@@ -2,6 +2,7 @@ import { app, BrowserWindow, Menu, session, shell, systemPreferences } from "ele
 import { execSync } from "node:child_process"
 import { join } from "node:path"
 import { createAppServer } from "./server.ts"
+import { initUpdater } from "./updater.ts"
 import { getConfig } from "../server/config"
 
 // GUI apps don't inherit the user's shell PATH.
@@ -131,6 +132,11 @@ app.whenReady().then(async () => {
   ]))
 
   await createWindow(port)
+
+  // Initialize auto-updater / update notifications
+  if (mainWindow) {
+    initUpdater(mainWindow)
+  }
 
   // macOS: re-create window when dock icon clicked
   app.on("activate", () => {
