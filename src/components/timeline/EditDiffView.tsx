@@ -8,8 +8,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
-import type { ThemedToken } from "shiki"
-import { getHighlighter, ensureLang, getLangFromPath } from "@/lib/shiki"
+import { getHighlighter, ensureLang, getLangFromPath, type ThemedToken } from "@/lib/shiki"
 import { useIsDarkMode } from "@/hooks/useIsDarkMode"
 
 // ── Simple line-level diff (LCS-based) ─────────────────────────────────────

@@ -119,12 +119,15 @@ export function useSubagentContent(messages: SubAgentMessage[], enabled: boolean
   const [isLoading, setIsLoading] = useState(false)
   const fetchedRef = useRef(new Set<string>())
 
-  // Identify agents that need lazy loading: async_launched with no content.
-  // Skip for live sessions — the subagentWatcher provides real-time progress.
+  // Identify agents that need lazy loading: summary-only messages with no detailed content.
+  // Non-live sessions: load async_launched agents.
+  // Live sessions: load agents that have COMPLETED (durationMs set by toolUseResult).
+  // Running agents are not loaded here -- Phase 3 polling handles those.
   const agentsToLoad = useMemo(
-    () => isLive ? [] : messages.filter(
-      (m) => m.status === "async_launched" && m.text.length === 0 && m.thinking.length === 0 && m.toolCalls.length === 0
-    ),
+    () => messages.filter((m) => {
+      if (m.text.length > 0 || m.thinking.length > 0 || m.toolCalls.length > 0) return false
+      return isLive ? m.durationMs != null : m.status === "async_launched"
+    }),
     [isLive, messages]
   )
 
@@ -195,7 +198,7 @@ export function useSubagentContent(messages: SubAgentMessage[], enabled: boolean
     const result: SubAgentMessage[] = []
     for (const m of messages) {
       const loadedMsgs = loaded.get(m.agentId)
-      if (loadedMsgs && loadedMsgs.length > 0 && m.status === "async_launched") {
+      if (loadedMsgs && loadedMsgs.length > 0 && (m.status === "async_launched" || m.durationMs != null)) {
         // Carry summary stats from the launch event onto the first loaded message
         const first: SubAgentMessage = {
           ...loadedMsgs[0],

@@ -17,12 +17,7 @@ import {
   applyBranchSwitch,
 } from "./undo/undoApplyOperations"
 
-// ── Re-exports (preserve public API) ─────────────────────────────────────────
-
 export type { UndoConfirmState } from "./undo/undoHelpers"
-export { buildSummary, isTurnStartingUserMessage, findCutoffLine } from "./undo/undoHelpers"
-export { ApplyAbort, tryApplyOps, truncateJsonl, appendJsonl, applyUndo, applyRedo, applyBranchSwitch } from "./undo/undoApplyOperations"
-
 const EMPTY_BRANCHES: Branch[] = []
 
 export interface UseUndoRedoResult {

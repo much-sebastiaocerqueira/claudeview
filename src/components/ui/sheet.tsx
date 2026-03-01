@@ -7,16 +7,8 @@ function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
   return <SheetPrimitive.Root data-slot="sheet" {...props} />
 }
 
-function SheetTrigger({ ...props }: React.ComponentProps<typeof SheetPrimitive.Trigger>) {
-  return <SheetPrimitive.Trigger data-slot="sheet-trigger" {...props} />
-}
-
 function SheetPortal({ ...props }: React.ComponentProps<typeof SheetPrimitive.Portal>) {
   return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />
-}
-
-function SheetClose({ ...props }: React.ComponentProps<typeof SheetPrimitive.Close>) {
-  return <SheetPrimitive.Close data-slot="sheet-close" {...props} />
 }
 
 function SheetOverlay({
@@ -87,11 +79,7 @@ function SheetTitle({
 
 export {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetHeader,
-  SheetOverlay,
-  SheetPortal,
   SheetTitle,
-  SheetTrigger,
 }

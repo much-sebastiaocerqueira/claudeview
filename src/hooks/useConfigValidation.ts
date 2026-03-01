@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react"
 import { authFetch } from "@/lib/auth"
 
-export type ValidationStatus = "idle" | "validating" | "valid" | "invalid"
+type ValidationStatus = "idle" | "validating" | "valid" | "invalid"
 
 export function useConfigValidation() {
   const [status, setStatus] = useState<ValidationStatus>("idle")

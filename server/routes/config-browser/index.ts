@@ -5,12 +5,6 @@ import { isAllowedConfigPath, isUserOwned, templates } from "./configValidation"
 import { buildGlobalSection, buildProjectSection, buildPluginSections } from "./configTree"
 import type { ConfigTreeSection } from "./configTree"
 
-// ── Re-exports ─────────────────────────────────────────────────────────
-
-export type { ConfigTreeItem, ConfigTreeSection } from "./configTree"
-export { scanDir, buildGlobalSection, buildProjectSection, buildPluginSections } from "./configTree"
-export { isAllowedConfigPath, isUserOwned, getFileType, templates } from "./configValidation"
-
 // ── Route registration ────────────────────────────────────────────────
 
 export function registerConfigBrowserRoutes(use: UseFn) {

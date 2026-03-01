@@ -9,12 +9,8 @@ import type {
 import { buildTurns } from "./turnBuilder"
 import { computeStats } from "./sessionStats"
 
-// ── Re-exports (preserve public API) ─────────────────────────────────────────
-
-export { buildTurns, buildCompactionSummary } from "./turnBuilder"
-export { mergeTokenUsage, countToolCalls, tallyToolCalls, addUsageToStats, computeStats } from "./sessionStats"
-export type { PlanApprovalState, UserQuestionState, PendingInteraction } from "./interactiveState"
-export { detectPendingInteraction, isStuckInteractiveLoop } from "./interactiveState"
+export type { PendingInteraction } from "./interactiveState"
+export { detectPendingInteraction } from "./interactiveState"
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 

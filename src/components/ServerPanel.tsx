@@ -103,7 +103,7 @@ function ServerOutput({ outputPath, title }: { outputPath: string; title: string
 
 // ── ServerPanel — collapsible bottom panel with server badges + split view ──
 
-export interface ServerInfo {
+interface ServerInfo {
   outputPath: string
   title: string
 }

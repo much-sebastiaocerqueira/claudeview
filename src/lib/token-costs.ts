@@ -12,11 +12,6 @@
 import type { Turn, SubAgentMessage } from "./types"
 import { resolveTier } from "./pricingTiers"
 
-// ── Re-exports (preserve public API) ─────────────────────────────────────────
-
-export type { PricingTier } from "./pricingTiers"
-export { EXTENDED_CONTEXT_THRESHOLD, MODEL_TIERS, FAMILY_FALLBACKS, resolveTier } from "./pricingTiers"
-export type { UsageBucket, AgentBreakdown, ModelBreakdown, CacheBreakdown } from "./costAnalytics"
 export { computeAgentBreakdown, computeModelBreakdown, computeCacheBreakdown } from "./costAnalytics"
 
 // ── Constants ─────────────────────────────────────────────────────────────────

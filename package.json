@@ -22,7 +22,7 @@
     "electron:dev": "electron-vite dev",
     "electron:build": "electron-vite build",
     "electron:preview": "electron-vite build && electron .",
-    "electron:package": "electron-vite build && electron-builder",
+    "electron:package": "start=$(date +%s) && electron-vite build && electron-builder --publish never && echo \"\\n✅ electron:package completed in $(($(date +%s) - start))s\"",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {

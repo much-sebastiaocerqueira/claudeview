@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react"
 
-export interface UploadedImage {
+interface UploadedImage {
   file: File
   preview: string
   data: string

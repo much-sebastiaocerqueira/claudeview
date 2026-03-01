@@ -4,6 +4,22 @@ Chronological record of all documentation audits for the agent-window project.
 
 ## Recent Audits
 
+### 2026-03-01 22:58:00 — Bundle Optimization & Subagent Content Loading
+- **File:** `audit-history/audit-PLACEHOLDER.md`
+- **Status:** PASS WITH DOCUMENTATION UPDATES REQUIRED
+- **Changes:** 54 files, 356 insertions(+), 515 deletions(-)
+- **Key updates:**
+  - Shiki bundle rewrite: dynamic imports, JS regex engine, no WASM
+  - Manual chunk splitting: vendor-shiki, vendor-markdown, vendor-ui
+  - electron-builder exclusions for renderer-only packages
+  - New `/api/sessions/{dirName}/{sessionId}/subagents` endpoint
+  - Enhanced useSubagentContent lazy-loading (live vs non-live logic)
+  - Deleted AGENTS.md (content moved to CLAUDE.md)
+  - Dead code removal: sessionStats exports, unused CSS variables
+  - Internal refactoring: component cleanup, prop simplification
+- **Risk:** LOW (all changes backward-compatible)
+- **Doc updates needed:** ARCHITECTURE.md (2 new sections), AGENT_INTEGRATION.md (lazy-load explanation), README.md (optional build summary), QUICK_REFERENCE.md (API table)
+
 ### 2026-03-01 04:04:28 — Queue & Session Status Refactor
 - **File:** `audit-history/audit-20260301-040428-79a7b49.md`
 - **Status:** PASS (with documentation updates required)

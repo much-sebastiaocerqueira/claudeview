@@ -2,7 +2,7 @@
  * Session statistics computation — token usage aggregation and tool call tallying.
  */
 
-import type { Turn, SessionStats, TokenUsage } from "./types"
+import type { Turn, SessionStats } from "./types"
 import {
   calculateTurnCostEstimated,
   calculateSubAgentCostEstimated,
@@ -10,30 +10,11 @@ import {
   estimateSubAgentOutput,
 } from "./token-costs"
 
-export function mergeTokenUsage(
-  existing: TokenUsage | null,
-  incoming: TokenUsage
-): TokenUsage {
-  if (!existing) {
-    return { ...incoming }
-  }
-  return {
-    input_tokens: existing.input_tokens + incoming.input_tokens,
-    output_tokens: existing.output_tokens + incoming.output_tokens,
-    cache_creation_input_tokens:
-      (existing.cache_creation_input_tokens ?? 0) +
-      (incoming.cache_creation_input_tokens ?? 0),
-    cache_read_input_tokens:
-      (existing.cache_read_input_tokens ?? 0) +
-      (incoming.cache_read_input_tokens ?? 0),
-  }
-}
-
 /**
  * Count tool calls in an array, accumulating into `counts` map.
  * Returns the number of errored tool calls.
  */
-export function countToolCalls(
+function countToolCalls(
   toolCalls: readonly { name: string; isError: boolean }[],
   counts: Record<string, number>,
 ): number {
@@ -45,10 +26,7 @@ export function countToolCalls(
   return errors
 }
 
-/** Alias for countToolCalls. */
-export const tallyToolCalls = countToolCalls
-
-export function addUsageToStats(
+function addUsageToStats(
   stats: SessionStats,
   usage: { input_tokens: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number },
   estimatedOutput: number,

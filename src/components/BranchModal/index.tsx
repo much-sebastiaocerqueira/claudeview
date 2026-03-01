@@ -14,11 +14,6 @@ import { parseSession } from "@/lib/parser"
 import { MiniBranchGraph } from "./MiniBranchGraph"
 import { FullTurnCard, ArchivedTurnCard } from "./TurnCards"
 
-// Re-export extracted modules so external imports remain unchanged
-export { MiniBranchGraph } from "./MiniBranchGraph"
-export { FullTurnCard, ArchivedTurnCard } from "./TurnCards"
-export { BRANCH_COLORS, BRANCH_INNER, TOOL_BADGE_STYLES, toolSummary } from "./branchStyles"
-
 // ─── Entry for the unified branch list (current + archived) ──
 
 export interface DisplayBranch {

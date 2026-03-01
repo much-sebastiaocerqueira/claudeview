@@ -11,7 +11,7 @@ import { parseSession } from "@/lib/parser"
 import { authFetch } from "@/lib/auth"
 import { parseSubAgentPath } from "@/lib/format"
 
-export interface AppHandlersDeps {
+interface AppHandlersDeps {
   state: {
     session: ParsedSession | null
     sessionSource: SessionSource | null
@@ -27,7 +27,7 @@ export interface AppHandlersDeps {
   handleDashboardSelect: (dirName: string, fileName: string) => void
 }
 
-export interface AppHandlersResult {
+interface AppHandlersResult {
   // Session reload
   reloadSession: () => Promise<void>
 

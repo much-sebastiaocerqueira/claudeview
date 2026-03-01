@@ -46,6 +46,8 @@ export function TurnSection({ turn, index, branchCount = 0 }: TurnSectionProps) 
   const { state: { activeTurnIndex, activeToolCallId, expandAll } } = useAppContext()
   const { session, isLive, isSubAgentView, undoRedo, actions } = useSessionContext()
 
+  const isAgentActive = isLive && session !== null && index === session.turns.length - 1
+
   return (
     <TurnSectionInner
       turn={turn}
@@ -54,7 +56,7 @@ export function TurnSection({ turn, index, branchCount = 0 }: TurnSectionProps) 
       isActive={activeTurnIndex === index}
       activeToolCallId={activeToolCallId}
       expandAll={expandAll}
-      isAgentActive={isLive && session !== null && index === session.turns.length - 1}
+      isAgentActive={isAgentActive}
       isSubAgentView={isSubAgentView}
       onRestoreToHere={isSubAgentView ? undefined : undoRedo.requestUndo}
       onOpenBranches={actions.handleOpenBranches}

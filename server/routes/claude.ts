@@ -151,12 +151,12 @@ export function registerClaudeRoutes(use: UseFn) {
             if (parsed.type === "result" && ps.onResult) {
               ps.onResult(parsed)
             }
-            // Track Task tool calls so the subagent watcher can match files
+            // Track Agent/Task tool calls so the subagent watcher can match files
             if (parsed.type === "assistant") {
               const content = parsed.message?.content
               if (Array.isArray(content)) {
                 for (const block of content) {
-                  if (block.type === "tool_use" && block.name === "Task") {
+                  if (block.type === "tool_use" && (block.name === "Task" || block.name === "Agent")) {
                     ps.pendingTaskCalls.set(block.id, block.input?.prompt ?? "")
                   }
                 }

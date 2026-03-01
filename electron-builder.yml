@@ -20,6 +20,18 @@ files:
   - "!node_modules/**/*.{md,map,ts,d.ts}"
   - "!node_modules/**/{CHANGELOG,README,LICENSE,LICENCE,readme,changelog}*"
   - "!node_modules/**/{test,tests,__tests__,spec,specs,example,examples,docs}/**"
+  # Renderer-only packages (already bundled into out/renderer/) — exclude from asar
+  - "!node_modules/shiki/**"
+  - "!node_modules/@shikijs/**"
+  - "!node_modules/lucide-react/**"
+  - "!node_modules/@radix-ui/**"
+  - "!node_modules/react-markdown/**"
+  - "!node_modules/react-resizable-panels/**"
+  - "!node_modules/@tanstack/**"
+  - "!node_modules/class-variance-authority/**"
+  - "!node_modules/tailwind-merge/**"
+  - "!node_modules/remark-gfm/**"
+  - "!node_modules/whisper-web-transcriber/**"
 
 extraMetadata:
   main: out/main/main.js

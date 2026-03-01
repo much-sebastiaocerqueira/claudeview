@@ -6,9 +6,6 @@ import type { UseFn } from "../../helpers"
 import { handleBackgroundTasks } from "./backgroundTasks"
 import { handleBackgroundAgents } from "./backgroundAgents"
 
-export { handleBackgroundTasks } from "./backgroundTasks"
-export { handleBackgroundAgents } from "./backgroundAgents"
-
 export function registerPortRoutes(use: UseFn) {
   // GET /api/check-ports?ports=3000,5173 - check which ports are listening
   use("/api/check-ports", async (req, res, next) => {

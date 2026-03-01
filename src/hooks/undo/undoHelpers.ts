@@ -8,8 +8,6 @@ import {
   type OperationSummary,
 } from "@/lib/undo-engine"
 
-export type { OperationSummary }
-
 export interface UndoConfirmState {
   type: "undo" | "redo" | "branch-switch"
   summary: OperationSummary
@@ -27,7 +25,7 @@ export function buildSummary(ops: FileOperation[], fallbackTurnCount: number): O
 }
 
 /** Check if a JSONL user message starts a new turn (not meta, not a tool_result). */
-export function isTurnStartingUserMessage(obj: Record<string, unknown>): boolean {
+function isTurnStartingUserMessage(obj: Record<string, unknown>): boolean {
   if (obj.type !== "user" || obj.isMeta) return false
   const content = (obj as { message?: { content?: unknown } }).message?.content
   if (Array.isArray(content) && content.some((b: { type: string }) => b.type === "tool_result")) {

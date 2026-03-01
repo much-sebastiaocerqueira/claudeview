@@ -90,8 +90,6 @@
   --elevation-3: oklch(1.000 0 0);
   --elevation-4: oklch(1.000 0 0);
 
-  /* Shadow Physics: hue-matched shadows (blue-tinted, never pure black) */
-  --shadow-hue: 225deg 40% 20%;
   --shadow-elevation-low:
     0 1px 2px hsla(225, 40%, 20%, 0.06),
     0 1px 3px hsla(225, 40%, 20%, 0.04);
@@ -103,13 +101,6 @@
     0 2px 4px hsla(225, 40%, 20%, 0.06),
     0 8px 20px hsla(225, 40%, 20%, 0.08),
     0 24px 48px hsla(225, 40%, 20%, 0.06);
-  --shadow-elevation-ultra:
-    0 2px 4px hsla(225, 40%, 20%, 0.08),
-    0 16px 32px hsla(225, 40%, 20%, 0.10),
-    0 40px 80px hsla(225, 40%, 20%, 0.08);
-
-  /* Inner edge highlights */
-  --edge-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
   --edge-highlight-subtle: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
@@ -165,13 +156,6 @@
   --shadow-elevation-high:
     0 1px 3px hsla(230, 60%, 4%, 0.4),
     0 4px 12px hsla(230, 60%, 4%, 0.3);
-  --shadow-elevation-ultra:
-    0 2px 4px hsla(230, 60%, 4%, 0.4),
-    0 8px 20px hsla(230, 60%, 4%, 0.3),
-    0 20px 40px hsla(230, 60%, 4%, 0.2);
-
-  /* Edge highlights: very subtle in dark mode */
-  --edge-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
   --edge-highlight-subtle: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
@@ -222,12 +206,6 @@
   --shadow-elevation-high:
     0 1px 3px rgba(0, 0, 0, 0.6),
     0 4px 12px rgba(0, 0, 0, 0.5);
-  --shadow-elevation-ultra:
-    0 2px 4px rgba(0, 0, 0, 0.6),
-    0 8px 20px rgba(0, 0, 0, 0.5),
-    0 20px 40px rgba(0, 0, 0, 0.4);
-
-  --edge-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.03);
   --edge-highlight-subtle: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
@@ -317,11 +295,6 @@
 .depth-low { box-shadow: var(--shadow-elevation-low); }
 .depth-mid { box-shadow: var(--shadow-elevation-mid); }
 .depth-high { box-shadow: var(--shadow-elevation-high); }
-.depth-ultra { box-shadow: var(--shadow-elevation-ultra); }
-
-/* Edge highlights for defining boundaries on elevated elements */
-.edge-top { box-shadow: var(--edge-highlight); }
-.edge-all { box-shadow: var(--edge-highlight-subtle); }
 
 /* ── Card hover: elevation shift on hover ─── */
 .card-hover {
@@ -369,29 +342,6 @@
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   box-shadow: var(--edge-highlight-subtle);
-}
-
-.glass-heavy {
-  backdrop-filter: blur(24px) saturate(200%);
-  -webkit-backdrop-filter: blur(24px) saturate(200%);
-  box-shadow: var(--edge-highlight-subtle);
-}
-
-/* Gradient border */
-.gradient-border {
-  position: relative;
-}
-.gradient-border::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(139, 92, 246, 0.3));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
 }
 
 /* Electron window drag region */

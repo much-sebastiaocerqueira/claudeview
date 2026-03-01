@@ -2,8 +2,6 @@ import type { UseFn } from "../../helpers"
 import { dirs, isWithinDir, projectDirToReadableName, getSessionMeta, readdir, readFile, stat, join } from "../../helpers"
 import { handleActiveSessions } from "./activeSessionsRoute"
 
-export { handleActiveSessions } from "./activeSessionsRoute"
-
 export function registerProjectRoutes(use: UseFn) {
   // GET /api/projects - list all projects
   use("/api/projects", async (_req, res, next) => {
@@ -146,6 +144,33 @@ export function registerProjectRoutes(use: UseFn) {
       } catch (err) {
         res.statusCode = 500
         res.end(JSON.stringify({ error: String(err) }))
+      }
+    } else if (parts.length === 3 && parts[2] === "subagents") {
+      // GET /api/sessions/{dirName}/{sessionId}/subagents — list subagent files
+      const dirName = decodeURIComponent(parts[0])
+      const sessionId = decodeURIComponent(parts[1])
+      const subagentsDir = join(dirs.PROJECTS_DIR, dirName, sessionId, "subagents")
+      if (!isWithinDir(dirs.PROJECTS_DIR, subagentsDir)) {
+        res.statusCode = 403
+        res.end(JSON.stringify({ error: "Access denied" }))
+        return
+      }
+      try {
+        const files = await readdir(subagentsDir)
+        const listing: Array<{ agentId: string; size: number; modifiedAt: number }> = []
+        for (const f of files) {
+          if (!f.startsWith("agent-") || !f.endsWith(".jsonl")) continue
+          const agentId = f.replace("agent-", "").replace(".jsonl", "")
+          try {
+            const s = await stat(join(subagentsDir, f))
+            listing.push({ agentId, size: s.size, modifiedAt: s.mtimeMs })
+          } catch { continue }
+        }
+        res.setHeader("Content-Type", "application/json")
+        res.end(JSON.stringify(listing))
+      } catch {
+        res.setHeader("Content-Type", "application/json")
+        res.end(JSON.stringify([]))
       }
     } else if (parts.length >= 2) {
       // Serve session file content (supports nested paths like sessionId/subagents/file.jsonl)

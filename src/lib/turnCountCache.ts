@@ -19,10 +19,6 @@ function persist() {
   } catch { /* ignore */ }
 }
 
-export function getCachedTurnCount(sessionId: string): number | null {
-  return cache.get(sessionId) ?? null
-}
-
 export function cacheTurnCount(sessionId: string, count: number): void {
   cache.set(sessionId, count)
   persist()

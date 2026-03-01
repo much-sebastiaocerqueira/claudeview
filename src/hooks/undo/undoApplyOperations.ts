@@ -18,7 +18,7 @@ import { findCutoffLine, type UndoConfirmState } from "./undoHelpers"
 /** Sentinel error to abort confirm-apply without setting an error message. */
 export class ApplyAbort extends Error { constructor() { super("abort") } }
 
-export async function tryApplyOps(
+async function tryApplyOps(
   ops: FileOperation[],
   applyOperations: (ops: FileOperation[]) => Promise<boolean>,
 ): Promise<void> {
@@ -27,7 +27,7 @@ export async function tryApplyOps(
   if (!success) throw new ApplyAbort()
 }
 
-export async function truncateJsonl(
+async function truncateJsonl(
   sessionSource: SessionSource,
   keepLines: number,
   setApplyError: (e: string) => void,
@@ -43,7 +43,7 @@ export async function truncateJsonl(
   }
 }
 
-export async function appendJsonl(
+async function appendJsonl(
   sessionSource: SessionSource,
   lines: string[],
   setApplyError: (e: string) => void,

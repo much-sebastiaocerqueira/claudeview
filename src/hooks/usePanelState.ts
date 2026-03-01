@@ -5,7 +5,7 @@
 import { useState, useCallback } from "react"
 import type { SessionState, SessionAction } from "./useSessionState"
 
-export interface PanelState {
+interface PanelState {
   showSidebar: boolean
   showStats: boolean
   showWorktrees: boolean

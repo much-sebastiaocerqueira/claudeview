@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain } from "electron"
-import { autoUpdater } from "electron-updater"
+import pkg from "electron-updater"
+const { autoUpdater } = pkg
 import { join } from "node:path"
 import { readFileSync, writeFileSync, existsSync } from "node:fs"
 

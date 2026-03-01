@@ -20,7 +20,7 @@ export interface UsageData {
   subscriptionType?: string
 }
 
-export interface UseTokenUsageResult {
+interface UseTokenUsageResult {
   usage: UsageData | null
   loading: boolean
   available: boolean

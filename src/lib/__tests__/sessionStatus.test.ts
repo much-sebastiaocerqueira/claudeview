@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest"
 import {
   deriveSessionStatus,
-  deriveSessionStatusFromTail,
   getStatusLabel,
 } from "../sessionStatus"
 
@@ -90,24 +89,6 @@ describe("deriveSessionStatus", () => {
     ]
     // No real user messages, so idle not completed
     expect(deriveSessionStatus(msgs).status).toBe("idle")
-  })
-})
-
-describe("deriveSessionStatusFromTail", () => {
-  it("parses JSONL text and derives completed status", () => {
-    const lines = [
-      JSON.stringify({ type: "user", message: { role: "user", content: "hi" } }),
-      JSON.stringify({ type: "assistant", message: { stop_reason: "end_turn", content: [] } }),
-    ].join("\n")
-    expect(deriveSessionStatusFromTail(lines).status).toBe("completed")
-  })
-
-  it("skips malformed lines", () => {
-    const lines = [
-      "not json",
-      JSON.stringify({ type: "assistant", message: { stop_reason: null, content: [] } }),
-    ].join("\n")
-    expect(deriveSessionStatusFromTail(lines).status).toBe("thinking")
   })
 })
 

@@ -1,7 +1,7 @@
 import { useMemo } from "react"
 import type { ParsedSession } from "@/lib/types"
 
-export interface TodoItem {
+interface TodoItem {
   content: string
   status: "pending" | "in_progress" | "completed"
   activeForm: string

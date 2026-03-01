@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react"
-import type { ThemedToken } from "shiki"
 import { cn } from "@/lib/utils"
-import { highlightCode, getLangFromPath } from "@/lib/shiki"
+import { highlightCode, getLangFromPath, type ThemedToken } from "@/lib/shiki"
 import { useIsDarkMode } from "@/hooks/useIsDarkMode"
 
 interface HighlightedEditorProps {

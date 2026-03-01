@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url"
 const __dirname = fileURLToPath(new URL(".", import.meta.url))
 const PROJECT_ROOT = resolve(__dirname, "..")
 
-export let CONFIG_PATH = join(PROJECT_ROOT, "config.local.json")
+let CONFIG_PATH = join(PROJECT_ROOT, "config.local.json")
 
 /**
  * Override the config file path at runtime (used by Electron main process
@@ -53,7 +53,7 @@ export async function saveConfig(config: AppConfig): Promise<void> {
   cachedConfig = config
 }
 
-export interface ValidationResult {
+interface ValidationResult {
   valid: boolean
   error?: string
   resolved?: string

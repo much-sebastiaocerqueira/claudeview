@@ -14,9 +14,6 @@ import {
 } from "./worktreeUtils"
 import { handleWorktreeList } from "./worktreeListRoute"
 
-export { isValidWorktreeName, parseWorktreeList, resolveProjectPath, getMainWorktreeRoot, getDefaultBranch } from "./worktreeUtils"
-export { handleWorktreeList } from "./worktreeListRoute"
-
 export function registerWorktreeRoutes(use: UseFn) {
   use("/api/worktrees", async (req, res, next) => {
     const url = new URL(req.url || "/", "http://localhost")

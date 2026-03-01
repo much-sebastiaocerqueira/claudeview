@@ -97,19 +97,3 @@ export function getStatusLabel(status: SessionStatus | undefined, toolName?: str
   }
 }
 
-/**
- * Derive session status from raw JSONL text (for server-side use).
- * Only parses the last few lines for efficiency.
- */
-export function deriveSessionStatusFromTail(tailText: string): SessionStatusInfo {
-  const lines = tailText.split("\n").filter(Boolean)
-  const messages: Array<{ type: string; [key: string]: unknown }> = []
-  for (const line of lines) {
-    try {
-      messages.push(JSON.parse(line))
-    } catch {
-      // skip malformed
-    }
-  }
-  return deriveSessionStatus(messages)
-}

@@ -69,6 +69,11 @@ export const AgentPanel = memo(function AgentPanel({
     return { totalDuration, totalToolUses, allCompleted }
   }, [messages])
 
+  const visibleMessageCount = useMemo(
+    () => displayMessages.filter((m) => m.text.length > 0 || m.thinking.length > 0 || m.toolCalls.length > 0).length,
+    [displayMessages]
+  )
+
   if (messages.length === 0) return null
 
   return (
@@ -116,7 +121,7 @@ export const AgentPanel = memo(function AgentPanel({
           </span>
         ) : (
           <span className="text-[10px] text-muted-foreground">
-            ({displayMessages.length} message{displayMessages.length > 1 ? "s" : ""})
+            ({visibleMessageCount} message{visibleMessageCount !== 1 ? "s" : ""})
           </span>
         )}
         {isOpen

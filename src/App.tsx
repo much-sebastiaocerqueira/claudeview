@@ -1,12 +1,10 @@
-import { useState, useEffect, useRef, useMemo, useCallback, startTransition } from "react"
+import { useState, useEffect, useRef, useMemo, useCallback, startTransition, lazy, Suspense } from "react"
 import { Loader2, AlertTriangle, RefreshCw, WifiOff, X, TerminalSquare, Code2, FolderSearch, Bot } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SessionBrowser } from "@/components/SessionBrowser"
 import { StatsPanel } from "@/components/StatsPanel"
-import { WorktreePanel } from "@/components/WorktreePanel"
 import { SessionSetupPanel } from "@/components/SessionSetupPanel"
 import { FileChangesPanel } from "@/components/FileChangesPanel"
-import { TeamsDashboard } from "@/components/TeamsDashboard"
 import { TeamMembersBar } from "@/components/TeamMembersBar"
 import { Dashboard } from "@/components/Dashboard"
 import { MobileNav } from "@/components/MobileNav"
@@ -14,11 +12,7 @@ import { ChatInput, type ChatInputHandle } from "@/components/ChatInput"
 import { ServerPanel } from "@/components/ServerPanel"
 import { PermissionsPanel } from "@/components/PermissionsPanel"
 import { UndoConfirmDialog } from "@/components/UndoConfirmDialog"
-import { BranchModal } from "@/components/BranchModal"
 import { SetupScreen } from "@/components/SetupScreen"
-import { ConfigDialog } from "@/components/ConfigDialog"
-import { ProjectSwitcherModal } from "@/components/ProjectSwitcherModal"
-import { ThemeSelectorModal } from "@/components/ThemeSelectorModal"
 import { DesktopHeader } from "@/components/DesktopHeader"
 import { SessionInfoBar } from "@/components/SessionInfoBar"
 import { ChatArea } from "@/components/ChatArea"
@@ -52,7 +46,6 @@ import { detectPendingInteraction } from "@/lib/parser"
 import { dirNameToPath, shortPath, parseSubAgentPath } from "@/lib/format"
 import type { ParsedSession } from "@/lib/types"
 import { authFetch } from "@/lib/auth"
-import { ConfigBrowser } from "@/components/ConfigBrowser"
 import { LoginScreen } from "@/components/LoginScreen"
 import { useNetworkAuth } from "@/hooks/useNetworkAuth"
 import {
@@ -62,6 +55,15 @@ import {
 } from "@/components/ui/resizable"
 import { AppProvider } from "@/contexts/AppContext"
 import { SessionProvider, type SessionContextValue, type SessionChatContextValue } from "@/contexts/SessionContext"
+
+// Lazy-loaded components (only rendered when user opens them)
+const BranchModal = lazy(() => import("@/components/BranchModal").then(m => ({ default: m.BranchModal })))
+const ConfigBrowser = lazy(() => import("@/components/ConfigBrowser").then(m => ({ default: m.ConfigBrowser })))
+const ConfigDialog = lazy(() => import("@/components/ConfigDialog").then(m => ({ default: m.ConfigDialog })))
+const ProjectSwitcherModal = lazy(() => import("@/components/ProjectSwitcherModal").then(m => ({ default: m.ProjectSwitcherModal })))
+const TeamsDashboard = lazy(() => import("@/components/TeamsDashboard").then(m => ({ default: m.TeamsDashboard })))
+const ThemeSelectorModal = lazy(() => import("@/components/ThemeSelectorModal").then(m => ({ default: m.ThemeSelectorModal })))
+const WorktreePanel = lazy(() => import("@/components/WorktreePanel").then(m => ({ default: m.WorktreePanel })))
 
 export default function App() {
   const config = useAppConfig()
@@ -541,14 +543,16 @@ export default function App() {
     : []
 
   const branchModal = handlers.branchModalTurn !== null && branchModalBranches.length > 0 && (
-    <BranchModal
-      branches={branchModalBranches}
-      branchPointTurnIndex={handlers.branchModalTurn}
-      currentTurns={branchModalCurrentTurns}
-      onClose={handlers.handleCloseBranchModal}
-      onRedoToTurn={handleRedoToTurn}
-      onRedoEntireBranch={handleRedoEntireBranch}
-    />
+    <Suspense fallback={null}>
+      <BranchModal
+        branches={branchModalBranches}
+        branchPointTurnIndex={handlers.branchModalTurn}
+        currentTurns={branchModalCurrentTurns}
+        onClose={handlers.handleCloseBranchModal}
+        onRedoToTurn={handleRedoToTurn}
+        onRedoEntireBranch={handleRedoEntireBranch}
+      />
+    </Suspense>
   )
 
   const serverPanelNode = serverPanel.serverMap.size > 0 && (
@@ -613,11 +617,13 @@ export default function App() {
           {state.mobileTab === "chat" && (
             <div className="flex flex-1 min-h-0 flex-col min-w-0">
               {state.mainView === "teams" && state.selectedTeam ? (
-                <TeamsDashboard
-                  teamName={state.selectedTeam}
-                  onBack={actions.handleBackFromTeam}
-                  onOpenSession={actions.handleOpenSessionFromTeam}
-                />
+                <Suspense fallback={null}>
+                  <TeamsDashboard
+                    teamName={state.selectedTeam}
+                    onBack={actions.handleBackFromTeam}
+                    onOpenSession={actions.handleOpenSessionFromTeam}
+                  />
+                </Suspense>
               ) : state.session ? (
                 <div className="flex flex-1 min-h-0 flex-col">
                   {teamMembersBar}
@@ -698,11 +704,13 @@ export default function App() {
           {state.mobileTab === "teams" && (
             <div className="flex flex-1 min-h-0 flex-col min-w-0">
               {state.selectedTeam ? (
-                <TeamsDashboard
-                  teamName={state.selectedTeam}
-                  onBack={actions.handleBackFromTeam}
-                  onOpenSession={actions.handleOpenSessionFromTeam}
-                />
+                <Suspense fallback={null}>
+                  <TeamsDashboard
+                    teamName={state.selectedTeam}
+                    onBack={actions.handleBackFromTeam}
+                    onOpenSession={actions.handleOpenSessionFromTeam}
+                  />
+                </Suspense>
               ) : (
                 <SessionBrowser
                   sessionId={state.session?.sessionId ?? null}
@@ -784,21 +792,25 @@ export default function App() {
 
         <main className="relative flex-1 min-w-0 overflow-hidden flex flex-col">
           {state.mainView === "config" ? (
-            <ConfigBrowser
-              projectPath={
-                state.session?.cwd
-                ?? pendingPath
-                ?? (state.sessionSource?.dirName ? dirNameToPath(state.sessionSource.dirName) : null)
-                ?? (state.dashboardProject ? dirNameToPath(state.dashboardProject) : null)
-              }
-              initialFilePath={state.configFilePath}
-            />
+            <Suspense fallback={null}>
+              <ConfigBrowser
+                projectPath={
+                  state.session?.cwd
+                  ?? pendingPath
+                  ?? (state.sessionSource?.dirName ? dirNameToPath(state.sessionSource.dirName) : null)
+                  ?? (state.dashboardProject ? dirNameToPath(state.dashboardProject) : null)
+                }
+                initialFilePath={state.configFilePath}
+              />
+            </Suspense>
           ) : state.mainView === "teams" && state.selectedTeam ? (
-            <TeamsDashboard
-              teamName={state.selectedTeam}
-              onBack={actions.handleBackFromTeam}
-              onOpenSession={actions.handleOpenSessionFromTeam}
-            />
+            <Suspense fallback={null}>
+              <TeamsDashboard
+                teamName={state.selectedTeam}
+                onBack={actions.handleBackFromTeam}
+                onOpenSession={actions.handleOpenSessionFromTeam}
+              />
+            </Suspense>
           ) : state.session ? (
             <div className="flex flex-1 min-h-0 flex-col">
               {teamMembersBar}
@@ -931,50 +943,56 @@ export default function App() {
 
       </div>
 
-      <WorktreePanel
-        open={panels.showWorktrees}
-        onOpenChange={panels.setShowWorktrees}
-        worktrees={worktreeData.worktrees}
-        loading={worktreeData.loading}
-        dirName={currentDirName}
-        onRefetch={worktreeData.refetch}
-        onOpenSession={(sessionId) => {
-          // sessionId is a JSONL filename without extension; navigate to it
-          if (currentDirName) {
-            actions.handleDashboardSelect(currentDirName, `${sessionId}.jsonl`)
-          }
-          panels.setShowWorktrees(false)
-        }}
-      />
+      <Suspense fallback={null}>
+        <WorktreePanel
+          open={panels.showWorktrees}
+          onOpenChange={panels.setShowWorktrees}
+          worktrees={worktreeData.worktrees}
+          loading={worktreeData.loading}
+          dirName={currentDirName}
+          onRefetch={worktreeData.refetch}
+          onOpenSession={(sessionId) => {
+            // sessionId is a JSONL filename without extension; navigate to it
+            if (currentDirName) {
+              actions.handleDashboardSelect(currentDirName, `${sessionId}.jsonl`)
+            }
+            panels.setShowWorktrees(false)
+          }}
+        />
+      </Suspense>
 
       {serverPanelNode}
       {undoConfirmDialog}
       {branchModal}
 
-      <ConfigDialog
-        open={config.showConfigDialog}
-        currentPath={config.claudeDir ?? ""}
-        onClose={config.handleCloseConfigDialog}
-        onSaved={(newPath: string) => {
-          config.handleConfigSaved(newPath)
-        }}
-      />
+      <Suspense fallback={null}>
+        <ConfigDialog
+          open={config.showConfigDialog}
+          currentPath={config.claudeDir ?? ""}
+          onClose={config.handleCloseConfigDialog}
+          onSaved={config.handleConfigSaved}
+        />
+      </Suspense>
 
-      <ProjectSwitcherModal
-        open={panels.showProjectSwitcher}
-        onClose={panels.handleCloseProjectSwitcher}
-        onNewSession={handleNewSession}
-        currentProjectDirName={state.sessionSource?.dirName ?? state.pendingDirName ?? null}
-        currentProjectCwd={state.session?.cwd ?? state.pendingCwd ?? null}
-      />
+      <Suspense fallback={null}>
+        <ProjectSwitcherModal
+          open={panels.showProjectSwitcher}
+          onClose={panels.handleCloseProjectSwitcher}
+          onNewSession={handleNewSession}
+          currentProjectDirName={state.sessionSource?.dirName ?? state.pendingDirName ?? null}
+          currentProjectCwd={state.session?.cwd ?? state.pendingCwd ?? null}
+        />
+      </Suspense>
 
-      <ThemeSelectorModal
-        open={panels.showThemeSelector}
-        onClose={panels.handleCloseThemeSelector}
-        currentTheme={themeCtx.theme}
-        onSelectTheme={themeCtx.setTheme}
-        onPreviewTheme={themeCtx.setPreview}
-      />
+      <Suspense fallback={null}>
+        <ThemeSelectorModal
+          open={panels.showThemeSelector}
+          onClose={panels.handleCloseThemeSelector}
+          currentTheme={themeCtx.theme}
+          onSelectTheme={themeCtx.setTheme}
+          onPreviewTheme={themeCtx.setPreview}
+        />
+      </Suspense>
 
       {errorToast || sseIndicator}
     </div>

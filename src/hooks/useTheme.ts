@@ -4,7 +4,7 @@ export type ThemeId = "dark" | "oled" | "light"
 
 const STORAGE_KEY = "cogpit-theme"
 
-export interface ThemeDefinition {
+interface ThemeDefinition {
   id: ThemeId
   name: string
   /** 5 elevation colors (0–4) for the swatch preview */

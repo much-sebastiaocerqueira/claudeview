@@ -1,44 +1,91 @@
 /**
  * Shared Shiki highlighter singleton.
  *
- * Provides a lazily-created highlighter with a default set of languages
- * pre-loaded, plus on-demand loading for any bundled Shiki language.
+ * Uses shiki/core with the JavaScript regex engine (no WASM) and
+ * only the 2 themes + 11 default languages needed by the app.
+ * All themes and languages are dynamically imported to keep the
+ * initial bundle small.
  */
-import {
-  createHighlighter,
-  type BundledLanguage,
-  type Highlighter,
-  type ThemedToken,
-} from "shiki"
+import { createHighlighterCore, type HighlighterCore, type ThemedToken } from "shiki/core"
+import { createJavaScriptRegexEngine } from "shiki/engine/javascript"
 
-let highlighterPromise: Promise<Highlighter> | null = null
+export type { ThemedToken } from "shiki/core"
+
+let highlighterPromise: Promise<HighlighterCore> | null = null
 const loadedLangs = new Set<string>()
+const loadingLangs = new Map<string, Promise<void>>()
 
-const DEFAULT_LANGS = [
+const DEFAULT_LANG_IDS = [
   "typescript", "tsx", "javascript", "jsx", "json",
   "css", "html", "python", "bash", "yaml", "markdown",
 ] as const
 
-export function getHighlighter(): Promise<Highlighter> {
+/** On-demand language loaders — only fetched when actually needed. */
+const LANG_IMPORT_MAP: Record<string, () => Promise<{ default: unknown }>> = {
+  typescript: () => import("@shikijs/langs/typescript"),
+  tsx: () => import("@shikijs/langs/tsx"),
+  javascript: () => import("@shikijs/langs/javascript"),
+  jsx: () => import("@shikijs/langs/jsx"),
+  json: () => import("@shikijs/langs/json"),
+  css: () => import("@shikijs/langs/css"),
+  html: () => import("@shikijs/langs/html"),
+  python: () => import("@shikijs/langs/python"),
+  bash: () => import("@shikijs/langs/bash"),
+  yaml: () => import("@shikijs/langs/yaml"),
+  markdown: () => import("@shikijs/langs/markdown"),
+  rust: () => import("@shikijs/langs/rust"),
+  go: () => import("@shikijs/langs/go"),
+  toml: () => import("@shikijs/langs/toml"),
+  sql: () => import("@shikijs/langs/sql"),
+  c: () => import("@shikijs/langs/c"),
+  cpp: () => import("@shikijs/langs/cpp"),
+  java: () => import("@shikijs/langs/java"),
+  ruby: () => import("@shikijs/langs/ruby"),
+  swift: () => import("@shikijs/langs/swift"),
+  kotlin: () => import("@shikijs/langs/kotlin"),
+  php: () => import("@shikijs/langs/php"),
+  vue: () => import("@shikijs/langs/vue"),
+  svelte: () => import("@shikijs/langs/svelte"),
+  scss: () => import("@shikijs/langs/scss"),
+}
+
+export function getHighlighter(): Promise<HighlighterCore> {
   if (!highlighterPromise) {
-    highlighterPromise = createHighlighter({
-      themes: ["github-dark", "github-light"],
-      langs: [...DEFAULT_LANGS],
-    }).then((hl) => {
-      for (const l of DEFAULT_LANGS) loadedLangs.add(l)
+    highlighterPromise = (async () => {
+      // Load themes + default languages in parallel
+      const [themeDark, themeLight, ...defaultLangs] = await Promise.all([
+        import("@shikijs/themes/github-dark").then(m => m.default),
+        import("@shikijs/themes/github-light").then(m => m.default),
+        ...DEFAULT_LANG_IDS.map(id => LANG_IMPORT_MAP[id]().then(m => m.default)),
+      ])
+      const hl = await createHighlighterCore({
+        themes: [themeDark, themeLight],
+        langs: defaultLangs as Parameters<HighlighterCore["loadLanguage"]>[0][],
+        engine: createJavaScriptRegexEngine(),
+      })
+      for (const id of DEFAULT_LANG_IDS) loadedLangs.add(id)
       return hl
-    })
+    })()
   }
   return highlighterPromise
 }
 
 export async function ensureLang(
-  hl: Highlighter,
-  lang: BundledLanguage
+  hl: HighlighterCore,
+  lang: string,
 ): Promise<void> {
   if (loadedLangs.has(lang)) return
-  await hl.loadLanguage(lang)
-  loadedLangs.add(lang)
+  if (loadingLangs.has(lang)) return loadingLangs.get(lang)!
+  const importFn = LANG_IMPORT_MAP[lang]
+  if (!importFn) return
+  const promise = importFn()
+    .then(async (mod) => {
+      await hl.loadLanguage(mod.default as Parameters<HighlighterCore["loadLanguage"]>[0])
+      loadedLangs.add(lang)
+    })
+    .finally(() => loadingLangs.delete(lang))
+  loadingLangs.set(lang, promise)
+  await promise
 }
 
 // ── Extension → Shiki language mapping ──────────────────────────────────────
@@ -47,7 +94,7 @@ export const EXT_TO_LANG: Record<string, string> = {
   ts: "typescript", tsx: "tsx", js: "javascript", jsx: "jsx",
   mjs: "javascript", cjs: "javascript", mts: "typescript", cts: "typescript",
   py: "python", rs: "rust", go: "go", json: "json",
-  css: "css", scss: "css", html: "html", htm: "html",
+  css: "css", scss: "scss", html: "html", htm: "html",
   md: "markdown", mdx: "markdown", yml: "yaml", yaml: "yaml",
   toml: "toml", sh: "bash", bash: "bash", zsh: "bash",
   sql: "sql", c: "c", h: "c", cpp: "cpp", cc: "cpp", hpp: "cpp",
@@ -55,9 +102,9 @@ export const EXT_TO_LANG: Record<string, string> = {
   php: "php", vue: "vue", svelte: "svelte",
 }
 
-export function getLangFromPath(filePath: string): BundledLanguage | null {
+export function getLangFromPath(filePath: string): string | null {
   const ext = filePath.split(".").pop()?.toLowerCase() ?? ""
-  return (EXT_TO_LANG[ext] as BundledLanguage) ?? null
+  return EXT_TO_LANG[ext] ?? null
 }
 
 // ── Highlight a code string ─────────────────────────────────────────────────
@@ -65,14 +112,13 @@ export function getLangFromPath(filePath: string): BundledLanguage | null {
 export async function highlightCode(
   code: string,
   lang: string,
-  isDark: boolean
+  isDark: boolean,
 ): Promise<ThemedToken[][] | null> {
   try {
     const hl = await getHighlighter()
-    const bundledLang = lang as BundledLanguage
-    await ensureLang(hl, bundledLang)
+    await ensureLang(hl, lang)
     const theme = isDark ? "github-dark" : "github-light"
-    const result = hl.codeToTokens(code, { lang: bundledLang, theme })
+    const result = hl.codeToTokens(code, { lang, theme })
     return result.tokens
   } catch {
     return null

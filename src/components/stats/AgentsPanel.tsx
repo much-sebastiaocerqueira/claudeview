@@ -101,12 +101,25 @@ export function AgentsPanel({
   }, [inlineAgents])
 
   // Build combined list: background agents + inline-only sub-agents (deduplicated)
+  // Show inline agents that aren't already covered by the background-agents API.
+  // Previously this also excluded `a.isBackground`, which meant completed background
+  // agents whose /tmp symlinks were cleaned up disappeared from the sidebar entirely.
   const inlineOnlyAgents = useMemo(() => {
     const bgAgentIds = new Set(sessionBgAgents.map((a) => a.agentId))
-    return inlineAgents.filter(
-      (a) => !a.isBackground && !bgAgentIds.has(a.agentId)
-    )
+    return inlineAgents.filter((a) => !bgAgentIds.has(a.agentId))
   }, [sessionBgAgents, inlineAgents])
+
+  // Sort background agents by modifiedAt descending (latest first)
+  const sortedBgAgents = useMemo(
+    () => [...sessionBgAgents].sort((a, b) => b.modifiedAt - a.modifiedAt),
+    [sessionBgAgents]
+  )
+
+  // Reverse inline-only agents so the latest-spawned appear first
+  const sortedInlineAgents = useMemo(
+    () => [...inlineOnlyAgents].reverse(),
+    [inlineOnlyAgents]
+  )
 
   const totalCount = sessionBgAgents.length + inlineOnlyAgents.length
   if (totalCount === 0) return null
@@ -129,8 +142,8 @@ export function AgentsPanel({
       )}
 
       <div className="max-h-[280px] overflow-y-auto space-y-1.5 pr-0.5">
-        {/* Background agents */}
-        {sessionBgAgents.map((agent, idx) => {
+        {/* Background agents (sorted by latest modified) */}
+        {sortedBgAgents.map((agent, idx) => {
           const preview = agent.preview
             ? agent.preview.split("\n").find((l) => l.trim())?.trim() ?? ""
             : ""
@@ -152,8 +165,8 @@ export function AgentsPanel({
           )
         })}
 
-        {/* Inline sub-agents (non-background) */}
-        {inlineOnlyAgents.map((agent, idx) => {
+        {/* Inline agents (sorted by latest spawned) */}
+        {sortedInlineAgents.map((agent, idx) => {
           const canNavigate = !!onLoadSession && !!parentSessionId && !!sessionSource
           return (
             <AgentCard
@@ -162,8 +175,9 @@ export function AgentsPanel({
               subagentType={agent.subagentType}
               agentName={agent.agentName}
               preview={agent.preview}
-              colorIndex={sessionBgAgents.length + idx}
+              colorIndex={sortedBgAgents.length + idx}
               isViewing={currentAgentId === agent.agentId}
+              isBackground={agent.isBackground}
               disabled={!canNavigate}
               onClick={() => {
                 if (!canNavigate) return

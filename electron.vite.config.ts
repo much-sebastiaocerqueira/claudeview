@@ -2,6 +2,7 @@ import { defineConfig, externalizeDepsPlugin } from "electron-vite"
 import react from "@vitejs/plugin-react"
 import tailwindcss from "@tailwindcss/vite"
 import { fileURLToPath, URL } from "node:url"
+import { manualChunks } from "./build/manualChunks"
 
 export default defineConfig({
   main: {
@@ -32,20 +33,7 @@ export default defineConfig({
       sourcemap: false,
       rollupOptions: {
         input: "index.html",
-        output: {
-          manualChunks: {
-            "react-vendor": ["react", "react-dom"],
-            "ui-vendor": ["react-resizable-panels", "@tanstack/react-virtual", "react-markdown"],
-            "radix": [
-              "@radix-ui/react-collapsible",
-              "@radix-ui/react-context-menu",
-              "@radix-ui/react-dialog",
-              "@radix-ui/react-scroll-area",
-              "@radix-ui/react-tooltip",
-            ],
-            "syntax": ["shiki"],
-          },
-        },
+        output: { manualChunks },
       },
     },
     plugins: [

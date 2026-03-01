@@ -5,7 +5,7 @@ function shortId(id: string): string {
 }
 
 /** Format: "type - shortId", falling back to just shortId when no metadata */
-export function agentLabel(msg: SubAgentMessage): string {
+function agentLabel(msg: SubAgentMessage): string {
   return formatAgentLabel(msg.agentId, msg.subagentType, msg.agentName)
 }
 
