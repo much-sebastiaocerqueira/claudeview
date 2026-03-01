@@ -20,7 +20,7 @@ jobs:
             pattern: "release/*.dmg"
           - os: ubuntu-latest
             name: Linux (AppImage)
-            cmd: bun run electron:package -- --linux AppImage --x64 --publish never
+            cmd: bun run electron:package -- --linux AppImage --x64 --publish always
             pattern: "release/*.AppImage"
           - os: ubuntu-latest
             name: Linux (pacman)
@@ -52,6 +52,7 @@ jobs:
         run: ${{ matrix.cmd }}
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
