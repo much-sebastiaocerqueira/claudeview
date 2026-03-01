@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, memo, type ReactNode } from "react"
-import { User, Cog, ChevronDown, ChevronRight, Eye, EyeOff, Terminal, Pencil, Loader2 } from "lucide-react"
+import { User, Cog, ChevronDown, ChevronRight, Eye, EyeOff, Terminal, Pencil, Loader2, CheckCircle2, XCircle, Clock } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import { markdownComponents, markdownPlugins } from "./markdown-components"
 import type { UserContent } from "@/lib/types"
@@ -11,6 +11,94 @@ const SYSTEM_TAG_RE =
 
 const COMMAND_MESSAGE_RE = /<command-message>([^<]+)<\/command-message>/
 const COMMAND_ARGS_RE = /<command-args>([\s\S]*?)<\/command-args>/
+
+// ── Task notification parsing ───────────────────────────────────────────
+
+const TASK_NOTIFICATION_RE = /<task-notification>([\s\S]*?)<\/task-notification>/g
+
+interface TaskNotification {
+  taskId: string
+  toolUseId: string
+  status: string
+  summary: string
+  result: string
+}
+
+function extractTag(xml: string, tag: string): string {
+  const re = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`)
+  const m = xml.match(re)
+  return m ? m[1].trim() : ""
+}
+
+function parseTaskNotifications(text: string): { notifications: TaskNotification[]; remainingText: string } {
+  const notifications: TaskNotification[] = []
+  const remainingText = text.replace(TASK_NOTIFICATION_RE, (_, inner) => {
+    notifications.push({
+      taskId: extractTag(inner, "task-id"),
+      toolUseId: extractTag(inner, "tool-use-id"),
+      status: extractTag(inner, "status"),
+      summary: extractTag(inner, "summary"),
+      result: extractTag(inner, "result"),
+    })
+    return ""
+  }).trim()
+  return { notifications, remainingText }
+}
+
+const ERROR_STYLE = { Icon: XCircle, color: "text-red-400", bg: "bg-red-500/10 border-red-500/20" } as const
+
+const STATUS_STYLES = {
+  completed: { Icon: CheckCircle2, color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", label: "Completed" },
+  failed: { ...ERROR_STYLE, label: "Failed" },
+  error: { ...ERROR_STYLE, label: "Error" },
+  running: { Icon: Clock, color: "text-amber-400", bg: "bg-amber-500/10 border-amber-500/20", label: "Running" },
+} as const
+
+function getStatusStyle(status: string) {
+  return STATUS_STYLES[status as keyof typeof STATUS_STYLES] ?? STATUS_STYLES.running
+}
+
+function TaskNotificationCard({ notification }: { notification: TaskNotification }) {
+  const [expanded, setExpanded] = useState(false)
+  const statusStyle = getStatusStyle(notification.status)
+  const { Icon: StatusIcon } = statusStyle
+  const hasResult = notification.result.length > 0
+  const Chevron = expanded ? ChevronDown : ChevronRight
+
+  return (
+    <div className={`rounded-lg border ${statusStyle.bg} p-3 my-1`}>
+      <div className="flex items-start gap-2">
+        <StatusIcon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${statusStyle.color}`} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-medium text-foreground">{notification.summary}</span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${statusStyle.color} ${statusStyle.bg}`}>
+              {statusStyle.label}
+            </span>
+          </div>
+          {hasResult && (
+            <>
+              <button
+                onClick={() => setExpanded(!expanded)}
+                className="mt-1.5 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+              >
+                <Chevron className="w-3 h-3" />
+                {expanded ? "Hide result" : "Show result"}
+              </button>
+              {expanded && (
+                <div className="mt-2 text-sm text-foreground/90 border-t border-border/30 pt-2">
+                  <ReactMarkdown components={markdownComponents} remarkPlugins={markdownPlugins}>
+                    {notification.result}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function stripSystemTags(text: string): string {
   return text.replace(SYSTEM_TAG_RE, "").trim()
@@ -89,6 +177,7 @@ export const UserMessage = memo(function UserMessage({ content, timestamp, label
   const commandName = useMemo(() => extractCommandName(rawText), [rawText])
   const commandArgs = useMemo(() => extractCommandArgs(rawText), [rawText])
   const cleanText = useMemo(() => stripSystemTags(rawText), [rawText])
+  const { notifications, remainingText: textAfterNotifications } = useMemo(() => parseTaskNotifications(cleanText), [cleanText])
 
   const handleToggleExpand = useCallback(async () => {
     if (commandExpanded) {
@@ -113,7 +202,7 @@ export const UserMessage = memo(function UserMessage({ content, timestamp, label
     [images]
   )
   const hasTags = rawText !== cleanText
-  const displayText = showRaw ? rawText : cleanText
+  const displayText = showRaw ? rawText : textAfterNotifications
 
   const isTruncated = displayText.length > 500 && !expanded
   const visibleText = isTruncated ? displayText.slice(0, 500) + "..." : displayText
@@ -203,6 +292,14 @@ export const UserMessage = memo(function UserMessage({ content, timestamp, label
                   className="max-h-40 max-w-60 object-contain bg-elevation-2"
                 />
               </button>
+            ))}
+          </div>
+        )}
+
+        {!showRaw && notifications.length > 0 && (
+          <div className="space-y-2 mb-2">
+            {notifications.map((n) => (
+              <TaskNotificationCard key={n.taskId} notification={n} />
             ))}
           </div>
         )}

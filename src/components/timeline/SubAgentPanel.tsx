@@ -31,6 +31,7 @@ export const SubAgentPanel = memo(function SubAgentPanel({ messages, expandAll }
       countLabel="subagents active"
       style={SUB_AGENT_STYLE}
       colors={SUB_AGENT_COLORS}
+      lazyLoad
     />
   )
 })

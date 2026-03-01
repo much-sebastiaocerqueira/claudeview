@@ -32,6 +32,7 @@ export const BackgroundAgentPanel = memo(function BackgroundAgentPanel({ message
       style={BACKGROUND_AGENT_STYLE}
       colors={BACKGROUND_AGENT_COLORS}
       thinkingIconColor="text-violet-400"
+      lazyLoad
     />
   )
 })

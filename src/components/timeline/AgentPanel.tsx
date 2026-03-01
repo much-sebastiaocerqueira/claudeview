@@ -1,10 +1,11 @@
 import { useState, memo, useMemo } from "react"
-import { Users, ChevronRight, ChevronDown, Clock, Wrench, CheckCircle2, XCircle } from "lucide-react"
+import { Users, ChevronRight, ChevronDown, Clock, Wrench, CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatDuration } from "@/lib/format"
 import type { SubAgentMessage } from "@/lib/types"
 import { buildAgentLabelMap } from "./agent-utils"
 import { AgentMessageItem } from "./AgentMessageItem"
+import { useSubagentContent } from "@/hooks/useSubagentContent"
 
 interface AgentColor {
   badge: string
@@ -26,6 +27,8 @@ interface AgentPanelProps {
   style: AgentPanelStyle
   colors: AgentColor[]
   thinkingIconColor?: string
+  /** Enable lazy loading of subagent JSONL files for async_launched agents */
+  lazyLoad?: boolean
 }
 
 /**
@@ -40,15 +43,18 @@ export const AgentPanel = memo(function AgentPanel({
   style,
   colors,
   thinkingIconColor,
+  lazyLoad = false,
 }: AgentPanelProps): React.ReactElement | null {
   const [open, setOpen] = useState(false)
   const isOpen = expandAll || open
 
-  const agentIds = useMemo(() => [...new Set(messages.map((m) => m.agentId))], [messages])
-  const agentColorMap = useMemo(() => new Map(agentIds.map((id, i) => [id, colors[i % colors.length]])), [agentIds, colors])
-  const agentLabelMap = useMemo(() => buildAgentLabelMap(messages), [messages])
+  const { enrichedMessages: displayMessages, isLoading } = useSubagentContent(messages, lazyLoad && isOpen)
 
-  // Aggregate summary stats from new-format messages (toolUseResult)
+  const agentIds = useMemo(() => [...new Set(displayMessages.map((m) => m.agentId))], [displayMessages])
+  const agentColorMap = useMemo(() => new Map(agentIds.map((id, i) => [id, colors[i % colors.length]])), [agentIds, colors])
+  const agentLabelMap = useMemo(() => buildAgentLabelMap(displayMessages), [displayMessages])
+
+  // Aggregate summary stats from original messages (they have durationMs/toolUseCount from the launch event)
   const summaryStats = useMemo(() => {
     let totalDuration = 0
     let totalToolUses = 0
@@ -110,18 +116,23 @@ export const AgentPanel = memo(function AgentPanel({
           </span>
         ) : (
           <span className="text-[10px] text-muted-foreground">
-            ({messages.length} message{messages.length > 1 ? "s" : ""})
+            ({displayMessages.length} message{displayMessages.length > 1 ? "s" : ""})
           </span>
         )}
         {isOpen
           ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground ml-auto" />
-          : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground ml-auto" />
-        }
+          : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground ml-auto" />}
       </button>
 
       {isOpen && (
         <div className="mt-3 space-y-2">
-          {messages.map((msg, i) => {
+          {isLoading && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Loading agent output...
+            </div>
+          )}
+          {displayMessages.map((msg, i) => {
             const color = agentColorMap.get(msg.agentId) ?? colors[0]
             return (
               <AgentMessageItem
