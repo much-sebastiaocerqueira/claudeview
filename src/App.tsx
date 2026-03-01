@@ -24,6 +24,7 @@ import { SessionInfoBar } from "@/components/SessionInfoBar"
 import { ChatArea } from "@/components/ChatArea"
 import { PendingTurnPreview } from "@/components/PendingTurnPreview"
 import { TodoProgressPanel } from "@/components/TodoProgressPanel"
+import { UpdateBanner } from "@/components/UpdateBanner"
 import { useLiveSession } from "@/hooks/useLiveSession"
 import { useSessionTeam } from "@/hooks/useSessionTeam"
 import { usePtyChat } from "@/hooks/usePtyChat"
@@ -591,6 +592,7 @@ export default function App() {
       <AppProvider value={appContextValue}>
       <SessionProvider value={sessionContextValue} chatValue={sessionChatValue}>
       <div className={`${themeCtx.themeClasses} flex h-dvh flex-col bg-elevation-0 text-foreground`}>
+        <UpdateBanner />
         <main className="flex flex-1 min-h-0 overflow-hidden">
           {state.mobileTab === "sessions" && (
             <SessionBrowser
@@ -745,6 +747,7 @@ export default function App() {
     <AppProvider value={appContextValue}>
     <SessionProvider value={sessionContextValue} chatValue={sessionChatValue}>
     <div className={`${themeCtx.themeClasses} flex h-dvh flex-col bg-elevation-0 text-foreground`}>
+      <UpdateBanner />
       <DesktopHeader
         showSidebar={panels.showSidebar}
         showStats={panels.showStats}
