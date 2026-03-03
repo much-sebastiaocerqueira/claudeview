@@ -1,0 +1,370 @@
+import type { UseFn } from "../helpers"
+import { findJsonlPath, readFile, readdir, stat, join, dirs } from "../helpers"
+import { parseSession } from "../../src/lib/parser"
+import type { ParsedSession, UserContent, SubAgentMessage } from "../../src/lib/types"
+
+// ── Types ───────────────────────────────────────────────────────────────────
+
+interface SearchHit {
+  location: string
+  snippet: string
+  matchCount: number
+  toolName?: string
+  agentName?: string
+}
+
+interface SessionSearchResult {
+  sessionId: string
+  hits: SearchHit[]
+}
+
+interface SearchResponse {
+  query: string
+  totalHits: number
+  returnedHits: number
+  sessionsSearched: number
+  results: SessionSearchResult[]
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+
+const SNIPPET_WINDOW = 150
+
+function parseMaxAge(raw: string): number {
+  const match = raw.match(/^(\d+)(d|h|m)$/)
+  if (!match) return 5 * 24 * 60 * 60 * 1000
+  const value = parseInt(match[1], 10)
+  const unit = match[2]
+  if (unit === "d") return value * 24 * 60 * 60 * 1000
+  if (unit === "h") return value * 60 * 60 * 1000
+  if (unit === "m") return value * 60 * 1000
+  return 5 * 24 * 60 * 60 * 1000
+}
+
+function extractUserMessageText(userMessage: UserContent | null): string | null {
+  if (userMessage === null) return null
+  if (typeof userMessage === "string") return userMessage
+  const parts: string[] = []
+  for (const block of userMessage) {
+    if (block.type === "text") parts.push(block.text)
+  }
+  return parts.length > 0 ? parts.join("\n") : null
+}
+
+function generateSnippet(text: string, query: string, caseSensitive: boolean): string {
+  const haystack = caseSensitive ? text : text.toLowerCase()
+  const needle = caseSensitive ? query : query.toLowerCase()
+  const idx = haystack.indexOf(needle)
+  if (idx === -1) return text.slice(0, SNIPPET_WINDOW)
+
+  const halfWindow = Math.floor((SNIPPET_WINDOW - query.length) / 2)
+  const start = Math.max(0, idx - halfWindow)
+  const end = Math.min(text.length, start + SNIPPET_WINDOW)
+  const adjustedStart = Math.max(0, end - SNIPPET_WINDOW)
+
+  let snippet = text.slice(adjustedStart, end)
+  if (adjustedStart > 0) snippet = "..." + snippet
+  if (end < text.length) snippet = snippet + "..."
+  return snippet
+}
+
+function countMatches(text: string, query: string, caseSensitive: boolean): number {
+  const haystack = caseSensitive ? text : text.toLowerCase()
+  const needle = caseSensitive ? query : query.toLowerCase()
+  let count = 0
+  let pos = 0
+  while ((pos = haystack.indexOf(needle, pos)) !== -1) {
+    count++
+    pos += needle.length
+  }
+  return count
+}
+
+function searchField(
+  text: string | null,
+  location: string,
+  query: string,
+  caseSensitive: boolean,
+  extras?: { toolName?: string; agentName?: string },
+): SearchHit | null {
+  if (!text) return null
+  const haystack = caseSensitive ? text : text.toLowerCase()
+  const needle = caseSensitive ? query : query.toLowerCase()
+  if (!haystack.includes(needle)) return null
+
+  return {
+    location,
+    snippet: generateSnippet(text, query, caseSensitive),
+    matchCount: countMatches(text, query, caseSensitive),
+    ...(extras?.toolName && { toolName: extras.toolName }),
+    ...(extras?.agentName && { agentName: extras.agentName }),
+  }
+}
+
+// ── Phase 1: File Discovery ─────────────────────────────────────────────────
+
+async function discoverSingleSession(sessionId: string): Promise<Array<{ path: string; mtimeMs: number }>> {
+  const jsonlPath = await findJsonlPath(sessionId)
+  if (!jsonlPath) return []
+  const s = await stat(jsonlPath)
+  return [{ path: jsonlPath, mtimeMs: s.mtimeMs }]
+}
+
+async function discoverAllSessions(maxAgeMs: number): Promise<Array<{ path: string; mtimeMs: number }>> {
+  const cutoff = Date.now() - maxAgeMs
+  const results: Array<{ path: string; mtimeMs: number }> = []
+
+  let entries: Awaited<ReturnType<typeof readdir>>
+  try {
+    entries = await readdir(dirs.PROJECTS_DIR, { withFileTypes: true })
+  } catch {
+    return []
+  }
+
+  for (const entry of entries) {
+    if (!(entry as any).isDirectory?.() || (entry as any).name === "memory") continue
+    const projectDir = join(dirs.PROJECTS_DIR, (entry as any).name)
+    try {
+      const files = await readdir(projectDir)
+      for (const f of files as string[]) {
+        if (!f.endsWith(".jsonl")) continue
+        const filePath = join(projectDir, f)
+        try {
+          const s = await stat(filePath)
+          if (s.mtimeMs >= cutoff) {
+            results.push({ path: filePath, mtimeMs: s.mtimeMs })
+          }
+        } catch {
+          continue
+        }
+      }
+    } catch {
+      continue
+    }
+  }
+
+  results.sort((a, b) => b.mtimeMs - a.mtimeMs)
+  return results
+}
+
+// ── Phase 2: Raw Text Pre-Filter ────────────────────────────────────────────
+
+async function rawTextMatch(filePath: string, query: string, caseSensitive: boolean): Promise<string | null> {
+  try {
+    const content = await readFile(filePath, "utf-8")
+    const haystack = caseSensitive ? content : content.toLowerCase()
+    const needle = caseSensitive ? query : query.toLowerCase()
+    if (haystack.includes(needle)) return content
+    return null
+  } catch {
+    return null
+  }
+}
+
+// ── Phase 3: Structured Walk ────────────────────────────────────────────────
+
+function walkSession(session: ParsedSession, query: string, caseSensitive: boolean, locationPrefix: string = ""): SearchHit[] {
+  const hits: SearchHit[] = []
+
+  for (let i = 0; i < session.turns.length; i++) {
+    const turn = session.turns[i]
+    const prefix = `${locationPrefix}turn/${i}`
+
+    // User message
+    const userText = extractUserMessageText(turn.userMessage)
+    const userHit = searchField(userText, `${prefix}/userMessage`, query, caseSensitive)
+    if (userHit) hits.push(userHit)
+
+    // Assistant text
+    const assistantText = turn.assistantText.join("\n\n")
+    const assistantHit = searchField(assistantText || null, `${prefix}/assistantMessage`, query, caseSensitive)
+    if (assistantHit) hits.push(assistantHit)
+
+    // Thinking blocks
+    for (const tb of turn.thinking) {
+      if (!tb.thinking) continue
+      const thinkHit = searchField(tb.thinking, `${prefix}/thinking`, query, caseSensitive)
+      if (thinkHit) {
+        hits.push(thinkHit)
+        break // one hit per thinking group
+      }
+    }
+
+    // Tool calls (input + result)
+    for (const tc of turn.toolCalls) {
+      const inputStr = JSON.stringify(tc.input)
+      const inputHit = searchField(inputStr, `${prefix}/toolCall/${tc.id}/input`, query, caseSensitive, { toolName: tc.name })
+      if (inputHit) hits.push(inputHit)
+
+      const resultHit = searchField(tc.result, `${prefix}/toolCall/${tc.id}/result`, query, caseSensitive, { toolName: tc.name })
+      if (resultHit) hits.push(resultHit)
+    }
+
+    // Sub-agent activity (inline data from parent session)
+    for (const sa of turn.subAgentActivity) {
+      const saPrefix = `${locationPrefix}agent/${sa.agentId}/`
+
+      const saText = sa.text.join("\n\n")
+      const saTextHit = searchField(saText || null, `${saPrefix}assistantMessage`, query, caseSensitive, {
+        agentName: sa.agentName ?? undefined,
+      })
+      if (saTextHit) hits.push(saTextHit)
+
+      for (const t of sa.thinking) {
+        const tHit = searchField(t, `${saPrefix}thinking`, query, caseSensitive, { agentName: sa.agentName ?? undefined })
+        if (tHit) {
+          hits.push(tHit)
+          break
+        }
+      }
+
+      for (const tc of sa.toolCalls) {
+        const inputStr = JSON.stringify(tc.input)
+        const inputHit = searchField(inputStr, `${saPrefix}toolCall/${tc.id}/input`, query, caseSensitive, {
+          toolName: tc.name,
+          agentName: sa.agentName ?? undefined,
+        })
+        if (inputHit) hits.push(inputHit)
+
+        const resultHit = searchField(tc.result, `${saPrefix}toolCall/${tc.id}/result`, query, caseSensitive, {
+          toolName: tc.name,
+          agentName: sa.agentName ?? undefined,
+        })
+        if (resultHit) hits.push(resultHit)
+      }
+    }
+
+    // Compaction summary
+    if (turn.compactionSummary) {
+      const compHit = searchField(turn.compactionSummary, `${prefix}/compactionSummary`, query, caseSensitive)
+      if (compHit) hits.push(compHit)
+    }
+  }
+
+  return hits
+}
+
+async function walkSubagentFiles(
+  parentJsonlPath: string,
+  query: string,
+  caseSensitive: boolean,
+  currentDepth: number,
+  maxDepth: number,
+): Promise<SearchHit[]> {
+  if (currentDepth >= maxDepth) return []
+
+  const subagentsDir = parentJsonlPath.replace(/\.jsonl$/, "") + "/subagents"
+  let files: string[]
+  try {
+    files = (await readdir(subagentsDir)) as string[]
+  } catch {
+    return []
+  }
+
+  const hits: SearchHit[] = []
+
+  for (const f of files) {
+    if (!f.startsWith("agent-") || !f.endsWith(".jsonl")) continue
+    const agentId = f.replace("agent-", "").replace(".jsonl", "")
+    const filePath = join(subagentsDir, f)
+
+    const rawContent = await rawTextMatch(filePath, query, caseSensitive)
+    if (!rawContent) continue
+
+    const subSession = parseSession(rawContent)
+    const subHits = walkSession(subSession, query, caseSensitive, `agent/${agentId}/`)
+    hits.push(...subHits)
+
+    const nestedHits = await walkSubagentFiles(filePath, query, caseSensitive, currentDepth + 1, maxDepth)
+    hits.push(...nestedHits)
+  }
+
+  return hits
+}
+
+// ── Route Handler ───────────────────────────────────────────────────────────
+
+function sendJson(res: import("node:http").ServerResponse, status: number, data: unknown) {
+  res.statusCode = status
+  res.setHeader("Content-Type", "application/json")
+  res.end(JSON.stringify(data))
+}
+
+export function registerSessionSearchRoutes(use: UseFn) {
+  use("/api/session-search", async (req, res, next) => {
+    if (req.method !== "GET") return next()
+
+    const url = new URL(req.url || "/", "http://localhost")
+    const query = url.searchParams.get("q")
+    const sessionId = url.searchParams.get("sessionId")
+    const maxAgeRaw = url.searchParams.get("maxAge") || "5d"
+    const limitRaw = url.searchParams.get("limit") || "20"
+    const caseSensitiveRaw = url.searchParams.get("caseSensitive") || "false"
+    const depthRaw = url.searchParams.get("depth") || "4"
+
+    if (!query || query.length < 2) {
+      return sendJson(res, 400, { error: "Query parameter 'q' is required and must be at least 2 characters" })
+    }
+
+    const limit = Math.min(Math.max(1, parseInt(limitRaw, 10) || 20), 200)
+    const caseSensitive = caseSensitiveRaw === "true"
+    const depth = Math.min(Math.max(1, parseInt(depthRaw, 10) || 4), 4)
+    const maxAgeMs = parseMaxAge(maxAgeRaw)
+
+    try {
+      // Phase 1: Discover files
+      const files = sessionId ? await discoverSingleSession(sessionId) : await discoverAllSessions(maxAgeMs)
+
+      let totalHits = 0
+      let returnedHits = 0
+      const results: SessionSearchResult[] = []
+      let sessionsSearched = 0
+
+      for (const file of files) {
+        // Phase 2: Raw text pre-filter
+        const rawContent = await rawTextMatch(file.path, query, caseSensitive)
+        sessionsSearched++
+        if (!rawContent) continue
+
+        // Phase 3: Parse and walk
+        const session = parseSession(rawContent)
+
+        const sessionHits = walkSession(session, query, caseSensitive)
+        const subagentHits = await walkSubagentFiles(file.path, query, caseSensitive, 0, depth)
+        const allHits = [...sessionHits, ...subagentHits]
+
+        if (allHits.length === 0) continue
+
+        totalHits += allHits.length
+
+        const sessionResult: SessionSearchResult = {
+          sessionId: session.sessionId || file.path.split("/").pop()?.replace(".jsonl", "") || "unknown",
+          hits: [],
+        }
+
+        for (const hit of allHits) {
+          if (returnedHits < limit) {
+            sessionResult.hits.push(hit)
+            returnedHits++
+          }
+        }
+
+        if (sessionResult.hits.length > 0) {
+          results.push(sessionResult)
+        }
+      }
+
+      const response: SearchResponse = {
+        query,
+        totalHits,
+        returnedHits,
+        sessionsSearched,
+        results,
+      }
+
+      sendJson(res, 200, response)
+    } catch (err) {
+      sendJson(res, 500, { error: String(err) })
+    }
+  })
+}
