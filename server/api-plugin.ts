@@ -18,6 +18,7 @@ import { registerWorktreeRoutes } from "./routes/worktrees"
 import { registerUsageRoutes } from "./routes/usage"
 import { registerSlashSuggestionRoutes } from "./routes/slash-suggestions"
 import { registerConfigBrowserRoutes } from "./routes/config-browser"
+import { registerSessionSearchRoutes } from "./routes/session-search"
 
 export function sessionApiPlugin(): Plugin {
   return {
@@ -71,6 +72,7 @@ export function sessionApiPlugin(): Plugin {
       registerUsageRoutes(use)
       registerSlashSuggestionRoutes(use)
       registerConfigBrowserRoutes(use)
+      registerSessionSearchRoutes(use)
     },
   }
 }
