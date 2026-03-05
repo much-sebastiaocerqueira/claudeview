@@ -1,4 +1,4 @@
-import Database from "better-sqlite3"
+import { Database } from "bun:sqlite"
 import { readFileSync, readdirSync, statSync, watch, type FSWatcher } from "node:fs"
 import { join, basename } from "node:path"
 import { parseSession, getUserMessageText } from "./parser"
@@ -24,7 +24,7 @@ export interface SearchHit {
 }
 
 export class SearchIndex {
-  private db: InstanceType<typeof Database>
+  private db: Database
   private dbPath: string
   projectsDir: string | null = null
   private _watcherRunning = false
@@ -36,8 +36,8 @@ export class SearchIndex {
   constructor(dbPath: string) {
     this.dbPath = dbPath
     this.db = new Database(dbPath)
-    this.db.pragma("journal_mode = WAL")
-    this.db.pragma("synchronous = NORMAL")
+    this.db.exec("PRAGMA journal_mode = WAL")
+    this.db.exec("PRAGMA synchronous = NORMAL")
     this.initSchema()
   }
 

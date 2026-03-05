@@ -31,7 +31,7 @@ import { registerConfigBrowserRoutes } from "../server/routes/config-browser"
 import { registerSessionSearchRoutes, setSearchIndex, getSearchIndex } from "../server/routes/session-search"
 import { registerLocalFileRoutes } from "../server/routes/local-file"
 import { registerSearchIndexRoutes } from "../server/routes/search-index-stats"
-import { SearchIndex } from "../packages/cogpit-memory/src"
+import { SearchIndex } from "../server/search-index"
 
 // ── PTY types ───────────────────────────────────────────────────────
 interface PtySession {

@@ -5,7 +5,7 @@ Chronological record of all documentation audits for the agent-window project.
 ## Recent Audits
 
 ### 2026-03-05 — Session Search Refactor, Local File API, Image Preprocessing
-- **File:** `audit-history/audit-20260305-PLACEHOLDER.md`
+- **File:** `audit-history/audit-20260305-d43aa53.md`
 - **Status:** PASS WITH DOCUMENTATION UPDATES REQUIRED
 - **Changes:** 23 files modified, 1 new route file
 - **Key updates:**

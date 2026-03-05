@@ -1,22 +1,17 @@
-// @vitest-environment node
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test"
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 
 // We need to mock dirs.PROJECTS_DIR to point at our temp directory
 // so tests don't depend on the real filesystem.
+// Use a mutable object so updates in beforeEach are visible through the
+// captured import reference.
 let tmpDir: string
-let projectsDir: string
+const mockDirs = { PROJECTS_DIR: "", TEAMS_DIR: "", TASKS_DIR: "" }
 
-vi.mock("../../lib/dirs", () => ({
-  get dirs() {
-    return {
-      PROJECTS_DIR: projectsDir,
-      TEAMS_DIR: join(projectsDir, "..", "teams"),
-      TASKS_DIR: join(projectsDir, "..", "tasks"),
-    }
-  },
+mock.module("../../lib/dirs", () => ({
+  dirs: mockDirs,
 }))
 
 // Import after mock setup
@@ -69,8 +64,11 @@ function writeSession(
 describe("sessions command", () => {
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), "cogpit-sessions-test-"))
-    projectsDir = join(tmpDir, "projects")
+    const projectsDir = join(tmpDir, "projects")
     mkdirSync(projectsDir, { recursive: true })
+    mockDirs.PROJECTS_DIR = projectsDir
+    mockDirs.TEAMS_DIR = join(projectsDir, "..", "teams")
+    mockDirs.TASKS_DIR = join(projectsDir, "..", "tasks")
   })
 
   afterEach(() => {
@@ -87,7 +85,7 @@ describe("sessions command", () => {
     })
 
     it("returns sessions sorted by mtime descending", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       writeSession(projDir, "older-session.jsonl", { userMessage: "first session" })
@@ -105,7 +103,7 @@ describe("sessions command", () => {
     })
 
     it("respects the limit option", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       writeSession(projDir, "s1.jsonl")
@@ -117,7 +115,7 @@ describe("sessions command", () => {
     })
 
     it("clamps limit to 100 maximum", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       writeSession(projDir, "s1.jsonl")
 
@@ -127,8 +125,8 @@ describe("sessions command", () => {
     })
 
     it("filters sessions by cwd", async () => {
-      const proj1 = join(projectsDir, "-proj-a")
-      const proj2 = join(projectsDir, "-proj-b")
+      const proj1 = join(mockDirs.PROJECTS_DIR, "-proj-a")
+      const proj2 = join(mockDirs.PROJECTS_DIR, "-proj-b")
       mkdirSync(proj1, { recursive: true })
       mkdirSync(proj2, { recursive: true })
 
@@ -141,7 +139,7 @@ describe("sessions command", () => {
     })
 
     it("filters sessions by maxAge", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       writeSession(projDir, "recent.jsonl")
 
@@ -159,7 +157,7 @@ describe("sessions command", () => {
     })
 
     it("each session has the expected shape", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       writeSession(projDir, "test.jsonl", {
         sessionId: "test-id",
@@ -188,7 +186,7 @@ describe("sessions command", () => {
     })
 
     it("skips the 'memory' directory", async () => {
-      const memDir = join(projectsDir, "memory")
+      const memDir = join(mockDirs.PROJECTS_DIR, "memory")
       mkdirSync(memDir, { recursive: true })
       writeSession(memDir, "should-be-skipped.jsonl")
 
@@ -197,8 +195,8 @@ describe("sessions command", () => {
     })
 
     it("discovers sessions across multiple project directories", async () => {
-      const proj1 = join(projectsDir, "-proj-one")
-      const proj2 = join(projectsDir, "-proj-two")
+      const proj1 = join(mockDirs.PROJECTS_DIR, "-proj-one")
+      const proj2 = join(mockDirs.PROJECTS_DIR, "-proj-two")
       mkdirSync(proj1, { recursive: true })
       mkdirSync(proj2, { recursive: true })
 
@@ -220,7 +218,7 @@ describe("sessions command", () => {
 
     it("finds the most recent session for a given cwd", async () => {
       // CWD "/test/project" -> dir name "-test-project"
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       writeSession(projDir, "old.jsonl", { userMessage: "old session" })
@@ -234,7 +232,7 @@ describe("sessions command", () => {
 
     it("returns null when project dir has no .jsonl files", async () => {
       // CWD "/empty/dir" -> dir name "-empty-dir"
-      const projDir = join(projectsDir, "-empty-dir")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-empty-dir")
       mkdirSync(projDir, { recursive: true })
       writeFileSync(join(projDir, "not-a-jsonl.txt"), "random content")
 
@@ -243,7 +241,7 @@ describe("sessions command", () => {
     })
 
     it("returns a session with the expected shape", async () => {
-      const projDir = join(projectsDir, "-my-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-my-project")
       mkdirSync(projDir, { recursive: true })
       writeSession(projDir, "abc123.jsonl", {
         sessionId: "abc123",
@@ -270,7 +268,7 @@ describe("sessions command", () => {
 
     it("handles dots in the cwd path", async () => {
       // CWD "/Users/me/.config" -> dir name "-Users-me--config"
-      const projDir = join(projectsDir, "-Users-me--config")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-Users-me--config")
       mkdirSync(projDir, { recursive: true })
       writeSession(projDir, "dotpath.jsonl", { cwd: "/Users/me/.config" })
 

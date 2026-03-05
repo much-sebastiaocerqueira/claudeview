@@ -1,5 +1,4 @@
-// @vitest-environment node
-import { describe, it, expect, beforeEach, afterEach } from "vitest"
+import { describe, it, expect, beforeEach, afterEach } from "bun:test"
 import { SearchIndex } from "../lib/search-index"
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs"
 import { join } from "node:path"

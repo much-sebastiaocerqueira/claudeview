@@ -2,7 +2,7 @@ import type { UseFn } from "../helpers"
 import { findJsonlPath, readFile, readdir, stat, join, basename, dirs, sendJson } from "../helpers"
 import { parseSession, getUserMessageText } from "../../src/lib/parser"
 import type { ParsedSession } from "../../src/lib/types"
-import type { SearchIndex } from "../../packages/cogpit-memory/src"
+import type { SearchIndex } from "../search-index"
 
 // ── Search Index Singleton ───────────────────────────────────────────────────
 

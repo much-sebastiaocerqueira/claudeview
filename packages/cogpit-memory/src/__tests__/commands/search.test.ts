@@ -1,26 +1,20 @@
-// @vitest-environment node
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test"
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 import { SearchIndex } from "../../lib/search-index"
 
-// Mock dirs.PROJECTS_DIR to point at our temp directory
+// Mock dirs.PROJECTS_DIR to point at our temp directory.
+// Use a mutable object so updates in beforeEach are visible through the
+// captured import reference.
 let tmpDir: string
-let projectsDir: string
+const mockDirs = { PROJECTS_DIR: "", TEAMS_DIR: "", TASKS_DIR: "" }
+const mockDbPath = { value: "" }
 
-vi.mock("../../lib/dirs", () => ({
-  get dirs() {
-    return {
-      PROJECTS_DIR: projectsDir,
-      TEAMS_DIR: join(projectsDir, "..", "teams"),
-      TASKS_DIR: join(projectsDir, "..", "tasks"),
-    }
-  },
+mock.module("../../lib/dirs", () => ({
+  dirs: mockDirs,
   get DEFAULT_DB_PATH() {
-    // Return a path that doesn't exist so the FTS5 path isn't triggered unless
-    // we explicitly pass a SearchIndex instance.
-    return join(projectsDir, "..", "nonexistent-search-index.db")
+    return mockDbPath.value
   },
 }))
 
@@ -152,8 +146,12 @@ function writeSessionWithToolCalls(
 describe("search command", () => {
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), "cogpit-search-test-"))
-    projectsDir = join(tmpDir, "projects")
+    const projectsDir = join(tmpDir, "projects")
     mkdirSync(projectsDir, { recursive: true })
+    mockDirs.PROJECTS_DIR = projectsDir
+    mockDirs.TEAMS_DIR = join(mockDirs.PROJECTS_DIR, "..", "teams")
+    mockDirs.TASKS_DIR = join(mockDirs.PROJECTS_DIR, "..", "tasks")
+    mockDbPath.value = join(mockDirs.PROJECTS_DIR, "..", "nonexistent-search-index.db")
   })
 
   afterEach(() => {
@@ -190,7 +188,7 @@ describe("search command", () => {
     })
 
     it("returns expected response shape when sessions exist", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       writeSession(projDir, "test-sess.jsonl", { userMessage: "find authentication bugs" })
 
@@ -226,7 +224,7 @@ describe("search command", () => {
 
   describe("raw-scan fallback", () => {
     it("finds matches in user messages", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       writeSession(projDir, "s1.jsonl", { userMessage: "explain the database schema" })
 
@@ -239,7 +237,7 @@ describe("search command", () => {
     })
 
     it("finds matches in assistant messages", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       writeSession(projDir, "s1.jsonl", { assistantMessage: "The authentication layer uses JWT tokens." })
 
@@ -252,7 +250,7 @@ describe("search command", () => {
     })
 
     it("finds matches in tool call inputs", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       writeSessionWithToolCalls(projDir, "s1.jsonl", {
         toolName: "Read",
@@ -269,7 +267,7 @@ describe("search command", () => {
     })
 
     it("finds matches in tool call results", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       writeSessionWithToolCalls(projDir, "s1.jsonl", {
         toolResult: "export function validateCredentials() { return true }",
@@ -284,8 +282,8 @@ describe("search command", () => {
     })
 
     it("searches across multiple sessions", async () => {
-      const proj1 = join(projectsDir, "-proj-one")
-      const proj2 = join(projectsDir, "-proj-two")
+      const proj1 = join(mockDirs.PROJECTS_DIR, "-proj-one")
+      const proj2 = join(mockDirs.PROJECTS_DIR, "-proj-two")
       mkdirSync(proj1, { recursive: true })
       mkdirSync(proj2, { recursive: true })
 
@@ -299,7 +297,7 @@ describe("search command", () => {
     })
 
     it("respects the limit parameter", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       // Create sessions that all match
@@ -314,7 +312,7 @@ describe("search command", () => {
     })
 
     it("respects case sensitivity", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       writeSession(projDir, "s1.jsonl", { userMessage: "CamelCaseWord in this message" })
 
@@ -335,7 +333,7 @@ describe("search command", () => {
     })
 
     it("skips the memory directory", async () => {
-      const memDir = join(projectsDir, "memory")
+      const memDir = join(mockDirs.PROJECTS_DIR, "memory")
       mkdirSync(memDir, { recursive: true })
       writeSession(memDir, "should-be-skipped.jsonl", { userMessage: "memory-hidden-content" })
 
@@ -353,7 +351,7 @@ describe("search command", () => {
     })
 
     it("snippet is centered on the match", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       const longMessage = "A".repeat(200) + " NEEDLE " + "B".repeat(200)
       writeSession(projDir, "s1.jsonl", { userMessage: longMessage })
@@ -370,7 +368,7 @@ describe("search command", () => {
     })
 
     it("counts multiple matches correctly", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       writeSession(projDir, "s1.jsonl", {
         userMessage: "alpha beta alpha gamma alpha",
@@ -393,7 +391,7 @@ describe("search command", () => {
       const index = new SearchIndex(dbPath)
 
       // Populate the index with a session file
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       const sessionFile = writeSession(projDir, "fts-test.jsonl", {
         userMessage: "unique-fts-keyword here",
@@ -413,14 +411,14 @@ describe("search command", () => {
       const dbPath = join(tmpDir, "test-search.db")
       const index = new SearchIndex(dbPath)
 
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       // Create two sessions both containing the keyword
       writeSession(projDir, "sess-a.jsonl", { userMessage: "common-fts-term in session A" })
       writeSession(projDir, "sess-b.jsonl", { userMessage: "common-fts-term in session B" })
 
-      index.buildFull(projectsDir)
+      index.buildFull(mockDirs.PROJECTS_DIR)
 
       const result = await searchSessions("common-fts-term", {}, index)
       expect(result).not.toHaveProperty("error")
@@ -438,13 +436,13 @@ describe("search command", () => {
       const dbPath = join(tmpDir, "test-search.db")
       const index = new SearchIndex(dbPath)
 
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       for (let i = 0; i < 5; i++) {
         writeSession(projDir, `fts-s${i}.jsonl`, { userMessage: `fts-limit-test content ${i}` })
       }
-      index.buildFull(projectsDir)
+      index.buildFull(mockDirs.PROJECTS_DIR)
 
       const result = await searchSessions("fts-limit-test", { limit: 2 }, index)
       expect(result).not.toHaveProperty("error")
@@ -458,13 +456,13 @@ describe("search command", () => {
       const dbPath = join(tmpDir, "test-search.db")
       const index = new SearchIndex(dbPath)
 
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       writeSession(projDir, "target-sess.jsonl", { userMessage: "fts-session-filter content" })
       writeSession(projDir, "other-sess.jsonl", { userMessage: "fts-session-filter content" })
 
-      index.buildFull(projectsDir)
+      index.buildFull(mockDirs.PROJECTS_DIR)
 
       const result = await searchSessions("fts-session-filter", { sessionId: "target-sess" }, index)
       expect(result).not.toHaveProperty("error")
@@ -476,7 +474,7 @@ describe("search command", () => {
     })
 
     it("falls back to raw scan when SearchIndex is null", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       writeSession(projDir, "fallback.jsonl", { userMessage: "raw-scan-fallback-keyword" })
 
@@ -492,7 +490,7 @@ describe("search command", () => {
 
   describe("subagent search", () => {
     it("searches subagent JSONL files when parent also matches", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       // Parent session — must also contain the search term for Phase 2
@@ -519,7 +517,7 @@ describe("search command", () => {
     })
 
     it("does not find subagent-only matches when parent does not match", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       // Parent session does NOT contain the search term

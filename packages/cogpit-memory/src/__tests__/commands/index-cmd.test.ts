@@ -1,23 +1,19 @@
-// @vitest-environment node
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test"
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 
 // Mock dirs so tests use temp directories instead of real filesystem.
+// Use a mutable object so updates in beforeEach are visible through the
+// captured import reference.
 let tmpDir: string
-let projectsDir: string
+const mockDirs = { PROJECTS_DIR: "", TEAMS_DIR: "", TASKS_DIR: "" }
+const mockDbPath = { value: "" }
 
-vi.mock("../../lib/dirs", () => ({
-  get dirs() {
-    return {
-      PROJECTS_DIR: projectsDir,
-      TEAMS_DIR: join(projectsDir, "..", "teams"),
-      TASKS_DIR: join(projectsDir, "..", "tasks"),
-    }
-  },
+mock.module("../../lib/dirs", () => ({
+  dirs: mockDirs,
   get DEFAULT_DB_PATH() {
-    return join(projectsDir, "..", "cogpit-memory", "search-index.db")
+    return mockDbPath.value
   },
 }))
 
@@ -73,8 +69,12 @@ function writeSession(
 describe("index command", () => {
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), "cogpit-index-test-"))
-    projectsDir = join(tmpDir, "projects")
+    const projectsDir = join(tmpDir, "projects")
     mkdirSync(projectsDir, { recursive: true })
+    mockDirs.PROJECTS_DIR = projectsDir
+    mockDirs.TEAMS_DIR = join(mockDirs.PROJECTS_DIR, "..", "teams")
+    mockDirs.TASKS_DIR = join(mockDirs.PROJECTS_DIR, "..", "tasks")
+    mockDbPath.value = join(mockDirs.PROJECTS_DIR, "..", "cogpit-memory", "search-index.db")
   })
 
   afterEach(() => {
@@ -119,7 +119,7 @@ describe("index command", () => {
     })
 
     it("reports correct counts after indexing sessions", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       writeSession(projDir, "s1.jsonl", { userMessage: "first session" })
       writeSession(projDir, "s2.jsonl", { userMessage: "second session" })
@@ -151,7 +151,7 @@ describe("index command", () => {
     })
 
     it("indexes session files during rebuild", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       writeSession(projDir, "sess-a.jsonl", { userMessage: "alpha content" })
       writeSession(projDir, "sess-b.jsonl", { userMessage: "beta content" })
@@ -184,7 +184,7 @@ describe("index command", () => {
     })
 
     it("re-indexes cleanly on a second rebuild", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
       writeSession(projDir, "s1.jsonl", { userMessage: "first pass" })
 

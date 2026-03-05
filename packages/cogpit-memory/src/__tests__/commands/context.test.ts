@@ -1,21 +1,16 @@
-// @vitest-environment node
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
+import { describe, it, expect, beforeEach, afterEach, mock } from "bun:test"
 import { mkdtempSync, writeFileSync, mkdirSync, rmSync } from "node:fs"
 import { join } from "node:path"
 import { tmpdir } from "node:os"
 
 // Mock dirs.PROJECTS_DIR (and TEAMS_DIR / TASKS_DIR) to point at temp directories.
+// Use a mutable object so updates in beforeEach are visible through the
+// captured import reference.
 let tmpDir: string
-let projectsDir: string
+const mockDirs = { PROJECTS_DIR: "", TEAMS_DIR: "", TASKS_DIR: "" }
 
-vi.mock("../../lib/dirs", () => ({
-  get dirs() {
-    return {
-      PROJECTS_DIR: projectsDir,
-      TEAMS_DIR: join(projectsDir, "..", "teams"),
-      TASKS_DIR: join(projectsDir, "..", "tasks"),
-    }
-  },
+mock.module("../../lib/dirs", () => ({
+  dirs: mockDirs,
 }))
 
 // Import after mock setup
@@ -91,8 +86,11 @@ function writeSession(
 describe("context command", () => {
   beforeEach(() => {
     tmpDir = mkdtempSync(join(tmpdir(), "cogpit-context-test-"))
-    projectsDir = join(tmpDir, "projects")
+    const projectsDir = join(tmpDir, "projects")
     mkdirSync(projectsDir, { recursive: true })
+    mockDirs.PROJECTS_DIR = projectsDir
+    mockDirs.TEAMS_DIR = join(mockDirs.PROJECTS_DIR, "..", "teams")
+    mockDirs.TASKS_DIR = join(mockDirs.PROJECTS_DIR, "..", "tasks")
   })
 
   afterEach(() => {
@@ -108,7 +106,7 @@ describe("context command", () => {
     })
 
     it("returns overview for a valid session", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       const content = buildSessionLines({
@@ -131,7 +129,7 @@ describe("context command", () => {
     })
 
     it("includes turn summaries with expected shape", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       const content = buildSessionLines({
@@ -163,7 +161,7 @@ describe("context command", () => {
     })
 
     it("returns error for out-of-range turn index", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       const content = buildSessionLines({ sessionId: "range-test" })
@@ -174,7 +172,7 @@ describe("context command", () => {
     })
 
     it("returns error for negative turn index", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       const content = buildSessionLines({ sessionId: "neg-test" })
@@ -185,7 +183,7 @@ describe("context command", () => {
     })
 
     it("returns detail for a valid turn", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       const content = buildSessionLines({
@@ -207,7 +205,7 @@ describe("context command", () => {
     })
 
     it("includes token usage when available", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       const content = buildSessionLines({
@@ -234,7 +232,7 @@ describe("context command", () => {
     })
 
     it("returns error when agent not found", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       const content = buildSessionLines({ sessionId: "agent-miss" })
@@ -245,7 +243,7 @@ describe("context command", () => {
     })
 
     it("returns agent overview when sub-agent file exists", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       // Create parent session
@@ -283,7 +281,7 @@ describe("context command", () => {
     })
 
     it("returns error when agent not found", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       const content = buildSessionLines({ sessionId: "agent-turn-miss" })
@@ -294,7 +292,7 @@ describe("context command", () => {
     })
 
     it("returns error for out-of-range agent turn index", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       const content = buildSessionLines({ sessionId: "agent-range" })
@@ -314,7 +312,7 @@ describe("context command", () => {
     })
 
     it("returns agent turn detail for valid indices", async () => {
-      const projDir = join(projectsDir, "-test-project")
+      const projDir = join(mockDirs.PROJECTS_DIR, "-test-project")
       mkdirSync(projDir, { recursive: true })
 
       const content = buildSessionLines({ sessionId: "agent-detail" })
