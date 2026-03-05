@@ -19,6 +19,7 @@ const FILES = [
   "token-costs.ts",
   "pricingTiers.ts",
   "costAnalytics.ts",
+  "interactiveState.ts",
 ]
 
 mkdirSync(DEST, { recursive: true })
