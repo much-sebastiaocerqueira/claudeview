@@ -1,5 +1,5 @@
 import Database from "better-sqlite3"
-import { readFileSync, readdirSync, statSync } from "node:fs"
+import { readFileSync, readdirSync, statSync, watch, type FSWatcher } from "node:fs"
 import { join, basename } from "node:path"
 import { parseSession, getUserMessageText } from "../src/lib/parser"
 
@@ -30,6 +30,8 @@ export class SearchIndex {
   private _watcherRunning = false
   private _lastFullBuild: string | null = null
   private _lastUpdate: string | null = null
+  private watcher: FSWatcher | null = null
+  private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>()
 
   constructor(dbPath: string) {
     this.dbPath = dbPath
@@ -474,7 +476,96 @@ export class SearchIndex {
     }
   }
 
+  /**
+   * Start watching `projectsDir` for JSONL file changes.
+   * Runs `updateStale()` immediately for an initial sync, then sets up
+   * `fs.watch` with `{ recursive: true }` (macOS-compatible) to detect
+   * subsequent file changes and trigger debounced re-indexing.
+   */
+  startWatching(projectsDir: string): void {
+    this.projectsDir = projectsDir
+
+    // Initial sync — index any files that are new or stale
+    this.updateStale(projectsDir)
+
+    // Watch for changes
+    try {
+      this.watcher = watch(projectsDir, { recursive: true }, (_event, filename) => {
+        if (!filename || !filename.endsWith(".jsonl")) return
+        this.debouncedReindex(join(projectsDir, filename))
+      })
+      this._watcherRunning = true
+    } catch {
+      // fs.watch may not support recursive on all platforms
+      this._watcherRunning = false
+    }
+  }
+
+  /**
+   * Stop the file watcher and clear any pending debounce timers.
+   * Safe to call even when not watching (no-op).
+   */
+  stopWatching(): void {
+    if (this.watcher) {
+      this.watcher.close()
+      this.watcher = null
+    }
+    for (const timer of this.debounceTimers.values()) {
+      clearTimeout(timer)
+    }
+    this.debounceTimers.clear()
+    this._watcherRunning = false
+  }
+
+  /**
+   * Private helper: debounce re-indexing of a single file.
+   * Waits 2 seconds after the last change event for a given file path
+   * before actually calling `indexFile()`. This coalesces rapid writes
+   * (e.g. streaming JSONL appends) into a single index operation.
+   */
+  private debouncedReindex(filePath: string): void {
+    const existing = this.debounceTimers.get(filePath)
+    if (existing) clearTimeout(existing)
+
+    this.debounceTimers.set(
+      filePath,
+      setTimeout(() => {
+        this.debounceTimers.delete(filePath)
+        try {
+          const s = statSync(filePath)
+
+          // Determine sessionId and subagent status from the file path
+          const parts = filePath.split("/")
+          const fileName = parts[parts.length - 1]
+          const isSubagent = parts.includes("subagents")
+
+          let sessionId: string
+          let parentSessionId: string | null = null
+
+          if (isSubagent) {
+            // Walk up to find the parent session directory name
+            // Structure: .../projects/{project}/{sessionId}/subagents/agent-{id}.jsonl
+            const subagentsIdx = parts.lastIndexOf("subagents")
+            const parentDir = parts[subagentsIdx - 1]
+            sessionId = parentDir
+            parentSessionId = parentDir
+          } else {
+            sessionId = basename(fileName, ".jsonl")
+          }
+
+          this.indexFile(filePath, sessionId, s.mtimeMs, {
+            isSubagent,
+            parentSessionId,
+          })
+        } catch {
+          // File may have been deleted or is still being written to
+        }
+      }, 2000)
+    )
+  }
+
   close(): void {
+    this.stopWatching()
     this.db.close()
   }
 }

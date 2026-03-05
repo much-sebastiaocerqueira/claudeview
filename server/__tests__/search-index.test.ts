@@ -868,6 +868,85 @@ describe("SearchIndex", () => {
     })
   })
 
+  describe("startWatching / stopWatching", () => {
+    beforeEach(() => {
+      mkdirSync(TEST_DIR, { recursive: true })
+    })
+    afterEach(() => {
+      try { rmSync(TEST_DIR, { recursive: true }) } catch {}
+    })
+
+    it("sets watcherRunning to true when started and false when stopped", () => {
+      const projectDir = join(TEST_DIR, "projects")
+      mkdirSync(projectDir, { recursive: true })
+
+      const index = new SearchIndex(TEST_DB)
+      expect(index.getStats().watcherRunning).toBe(false)
+
+      index.startWatching(projectDir)
+      expect(index.getStats().watcherRunning).toBe(true)
+
+      index.stopWatching()
+      expect(index.getStats().watcherRunning).toBe(false)
+      index.close()
+    })
+
+    it("stores projectsDir when startWatching is called", () => {
+      const projectDir = join(TEST_DIR, "projects")
+      mkdirSync(projectDir, { recursive: true })
+
+      const index = new SearchIndex(TEST_DB)
+      expect(index.projectsDir).toBeNull()
+
+      index.startWatching(projectDir)
+      expect(index.projectsDir).toBe(projectDir)
+
+      index.stopWatching()
+      index.close()
+    })
+
+    it("runs updateStale on initial startWatching call", () => {
+      const projectDir = join(TEST_DIR, "projects", "project-a")
+      mkdirSync(projectDir, { recursive: true })
+      writeTestJsonl(join(projectDir, "session-1.jsonl"), [
+        makeUserMessage("initial sync content unique_watcher_test"),
+      ])
+
+      const index = new SearchIndex(TEST_DB)
+      index.startWatching(join(TEST_DIR, "projects"))
+
+      // updateStale should have indexed the existing file
+      const stats = index.getStats()
+      expect(stats.indexedFiles).toBeGreaterThanOrEqual(1)
+      expect(index.search("unique_watcher_test").length).toBeGreaterThan(0)
+
+      index.stopWatching()
+      index.close()
+    })
+
+    it("stopWatching is safe to call when not watching", () => {
+      const index = new SearchIndex(TEST_DB)
+      // Should not throw
+      index.stopWatching()
+      expect(index.getStats().watcherRunning).toBe(false)
+      index.close()
+    })
+
+    it("stopWatching clears debounce timers", () => {
+      const projectDir = join(TEST_DIR, "projects")
+      mkdirSync(projectDir, { recursive: true })
+
+      const index = new SearchIndex(TEST_DB)
+      index.startWatching(projectDir)
+
+      // Internally there should be no timers yet, but stopWatching should
+      // handle clearing an empty map gracefully
+      index.stopWatching()
+      expect(index.getStats().watcherRunning).toBe(false)
+      index.close()
+    })
+  })
+
   describe("rebuild", () => {
     beforeEach(() => {
       mkdirSync(TEST_DIR, { recursive: true })
