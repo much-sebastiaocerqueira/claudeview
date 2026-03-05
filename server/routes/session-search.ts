@@ -2,6 +2,19 @@ import type { UseFn } from "../helpers"
 import { findJsonlPath, readFile, readdir, stat, join, basename, dirs, sendJson } from "../helpers"
 import { parseSession, getUserMessageText } from "../../src/lib/parser"
 import type { ParsedSession } from "../../src/lib/types"
+import type { SearchIndex } from "../search-index"
+
+// ── Search Index Singleton ───────────────────────────────────────────────────
+
+let searchIndex: SearchIndex | null = null
+
+export function setSearchIndex(index: SearchIndex | null): void {
+  searchIndex = index
+}
+
+export function getSearchIndex(): SearchIndex | null {
+  return searchIndex
+}
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -310,6 +323,53 @@ export function registerSessionSearchRoutes(use: UseFn) {
     const depth = Math.min(Math.max(1, parseInt(depthRaw, 10) || 4), 4)
     const maxAgeMs = parseMaxAge(maxAgeRaw)
 
+    // ── Fast path: use search index if available ─────────────────────────
+    if (searchIndex) {
+      try {
+        const indexHits = searchIndex.search(query, {
+          limit,
+          sessionId: sessionId ?? undefined,
+          maxAgeMs,
+          caseSensitive,
+        })
+
+        // Group hits by sessionId to build SessionSearchResult[]
+        const grouped = new Map<string, SearchHit[]>()
+        for (const hit of indexHits) {
+          let sessionHits = grouped.get(hit.sessionId)
+          if (!sessionHits) {
+            sessionHits = []
+            grouped.set(hit.sessionId, sessionHits)
+          }
+          sessionHits.push({
+            location: hit.location,
+            snippet: hit.snippet,
+            matchCount: hit.matchCount,
+          })
+        }
+
+        const results: SessionSearchResult[] = []
+        let totalHits = 0
+        for (const [sid, sessionHits] of grouped) {
+          totalHits += sessionHits.length
+          results.push({ sessionId: sid, hits: sessionHits })
+        }
+
+        const response: SearchResponse = {
+          query,
+          totalHits,
+          returnedHits: indexHits.length,
+          sessionsSearched: grouped.size,
+          results,
+        }
+
+        return sendJson(res, 200, response)
+      } catch {
+        // Index search failed — fall through to raw-scan fallback
+      }
+    }
+
+    // ── Fallback: raw scan ──────────────────────────────────────────────
     try {
       // Phase 1: Discover files
       const files = sessionId ? await discoverSingleSession(sessionId) : await discoverAllSessions(maxAgeMs)

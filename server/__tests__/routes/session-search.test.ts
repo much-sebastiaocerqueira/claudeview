@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from "vitest"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
 
 vi.mock("../../helpers", () => ({
   findJsonlPath: vi.fn(),
@@ -30,7 +30,7 @@ vi.mock("../../../src/lib/parser", () => ({
 
 import { findJsonlPath, readFile, readdir, stat } from "../../helpers"
 import { parseSession } from "../../../src/lib/parser"
-import { registerSessionSearchRoutes } from "../../routes/session-search"
+import { registerSessionSearchRoutes, setSearchIndex, getSearchIndex } from "../../routes/session-search"
 import type { UseFn, Middleware } from "../../helpers"
 import type { ParsedSession, Turn, TokenUsage } from "../../../src/lib/types"
 
@@ -701,6 +701,119 @@ describe("registerSessionSearchRoutes", () => {
       expect(res._getStatus()).toBe(200)
       expect(data.results).toHaveLength(0)
       expect(data.sessionsSearched).toBe(0)
+    })
+  })
+
+  // ── Search index integration ────────────────────────────────────────────
+
+  describe("search index fast path", () => {
+    afterEach(() => {
+      // Reset the singleton so other tests use the fallback path
+      setSearchIndex(null)
+    })
+
+    it("uses index when set and returns correct response shape", async () => {
+      const mockIndex = {
+        search: vi.fn().mockReturnValue([
+          { sessionId: "session-a", location: "turn/0/userMessage", snippet: "found keyword here", matchCount: 1 },
+          { sessionId: "session-a", location: "turn/1/assistantMessage", snippet: "keyword again", matchCount: 2 },
+          { sessionId: "session-b", location: "turn/0/userMessage", snippet: "keyword in b", matchCount: 1 },
+        ]),
+      }
+      setSearchIndex(mockIndex as any)
+
+      const { req, res, next } = createMockReqRes("GET", "/?q=keyword")
+      await handler(req as never, res as never, next)
+
+      expect(res._getStatus()).toBe(200)
+      const data = JSON.parse(res._getData())
+
+      // Verify response shape matches SearchResponse exactly
+      expect(data).toHaveProperty("query", "keyword")
+      expect(data).toHaveProperty("totalHits", 3)
+      expect(data).toHaveProperty("returnedHits", 3)
+      expect(data).toHaveProperty("sessionsSearched", 2)
+      expect(data).toHaveProperty("results")
+      expect(data.results).toHaveLength(2)
+
+      // Verify hits are grouped by sessionId
+      const sessionA = data.results.find((r: any) => r.sessionId === "session-a")
+      expect(sessionA).toBeDefined()
+      expect(sessionA.hits).toHaveLength(2)
+      expect(sessionA.hits[0]).toHaveProperty("location")
+      expect(sessionA.hits[0]).toHaveProperty("snippet")
+      expect(sessionA.hits[0]).toHaveProperty("matchCount")
+
+      const sessionB = data.results.find((r: any) => r.sessionId === "session-b")
+      expect(sessionB).toBeDefined()
+      expect(sessionB.hits).toHaveLength(1)
+
+      // Verify the index was called with correct params
+      expect(mockIndex.search).toHaveBeenCalledWith("keyword", {
+        limit: 20,
+        sessionId: undefined,
+        maxAgeMs: 5 * 24 * 60 * 60 * 1000, // default 5d
+        caseSensitive: false,
+      })
+
+      // Verify raw scan was NOT called (fast path was used)
+      expect(mockedFindJsonlPath).not.toHaveBeenCalled()
+      expect(mockedReaddir).not.toHaveBeenCalled()
+    })
+
+    it("passes query parameters through to index search", async () => {
+      const mockIndex = {
+        search: vi.fn().mockReturnValue([]),
+      }
+      setSearchIndex(mockIndex as any)
+
+      const { req, res, next } = createMockReqRes(
+        "GET",
+        "/?q=test&sessionId=my-session&limit=5&maxAge=2d&caseSensitive=true"
+      )
+      await handler(req as never, res as never, next)
+
+      expect(mockIndex.search).toHaveBeenCalledWith("test", {
+        limit: 5,
+        sessionId: "my-session",
+        maxAgeMs: 2 * 24 * 60 * 60 * 1000,
+        caseSensitive: true,
+      })
+    })
+
+    it("falls back to raw scan when index search throws", async () => {
+      const mockIndex = {
+        search: vi.fn().mockImplementation(() => {
+          throw new Error("Index corrupted")
+        }),
+      }
+      setSearchIndex(mockIndex as any)
+
+      // Set up mocks for raw-scan fallback (single session path)
+      mockedFindJsonlPath.mockResolvedValueOnce("/mock/session.jsonl")
+      mockedStat.mockResolvedValueOnce({ mtimeMs: Date.now() } as never)
+      mockedReadFile.mockResolvedValueOnce("keyword match" as never)
+      mockedParseSession.mockReturnValueOnce(makeSession({
+        turns: [makeTurn({ userMessage: "keyword match" })],
+      }))
+      mockedReaddir.mockRejectedValueOnce(new Error("ENOENT"))
+
+      const { req, res, next } = createMockReqRes("GET", "/?q=keyword&sessionId=test-session-123")
+      await handler(req as never, res as never, next)
+
+      // Should succeed via fallback
+      expect(res._getStatus()).toBe(200)
+      const data = JSON.parse(res._getData())
+      expect(data.results).toHaveLength(1)
+      // Verify raw scan was used
+      expect(mockedFindJsonlPath).toHaveBeenCalled()
+    })
+
+    it("getSearchIndex returns the set index", () => {
+      expect(getSearchIndex()).toBeNull()
+      const mockIndex = { search: vi.fn() }
+      setSearchIndex(mockIndex as any)
+      expect(getSearchIndex()).toBe(mockIndex)
     })
   })
 })
