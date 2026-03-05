@@ -333,6 +333,12 @@ export function registerSessionSearchRoutes(use: UseFn) {
           caseSensitive,
         })
 
+        // Get accurate totals (without LIMIT)
+        const counts = searchIndex.countMatches(query, {
+          sessionId: sessionId ?? undefined,
+          maxAgeMs,
+        })
+
         // Group hits by sessionId to build SessionSearchResult[]
         const grouped = new Map<string, SearchHit[]>()
         for (const hit of indexHits) {
@@ -341,25 +347,24 @@ export function registerSessionSearchRoutes(use: UseFn) {
             sessionHits = []
             grouped.set(hit.sessionId, sessionHits)
           }
-          sessionHits.push({
+          const searchHit: SearchHit = {
             location: hit.location,
             snippet: hit.snippet,
             matchCount: hit.matchCount,
-          })
+          }
+          sessionHits.push(searchHit)
         }
 
         const results: SessionSearchResult[] = []
-        let totalHits = 0
         for (const [sid, sessionHits] of grouped) {
-          totalHits += sessionHits.length
           results.push({ sessionId: sid, hits: sessionHits })
         }
 
         const response: SearchResponse = {
           query,
-          totalHits,
+          totalHits: counts.totalHits,
           returnedHits: indexHits.length,
-          sessionsSearched: grouped.size,
+          sessionsSearched: counts.sessionsSearched,
           results,
         }
 

@@ -282,6 +282,45 @@ export class SearchIndex {
   }
 
   /**
+   * Count total matching rows and distinct sessions for a query (without LIMIT).
+   * Used by the route to report accurate totalHits and sessionsSearched.
+   */
+  countMatches(
+    query: string,
+    opts?: {
+      sessionId?: string
+      maxAgeMs?: number
+    }
+  ): { totalHits: number; sessionsSearched: number } {
+    const ftsQuery = `"${query.replace(/"/g, '""')}"`
+
+    let sql = `
+      SELECT COUNT(*) as total,
+             COUNT(DISTINCT sc.session_id) as sessions
+      FROM search_content sc
+    `
+    const params: (string | number)[] = []
+    const conditions: string[] = ["sc.content MATCH ?"]
+    params.push(ftsQuery)
+
+    if (opts?.maxAgeMs != null) {
+      sql += " JOIN indexed_files fi ON fi.file_path = sc.source_file"
+      conditions.push("fi.mtime_ms >= ?")
+      params.push(Date.now() - opts.maxAgeMs)
+    }
+
+    if (opts?.sessionId) {
+      conditions.push("sc.session_id = ?")
+      params.push(opts.sessionId)
+    }
+
+    sql += " WHERE " + conditions.join(" AND ")
+
+    const row = this.db.prepare(sql).get(...params) as { total: number; sessions: number }
+    return { totalHits: row.total, sessionsSearched: row.sessions }
+  }
+
+  /**
    * Clear all indexed data and re-index every JSONL file under `projectsDir`.
    * Structure: projectsDir/{projectName}/{sessionId}.jsonl
    * Subagents:  projectsDir/{projectName}/{sessionId}/subagents/agent-{id}.jsonl

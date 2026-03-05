@@ -719,6 +719,7 @@ describe("registerSessionSearchRoutes", () => {
           { sessionId: "session-a", location: "turn/1/assistantMessage", snippet: "keyword again", matchCount: 2 },
           { sessionId: "session-b", location: "turn/0/userMessage", snippet: "keyword in b", matchCount: 1 },
         ]),
+        countMatches: vi.fn().mockReturnValue({ totalHits: 3, sessionsSearched: 2 }),
       }
       setSearchIndex(mockIndex as any)
 
@@ -764,6 +765,7 @@ describe("registerSessionSearchRoutes", () => {
     it("passes query parameters through to index search", async () => {
       const mockIndex = {
         search: vi.fn().mockReturnValue([]),
+        countMatches: vi.fn().mockReturnValue({ totalHits: 0, sessionsSearched: 0 }),
       }
       setSearchIndex(mockIndex as any)
 
