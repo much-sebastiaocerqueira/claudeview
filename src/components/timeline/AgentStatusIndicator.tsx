@@ -81,6 +81,21 @@ function ProcessingIcon() {
   )
 }
 
+function CompactingIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="none" className="size-5">
+      {/* Top arrow pointing down */}
+      <path d="M10 2 L10 8 M7 5.5 L10 8 L13 5.5" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <animate attributeName="opacity" values="1;0.4;1" dur="1.2s" repeatCount="indefinite" />
+      </path>
+      {/* Bottom arrow pointing up */}
+      <path d="M10 18 L10 12 M7 14.5 L10 12 L13 14.5" stroke="#F59E0B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <animate attributeName="opacity" values="0.4;1;0.4" dur="1.2s" repeatCount="indefinite" />
+      </path>
+    </svg>
+  )
+}
+
 function CompletedIcon() {
   return (
     <svg
@@ -121,6 +136,8 @@ function StatusIcon({ status }: { status: SessionStatus }) {
       return <ToolUseIcon />
     case "processing":
       return <ProcessingIcon />
+    case "compacting":
+      return <CompactingIcon />
     case "completed":
       return <CompletedIcon />
     default:
@@ -136,17 +153,30 @@ const FADE_DURATION = 600 // ms for the fade-out transition
 export const AgentStatusIndicator = memo(function AgentStatusIndicator() {
   const { session, isLive, sseState } = useSessionContext()
 
-  // Show indicator when SSE is connected AND either:
-  // - session is actively streaming (isLive), OR
-  // - derived status is an active state (tool_use/processing/thinking)
-  //   which handles long-running Agent calls where the 30s stale timer
-  //   sets isLive=false even though the session is still working.
+  // Suppress stale "completed" when isLive transitions false→true (new turn starting).
+  // Without this, the old "Done" briefly flashes before the new user message arrives.
+  const suppressCompletedRef = useRef(false)
+
   const agentStatus = useMemo(() => {
     if (!session || sseState !== "connected") return null
     const status = deriveSessionStatus(
       session.rawMessages as Array<{ type: string; [key: string]: unknown }>
     )
-    if (!isLive && (status.status === "completed" || status.status === "idle")) return null
+
+    // Hide everything when not live — server may be stopped/paused
+    if (!isLive) {
+      if (status.status === "completed") suppressCompletedRef.current = true
+      return null
+    }
+
+    if (status.status === "idle") return null
+
+    // Suppress stale "completed" carried over from previous turn
+    if (status.status === "completed" && suppressCompletedRef.current) return null
+
+    // Non-completed status means a new turn has genuinely started — clear suppress flag
+    if (status.status !== "completed") suppressCompletedRef.current = false
+
     return status
   }, [session, isLive, sseState])
 

@@ -7,7 +7,7 @@
  * never stored as app state.
  */
 
-export type SessionStatus = "idle" | "thinking" | "tool_use" | "processing" | "completed"
+export type SessionStatus = "idle" | "thinking" | "tool_use" | "processing" | "completed" | "compacting"
 
 export interface SessionStatusInfo {
   status: SessionStatus
@@ -75,7 +75,10 @@ export function deriveSessionStatus(
       return result("processing")
     }
 
-    // Skip progress, system, summary, etc.
+    // Compaction just happened — show "compacting" until the next real message arrives
+    if (msg.type === "summary") return result("compacting")
+
+    // Skip progress, system, etc.
   }
 
   return { status: "idle" }
@@ -92,6 +95,7 @@ export function getStatusLabel(status: SessionStatus | undefined, toolName?: str
       if (toolName && AGENT_TOOLS.has(toolName)) return "Running agents..."
       return toolName ? `Using ${toolName}` : "Using tool..."
     case "processing": return "Processing..."
+    case "compacting": return "Compressing context..."
     case "completed": return "Done"
     default: return null
   }

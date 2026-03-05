@@ -20,6 +20,7 @@ import { registerUsageRoutes } from "./routes/usage"
 import { registerSlashSuggestionRoutes } from "./routes/slash-suggestions"
 import { registerConfigBrowserRoutes } from "./routes/config-browser"
 import { registerSessionSearchRoutes } from "./routes/session-search"
+import { registerLocalFileRoutes } from "./routes/local-file"
 
 export function sessionApiPlugin(): Plugin {
   return {
@@ -75,6 +76,7 @@ export function sessionApiPlugin(): Plugin {
       registerSlashSuggestionRoutes(use)
       registerConfigBrowserRoutes(use)
       registerSessionSearchRoutes(use)
+      registerLocalFileRoutes(use)
     },
   }
 }

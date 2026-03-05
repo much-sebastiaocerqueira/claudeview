@@ -1,7 +1,7 @@
-import { memo } from "react"
+import { memo, useMemo } from "react"
 import { Cog } from "lucide-react"
 import ReactMarkdown from "react-markdown"
-import { markdownComponents, markdownPlugins } from "./markdown-components"
+import { markdownComponents, markdownPlugins, preprocessImagePaths } from "./markdown-components"
 import { Badge } from "@/components/ui/badge"
 import {
   Tooltip,
@@ -80,6 +80,8 @@ export const AssistantText = memo(function AssistantText({
   label = "Agent",
   variant = "agent",
 }: AssistantTextProps) {
+  const markdownText = useMemo(() => preprocessImagePaths(text), [text])
+
   if (!text) return null
 
   const styles = VARIANT_STYLES[variant]
@@ -110,7 +112,7 @@ export const AssistantText = memo(function AssistantText({
           )}
         </div>
         <div className="text-sm break-words overflow-hidden">
-          <ReactMarkdown components={markdownComponents} remarkPlugins={markdownPlugins}>{text}</ReactMarkdown>
+          <ReactMarkdown components={markdownComponents} remarkPlugins={markdownPlugins}>{markdownText}</ReactMarkdown>
         </div>
       </div>
     </div>

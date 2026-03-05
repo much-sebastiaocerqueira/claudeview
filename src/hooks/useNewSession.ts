@@ -139,12 +139,23 @@ export function useNewSession({
 
   const clearCreateError = useCallback(() => setCreateError(null), [])
 
+  /** Abort any in-flight createAndSend request. Used when switching away
+   *  from a pending session before creation completes. */
+  const cancelCreation = useCallback(() => {
+    abortRef.current?.abort()
+    abortRef.current = null
+    pendingDirNameRef.current = null
+    setCreatingSession(false)
+    setCreateError(null)
+  }, [])
+
   return {
     creatingSession,
     createError,
     clearCreateError,
     handleNewSession,
     createAndSend,
+    cancelCreation,
     pendingDirNameRef,
     worktreeEnabled,
     setWorktreeEnabled,

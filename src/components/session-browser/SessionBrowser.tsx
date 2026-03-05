@@ -69,12 +69,14 @@ export const SessionBrowser = memo(function SessionBrowser({
   teamsOnly,
   onDuplicateSession,
   onDeleteSession,
+  onBeforeSessionSwitch,
 }: SessionBrowserProps): React.ReactElement {
   const browser = useSessionBrowser({
     sessionId,
     onLoadSession,
     onDeleteSession,
     onDuplicateSession,
+    onBeforeLoad: onBeforeSessionSwitch,
   })
 
   const { view, selectedProject, loadProjects, loadSessions, setFetchError } = browser

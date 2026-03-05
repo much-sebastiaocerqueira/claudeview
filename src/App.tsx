@@ -204,6 +204,7 @@ export default function App() {
     clearCreateError,
     handleNewSession,
     createAndSend,
+    cancelCreation,
     worktreeEnabled,
     setWorktreeEnabled,
     worktreeName: newSessionWorktreeName,
@@ -267,6 +268,14 @@ export default function App() {
     scroll.scrollToBottomInstant()
   }
 
+  // Pre-session-switch cleanup: abort in-flight send-message and session creation
+  // requests to free HTTP connections before fetching the new session data.
+  const handlePreSessionSwitch = useCallback(() => {
+    claudeChat.disconnect()
+    cancelCreation()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [claudeChat.disconnect, cancelCreation])
+
   // Session action handlers
   const actions = useSessionActions({
     dispatch,
@@ -274,6 +283,7 @@ export default function App() {
     teamContext,
     scrollToBottomInstant: scroll.scrollToBottomInstant,
     resetTurnCount: scroll.resetTurnCount,
+    onBeforeSwitch: handlePreSessionSwitch,
   })
 
   // Sync URL <-> state
@@ -618,6 +628,7 @@ export default function App() {
               creatingSession={creatingSession}
               onDuplicateSession={handlers.handleDuplicateSessionByPath}
               onDeleteSession={handlers.handleDeleteSession}
+              onBeforeSessionSwitch={handlePreSessionSwitch}
               isMobile
             />
           )}
@@ -729,6 +740,7 @@ export default function App() {
                   onSelectTeam={actions.handleSelectTeam}
                   isMobile
                   teamsOnly
+                  onBeforeSessionSwitch={handlePreSessionSwitch}
                 />
               )}
             </div>
@@ -795,6 +807,7 @@ export default function App() {
             creatingSession={creatingSession}
             onDuplicateSession={handlers.handleDuplicateSessionByPath}
             onDeleteSession={handlers.handleDeleteSession}
+            onBeforeSessionSwitch={handlePreSessionSwitch}
           />
         )}
 

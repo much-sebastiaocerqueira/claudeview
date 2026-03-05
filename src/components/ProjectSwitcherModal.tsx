@@ -44,7 +44,7 @@ export function ProjectSwitcherModal({
     setSelectedIndex(0)
     authFetch("/api/projects")
       .then((res) => (res.ok ? res.json() : []))
-      .then((data: ProjectInfo[]) => setProjects(data.slice(0, 10)))
+      .then((data: ProjectInfo[]) => setProjects(data))
       .catch(() => setProjects([]))
   }, [open])
 

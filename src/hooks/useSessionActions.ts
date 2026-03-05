@@ -15,6 +15,9 @@ interface UseSessionActionsOpts {
   teamContext: SessionTeamContext | null
   scrollToBottomInstant: () => void
   resetTurnCount: (count: number) => void
+  /** Called before fetching a new session to free connections held by the
+   *  current session (e.g. long-lived send-message POST, session creation). */
+  onBeforeSwitch?: () => void
 }
 
 /** Fetch a session file and parse it. The `errorLabel` is used in the error message on failure. */
@@ -37,6 +40,7 @@ export function useSessionActions({
   teamContext,
   scrollToBottomInstant,
   resetTurnCount,
+  onBeforeSwitch,
 }: UseSessionActionsOpts) {
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -53,6 +57,7 @@ export function useSessionActions({
 
   const handleDashboardSelect = useCallback(
     async (dirName: string, fileName: string) => {
+      onBeforeSwitch?.()
       setLoadError(null)
       try {
         const { parsed, source } = await fetchAndParse(dirName, fileName, "session")
@@ -61,11 +66,12 @@ export function useSessionActions({
         setLoadError(err instanceof Error ? err.message : "Failed to load session")
       }
     },
-    [handleLoadSession]
+    [handleLoadSession, onBeforeSwitch]
   )
 
   const handleOpenSessionFromTeam = useCallback(
     async (dirName: string, fileName: string, memberName?: string) => {
+      onBeforeSwitch?.()
       setLoadError(null)
       try {
         const { parsed, source } = await fetchAndParse(dirName, fileName, "team session")
@@ -82,12 +88,13 @@ export function useSessionActions({
         setLoadError(err instanceof Error ? err.message : "Failed to load team session")
       }
     },
-    [dispatch, isMobile, resetTurnCount, scrollToBottomInstant]
+    [dispatch, isMobile, resetTurnCount, scrollToBottomInstant, onBeforeSwitch]
   )
 
   const handleTeamMemberSwitch = useCallback(
     async (member: TeamMember) => {
       if (!teamContext) return
+      onBeforeSwitch?.()
       setLoadError(null)
       dispatch({ type: "SET_LOADING_MEMBER", name: member.name })
       try {
@@ -113,7 +120,7 @@ export function useSessionActions({
         dispatch({ type: "SET_LOADING_MEMBER", name: null })
       }
     },
-    [dispatch, teamContext, resetTurnCount, scrollToBottomInstant]
+    [dispatch, teamContext, resetTurnCount, scrollToBottomInstant, onBeforeSwitch]
   )
 
   const clearLoadError = useCallback(() => setLoadError(null), [])

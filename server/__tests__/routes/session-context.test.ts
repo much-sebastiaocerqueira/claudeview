@@ -8,6 +8,11 @@ vi.mock("../../helpers", () => ({
   join: (...parts: string[]) => parts.join("/"),
   dirs: { TEAMS_DIR: "/mock/teams", TASKS_DIR: "/mock/tasks", PROJECTS_DIR: "/mock/projects" },
   matchSubagentToMember: vi.fn(),
+  sendJson: (res: any, status: number, data: unknown) => {
+    res.statusCode = status
+    res.setHeader("Content-Type", "application/json")
+    res.end(JSON.stringify(data))
+  },
 }))
 
 // Must mock the parser since it imports from src/lib/

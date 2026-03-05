@@ -35,6 +35,7 @@ export function useSessionBrowser({
   onLoadSession,
   onDeleteSession,
   onDuplicateSession,
+  onBeforeLoad,
 }: {
   sessionId: string | null
   onLoadSession: (
@@ -43,6 +44,8 @@ export function useSessionBrowser({
   ) => void
   onDeleteSession?: (dirName: string, fileName: string) => void
   onDuplicateSession?: (dirName: string, fileName: string) => void
+  /** Called before fetching a new session to free connections held by the current session. */
+  onBeforeLoad?: () => void
 }): UseSessionBrowserReturn {
   const [view, setView] = useState<View>(sessionId ? "detail" : "projects")
   const [projects, setProjects] = useState<ProjectInfo[]>([])
@@ -106,6 +109,7 @@ export function useSessionBrowser({
 
   const loadSessionFile = useCallback(
     async (project: ProjectInfo, session: SessionInfo) => {
+      onBeforeLoad?.()
       setIsLoading(true)
       setFetchError(null)
       try {
@@ -127,11 +131,12 @@ export function useSessionBrowser({
         setIsLoading(false)
       }
     },
-    [onLoadSession]
+    [onLoadSession, onBeforeLoad]
   )
 
   const loadLiveSession = useCallback(
     async (dirName: string, fileName: string) => {
+      onBeforeLoad?.()
       setIsLoading(true)
       setFetchError(null)
       try {
@@ -149,7 +154,7 @@ export function useSessionBrowser({
         setIsLoading(false)
       }
     },
-    [onLoadSession]
+    [onLoadSession, onBeforeLoad]
   )
 
   const handleBack = useCallback(() => {

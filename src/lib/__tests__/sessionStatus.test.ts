@@ -80,15 +80,23 @@ describe("deriveSessionStatus", () => {
     expect(deriveSessionStatus(msgs).status).toBe("completed")
   })
 
-  it("skips system/progress/summary messages to find real status", () => {
+  it("skips system/progress messages to find real status", () => {
     const msgs = [
       { type: "assistant", message: { stop_reason: "end_turn", content: [] } },
       { type: "system", subtype: "turn_duration" },
       { type: "progress", data: {} },
-      { type: "summary", summary: "compacted" },
     ]
     // No real user messages, so idle not completed
     expect(deriveSessionStatus(msgs).status).toBe("idle")
+  })
+
+  it("returns compacting when last meaningful message is a summary", () => {
+    const msgs = [
+      { type: "assistant", message: { stop_reason: "end_turn", content: [] } },
+      { type: "system", subtype: "turn_duration" },
+      { type: "summary", summary: "compacted" },
+    ]
+    expect(deriveSessionStatus(msgs).status).toBe("compacting")
   })
 })
 
@@ -120,6 +128,10 @@ describe("getStatusLabel", () => {
 
   it("returns Processing... for processing", () => {
     expect(getStatusLabel("processing")).toBe("Processing...")
+  })
+
+  it("returns Compressing context... for compacting", () => {
+    expect(getStatusLabel("compacting")).toBe("Compressing context...")
   })
 
   it("returns Done for completed", () => {

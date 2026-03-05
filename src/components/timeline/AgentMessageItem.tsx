@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 import { ToolCallCard } from "./ToolCallCard"
 import type { SubAgentMessage } from "@/lib/types"
 import ReactMarkdown from "react-markdown"
-import { markdownComponents, markdownPlugins } from "./markdown-components"
+import { markdownComponents, markdownPlugins, preprocessImagePaths } from "./markdown-components"
 
 interface AgentMessageItemProps {
   message: SubAgentMessage
@@ -19,7 +19,7 @@ export const AgentMessageItem = memo(function AgentMessageItem({
   barColor,
   thinkingIconColor = "text-violet-400",
 }: AgentMessageItemProps): React.ReactElement | null {
-  const markdownText = useMemo(() => message.text.join("\n\n"), [message.text])
+  const markdownText = useMemo(() => preprocessImagePaths(message.text.join("\n\n")), [message.text])
 
   return (
     <div className="flex gap-0">

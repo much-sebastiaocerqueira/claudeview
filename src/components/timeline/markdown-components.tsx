@@ -1,7 +1,29 @@
+import { useState } from "react"
 import type { Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 import type { PluggableList } from "unified"
 import { MarkdownCodeBlock } from "./MarkdownCodeBlock"
+
+const IMAGE_EXTENSIONS = new Set([
+  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico", ".avif",
+])
+
+/** True when the src looks like a local absolute file path to an image */
+function isLocalImagePath(src: string | undefined): boolean {
+  if (!src) return false
+  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:")) return false
+  if (!src.startsWith("/")) return false
+  const dot = src.lastIndexOf(".")
+  if (dot === -1) return false
+  return IMAGE_EXTENSIONS.has(src.slice(dot).toLowerCase())
+}
+
+/** Rewrite local image paths to go through the API proxy */
+function resolveImageSrc(src: string | undefined): string | undefined {
+  if (!src) return src
+  if (isLocalImagePath(src)) return `/api/local-file?path=${encodeURIComponent(src)}`
+  return src
+}
 
 /**
  * Custom link component that opens URLs in the default browser
@@ -30,6 +52,56 @@ function ExternalLink({
       {children}
     </a>
   )
+}
+
+/**
+ * Image component that proxies local file paths through /api/local-file
+ * and supports click-to-expand in a dialog.
+ */
+function LocalImage({ src, alt }: { src?: string; alt?: string }) {
+  const [expanded, setExpanded] = useState(false)
+  const resolved = resolveImageSrc(src)
+
+  return (
+    <>
+      <img
+        src={resolved}
+        alt={alt ?? ""}
+        className="my-3 max-w-full max-h-96 rounded-lg border border-border/30 cursor-pointer hover:border-border/60 transition-colors"
+        onClick={() => setExpanded(true)}
+      />
+      {expanded && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+          onClick={() => setExpanded(false)}
+        >
+          <img
+            src={resolved}
+            alt={alt ?? ""}
+            className="max-w-[90vw] max-h-[90vh] rounded-lg shadow-2xl"
+          />
+        </div>
+      )}
+    </>
+  )
+}
+
+/**
+ * Regex to detect bare image file paths on their own line.
+ * Matches absolute paths like /tmp/screenshot.png that aren't already in markdown image syntax.
+ * Generated from IMAGE_EXTENSIONS to keep the two in sync.
+ */
+const EXT_PATTERN = [...IMAGE_EXTENSIONS].map(e => e.slice(1)).join("|")
+const BARE_IMAGE_PATH_RE = new RegExp(`^([ \\t]*)(\\/[^\\s]+\\.(?:${EXT_PATTERN}))[ \\t]*$`, "gim")
+
+/**
+ * Pre-processes markdown text to convert bare image file paths into markdown image syntax.
+ * e.g. "/tmp/screenshot.png" becomes "![/tmp/screenshot.png](/tmp/screenshot.png)"
+ */
+export function preprocessImagePaths(text: string): string {
+  return text.replace(BARE_IMAGE_PATH_RE, (_match, indent, path) => {
+    return `${indent}![${path}](${path})`
+  })
 }
 
 export const markdownComponents: Components = {
@@ -189,15 +261,7 @@ export const markdownComponents: Components = {
   },
 
   // ── Images ─────────────────────────────────────────────────────────────────
-  img({ src, alt }) {
-    return (
-      <img
-        src={src}
-        alt={alt ?? ""}
-        className="my-3 max-w-full rounded-lg border border-border/30"
-      />
-    )
-  },
+  img: LocalImage,
 
   // ── Task list items (GFM checkboxes) ───────────────────────────────────────
   input({ checked, ...rest }) {

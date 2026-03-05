@@ -14,12 +14,17 @@ async function readCwdFromJsonl(filePath: string): Promise<string | null> {
   let fh: Awaited<ReturnType<typeof open>> | null = null
   try {
     fh = await open(filePath, "r")
-    const buf = Buffer.alloc(4096)
-    const { bytesRead } = await fh.read(buf, 0, 4096, 0)
-    const firstLine = buf.subarray(0, bytesRead).toString("utf-8").split("\n")[0]
-    if (!firstLine) return null
-    const parsed = JSON.parse(firstLine)
-    return parsed.cwd ?? null
+    const buf = Buffer.alloc(8192)
+    const { bytesRead } = await fh.read(buf, 0, 8192, 0)
+    const lines = buf.subarray(0, bytesRead).toString("utf-8").split("\n")
+    for (const line of lines) {
+      if (!line) continue
+      try {
+        const parsed = JSON.parse(line)
+        if (parsed.cwd) return parsed.cwd
+      } catch { continue }
+    }
+    return null
   } catch {
     return null
   } finally {

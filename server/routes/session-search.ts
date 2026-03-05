@@ -1,7 +1,7 @@
 import type { UseFn } from "../helpers"
-import { findJsonlPath, readFile, readdir, stat, join, dirs } from "../helpers"
-import { parseSession } from "../../src/lib/parser"
-import type { ParsedSession, UserContent, SubAgentMessage } from "../../src/lib/types"
+import { findJsonlPath, readFile, readdir, stat, join, basename, dirs, sendJson } from "../helpers"
+import { parseSession, getUserMessageText } from "../../src/lib/parser"
+import type { ParsedSession } from "../../src/lib/types"
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -30,35 +30,26 @@ interface SearchResponse {
 
 const SNIPPET_WINDOW = 150
 
+const DEFAULT_MAX_AGE_MS = 5 * 24 * 60 * 60 * 1000
+
 function parseMaxAge(raw: string): number {
   const match = raw.match(/^(\d+)(d|h|m)$/)
-  if (!match) return 5 * 24 * 60 * 60 * 1000
+  if (!match) return DEFAULT_MAX_AGE_MS
   const value = parseInt(match[1], 10)
-  const unit = match[2]
-  if (unit === "d") return value * 24 * 60 * 60 * 1000
-  if (unit === "h") return value * 60 * 60 * 1000
-  if (unit === "m") return value * 60 * 1000
-  return 5 * 24 * 60 * 60 * 1000
-}
-
-function extractUserMessageText(userMessage: UserContent | null): string | null {
-  if (userMessage === null) return null
-  if (typeof userMessage === "string") return userMessage
-  const parts: string[] = []
-  for (const block of userMessage) {
-    if (block.type === "text") parts.push(block.text)
+  switch (match[2]) {
+    case "d": return value * 24 * 60 * 60 * 1000
+    case "h": return value * 60 * 60 * 1000
+    case "m": return value * 60 * 1000
+    default: return DEFAULT_MAX_AGE_MS
   }
-  return parts.length > 0 ? parts.join("\n") : null
 }
 
-function generateSnippet(text: string, query: string, caseSensitive: boolean): string {
-  const haystack = caseSensitive ? text : text.toLowerCase()
-  const needle = caseSensitive ? query : query.toLowerCase()
-  const idx = haystack.indexOf(needle)
-  if (idx === -1) return text.slice(0, SNIPPET_WINDOW)
+/** Generate a ~150-char snippet centered on the first match. Accepts pre-found index. */
+function generateSnippet(text: string, matchIdx: number, queryLen: number): string {
+  if (matchIdx === -1) return text.slice(0, SNIPPET_WINDOW)
 
-  const halfWindow = Math.floor((SNIPPET_WINDOW - query.length) / 2)
-  const start = Math.max(0, idx - halfWindow)
+  const halfWindow = Math.floor((SNIPPET_WINDOW - queryLen) / 2)
+  const start = Math.max(0, matchIdx - halfWindow)
   const end = Math.min(text.length, start + SNIPPET_WINDOW)
   const adjustedStart = Math.max(0, end - SNIPPET_WINDOW)
 
@@ -68,9 +59,8 @@ function generateSnippet(text: string, query: string, caseSensitive: boolean): s
   return snippet
 }
 
-function countMatches(text: string, query: string, caseSensitive: boolean): number {
-  const haystack = caseSensitive ? text : text.toLowerCase()
-  const needle = caseSensitive ? query : query.toLowerCase()
+/** Count all occurrences of needle in haystack (both already case-normalized). */
+function countMatches(haystack: string, needle: string): number {
   let count = 0
   let pos = 0
   while ((pos = haystack.indexOf(needle, pos)) !== -1) {
@@ -80,6 +70,7 @@ function countMatches(text: string, query: string, caseSensitive: boolean): numb
   return count
 }
 
+/** Search a text field — normalize case once, then generate snippet + count. */
 function searchField(
   text: string | null,
   location: string,
@@ -90,12 +81,13 @@ function searchField(
   if (!text) return null
   const haystack = caseSensitive ? text : text.toLowerCase()
   const needle = caseSensitive ? query : query.toLowerCase()
-  if (!haystack.includes(needle)) return null
+  const idx = haystack.indexOf(needle)
+  if (idx === -1) return null
 
   return {
     location,
-    snippet: generateSnippet(text, query, caseSensitive),
-    matchCount: countMatches(text, query, caseSensitive),
+    snippet: generateSnippet(text, idx, query.length),
+    matchCount: countMatches(haystack, needle),
     ...(extras?.toolName && { toolName: extras.toolName }),
     ...(extras?.agentName && { agentName: extras.agentName }),
   }
@@ -112,37 +104,40 @@ async function discoverSingleSession(sessionId: string): Promise<Array<{ path: s
 
 async function discoverAllSessions(maxAgeMs: number): Promise<Array<{ path: string; mtimeMs: number }>> {
   const cutoff = Date.now() - maxAgeMs
-  const results: Array<{ path: string; mtimeMs: number }> = []
 
-  let entries: Awaited<ReturnType<typeof readdir>>
+  let entries: import("node:fs").Dirent[]
   try {
-    entries = await readdir(dirs.PROJECTS_DIR, { withFileTypes: true })
+    entries = await readdir(dirs.PROJECTS_DIR, { withFileTypes: true }) as import("node:fs").Dirent[]
   } catch {
     return []
   }
 
-  for (const entry of entries) {
-    if (!(entry as any).isDirectory?.() || (entry as any).name === "memory") continue
-    const projectDir = join(dirs.PROJECTS_DIR, (entry as any).name)
-    try {
-      const files = await readdir(projectDir)
-      for (const f of files as string[]) {
-        if (!f.endsWith(".jsonl")) continue
-        const filePath = join(projectDir, f)
-        try {
-          const s = await stat(filePath)
-          if (s.mtimeMs >= cutoff) {
-            results.push({ path: filePath, mtimeMs: s.mtimeMs })
-          }
-        } catch {
-          continue
-        }
-      }
-    } catch {
-      continue
-    }
-  }
+  const projectDirs = entries
+    .filter(e => e.isDirectory() && e.name !== "memory")
+    .map(e => join(dirs.PROJECTS_DIR, e.name))
 
+  // Read all project directories in parallel
+  const nested = await Promise.all(
+    projectDirs.map(async (projectDir) => {
+      try {
+        const files = (await readdir(projectDir)) as string[]
+        const jsonlFiles = files.filter(f => f.endsWith(".jsonl"))
+        // Stat all files in this directory in parallel
+        const statResults = await Promise.all(
+          jsonlFiles.map(async (f) => {
+            const filePath = join(projectDir, f)
+            try {
+              const s = await stat(filePath)
+              return s.mtimeMs >= cutoff ? { path: filePath, mtimeMs: s.mtimeMs } : null
+            } catch { return null }
+          }),
+        )
+        return statResults.filter((r): r is { path: string; mtimeMs: number } => r !== null)
+      } catch { return [] }
+    }),
+  )
+
+  const results = nested.flat()
   results.sort((a, b) => b.mtimeMs - a.mtimeMs)
   return results
 }
@@ -171,13 +166,13 @@ function walkSession(session: ParsedSession, query: string, caseSensitive: boole
     const prefix = `${locationPrefix}turn/${i}`
 
     // User message
-    const userText = extractUserMessageText(turn.userMessage)
-    const userHit = searchField(userText, `${prefix}/userMessage`, query, caseSensitive)
+    const userText = getUserMessageText(turn.userMessage)
+    const userHit = searchField(userText || null, `${prefix}/userMessage`, query, caseSensitive)
     if (userHit) hits.push(userHit)
 
     // Assistant text
-    const assistantText = turn.assistantText.join("\n\n")
-    const assistantHit = searchField(assistantText || null, `${prefix}/assistantMessage`, query, caseSensitive)
+    const assistantText = turn.assistantText.length > 0 ? turn.assistantText.join("\n\n") : null
+    const assistantHit = searchField(assistantText, `${prefix}/assistantMessage`, query, caseSensitive)
     if (assistantHit) hits.push(assistantHit)
 
     // Thinking blocks
@@ -204,8 +199,8 @@ function walkSession(session: ParsedSession, query: string, caseSensitive: boole
     for (const sa of turn.subAgentActivity) {
       const saPrefix = `${locationPrefix}agent/${sa.agentId}/`
 
-      const saText = sa.text.join("\n\n")
-      const saTextHit = searchField(saText || null, `${saPrefix}assistantMessage`, query, caseSensitive, {
+      const saText = sa.text.length > 0 ? sa.text.join("\n\n") : null
+      const saTextHit = searchField(saText, `${saPrefix}assistantMessage`, query, caseSensitive, {
         agentName: sa.agentName ?? undefined,
       })
       if (saTextHit) hits.push(saTextHit)
@@ -253,42 +248,46 @@ async function walkSubagentFiles(
 ): Promise<SearchHit[]> {
   if (currentDepth >= maxDepth) return []
 
-  const subagentsDir = parentJsonlPath.replace(/\.jsonl$/, "") + "/subagents"
+  const subDir = parentJsonlPath.replace(/\.jsonl$/, "") + "/subagents"
   let files: string[]
   try {
-    files = (await readdir(subagentsDir)) as string[]
+    files = (await readdir(subDir)) as string[]
   } catch {
     return []
   }
 
-  const hits: SearchHit[] = []
+  const agentFiles = files
+    .filter(f => f.startsWith("agent-") && f.endsWith(".jsonl"))
+    .map(f => ({
+      agentId: f.slice("agent-".length, -".jsonl".length),
+      filePath: join(subDir, f),
+    }))
 
-  for (const f of files) {
-    if (!f.startsWith("agent-") || !f.endsWith(".jsonl")) continue
-    const agentId = f.replace("agent-", "").replace(".jsonl", "")
-    const filePath = join(subagentsDir, f)
+  // Pre-filter all agent files in parallel
+  const matched = await Promise.all(
+    agentFiles.map(async ({ agentId, filePath }) => ({
+      agentId,
+      filePath,
+      rawContent: await rawTextMatch(filePath, query, caseSensitive),
+    })),
+  )
 
-    const rawContent = await rawTextMatch(filePath, query, caseSensitive)
-    if (!rawContent) continue
+  // Walk matching files in parallel
+  const hitArrays = await Promise.all(
+    matched
+      .filter(m => m.rawContent)
+      .map(async ({ agentId, filePath, rawContent }) => {
+        const subSession = parseSession(rawContent!)
+        const subHits = walkSession(subSession, query, caseSensitive, `agent/${agentId}/`)
+        const nestedHits = await walkSubagentFiles(filePath, query, caseSensitive, currentDepth + 1, maxDepth)
+        return [...subHits, ...nestedHits]
+      }),
+  )
 
-    const subSession = parseSession(rawContent)
-    const subHits = walkSession(subSession, query, caseSensitive, `agent/${agentId}/`)
-    hits.push(...subHits)
-
-    const nestedHits = await walkSubagentFiles(filePath, query, caseSensitive, currentDepth + 1, maxDepth)
-    hits.push(...nestedHits)
-  }
-
-  return hits
+  return hitArrays.flat()
 }
 
 // ── Route Handler ───────────────────────────────────────────────────────────
-
-function sendJson(res: import("node:http").ServerResponse, status: number, data: unknown) {
-  res.statusCode = status
-  res.setHeader("Content-Type", "application/json")
-  res.end(JSON.stringify(data))
-}
 
 export function registerSessionSearchRoutes(use: UseFn) {
   use("/api/session-search", async (req, res, next) => {
@@ -321,6 +320,9 @@ export function registerSessionSearchRoutes(use: UseFn) {
       let sessionsSearched = 0
 
       for (const file of files) {
+        // Early exit: skip expensive work once limit is reached
+        if (returnedHits >= limit) break
+
         // Phase 2: Raw text pre-filter
         const rawContent = await rawTextMatch(file.path, query, caseSensitive)
         sessionsSearched++
@@ -338,7 +340,7 @@ export function registerSessionSearchRoutes(use: UseFn) {
         totalHits += allHits.length
 
         const sessionResult: SessionSearchResult = {
-          sessionId: session.sessionId || file.path.split("/").pop()?.replace(".jsonl", "") || "unknown",
+          sessionId: session.sessionId || basename(file.path, ".jsonl"),
           hits: [],
         }
 

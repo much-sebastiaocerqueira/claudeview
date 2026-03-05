@@ -104,8 +104,7 @@ export function isRateLimited(req: IncomingMessage): boolean {
   }
 
   entry.count++
-  if (entry.count > RATE_LIMIT_MAX_ATTEMPTS) return true
-  return false
+  return entry.count > RATE_LIMIT_MAX_ATTEMPTS
 }
 
 // Periodically clean up expired entries (unref so build process can exit)
@@ -307,6 +306,15 @@ export {
 } from "./security"
 
 export { getSessionMeta, getSessionStatus, searchSessionMessages } from "./sessionMetadata"
+
+// ── Shared route helpers ────────────────────────────────────────────────────
+
+export function sendJson(res: import("node:http").ServerResponse, status: number, data: unknown): void {
+  res.statusCode = status
+  res.setHeader("Content-Type", "application/json")
+  res.end(JSON.stringify(data))
+}
+
 export { watchSubagents } from "./subagentWatcher"
 export type { SubagentWatcher } from "./subagentWatcher"
 
@@ -316,6 +324,6 @@ export { createInterface } from "node:readline"
 export { appendFile } from "node:fs/promises"
 export { readdir, readFile, stat, open } from "node:fs/promises"
 export { writeFile, mkdir, unlink, lstat } from "node:fs/promises"
-export { join, resolve } from "node:path"
+export { join, resolve, basename } from "node:path"
 export { watch } from "node:fs"
 export { createConnection } from "node:net"

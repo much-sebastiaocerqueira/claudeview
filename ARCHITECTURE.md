@@ -139,6 +139,7 @@ All routes are registered in **both** `server/api-plugin.ts` (Vite) and `electro
 | `/api/background-tasks` | GET | Scan Claude's task dir for background Bash tasks |
 | `/api/background-agents` | GET | Scan `projects/` for background agent symlinks |
 | `/api/kill-port` | POST | Kill process on port |
+| `/api/local-file` | GET | Serve local image files (query: `?path=/absolute/path/to/image`) |
 | `/api/open-terminal` | POST | Launch terminal in project directory |
 | `/api/pty` | WS | WebSocket PTY session |
 | `/api/ports` | GET | List listening processes (scans lsof) |

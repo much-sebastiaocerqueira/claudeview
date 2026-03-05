@@ -4,8 +4,25 @@ Chronological record of all documentation audits for the agent-window project.
 
 ## Recent Audits
 
+### 2026-03-05 — Session Search Refactor, Local File API, Image Preprocessing
+- **File:** `audit-history/audit-20260305-PLACEHOLDER.md`
+- **Status:** PASS WITH DOCUMENTATION UPDATES REQUIRED
+- **Changes:** 23 files modified, 1 new route file
+- **Key updates:**
+  - New `/api/local-file` route for serving local images with click-to-expand dialog
+  - `sendJson()` helper extracted to reduce duplication in routes
+  - Session search refactored for parallel I/O performance (faster discovery)
+  - Markdown components enhanced: bare image paths auto-converted, LocalImage component
+  - Session switch pre-cleanup: `onBeforeSessionSwitch` callback to free connections
+  - New "compacting" status indicator (amber animation) when Claude compresses context
+  - Editor routes: improved cwd resolution with larger buffer (8KB, multiple lines)
+  - Config browser: fixed symlink handling for skill detection
+  - Project switcher: removed 10-item limit
+- **Risk:** LOW (backward-compatible, all new features optional)
+- **Doc updates needed:** ARCHITECTURE.md (1 API row), README.md (2 bullet points)
+
 ### 2026-03-03 — Editor API Routes: dirName Resolution
-- **File:** `audit-history/audit-20260303-014921-PLACEHOLDER.md`
+- **File:** `audit-history/audit-20260303-014921-479c9d5.md`
 - **Status:** PASS WITH MINOR DOCUMENTATION UPDATES REQUIRED
 - **Changes:** 4 files modified, new `resolveActionPath` utility function
 - **Key updates:**

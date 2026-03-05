@@ -1,5 +1,5 @@
 import type { UseFn } from "../helpers"
-import { findJsonlPath, readFile, readdir, join, dirs } from "../helpers"
+import { findJsonlPath, readFile, readdir, join, dirs, sendJson } from "../helpers"
 import { matchSubagentToMember } from "../helpers"
 import { parseSession } from "../../src/lib/parser"
 import type {
@@ -288,12 +288,6 @@ function findAgentMetadata(
 }
 
 // ── Route Registration ───────────────────────────────────────────────────────
-
-function sendJson(res: import("node:http").ServerResponse, status: number, data: unknown) {
-  res.statusCode = status
-  res.setHeader("Content-Type", "application/json")
-  res.end(JSON.stringify(data))
-}
 
 export function registerSessionContextRoutes(use: UseFn) {
   use("/api/session-context/", async (req, res, next) => {

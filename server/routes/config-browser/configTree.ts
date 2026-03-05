@@ -36,7 +36,10 @@ export async function scanDir(
     const entries = await readdir(dir, { withFileTypes: true })
     for (const entry of entries) {
       const fullPath = join(dir, entry.name)
-      if (entry.isDirectory()) {
+      // Follow symlinks: stat() resolves symlinks to determine target type
+      const resolved = entry.isSymbolicLink() ? await stat(fullPath).catch(() => null) : null
+      const isDir = entry.isDirectory() || resolved?.isDirectory()
+      if (isDir) {
         if (opts.isSkillsDir) {
           // Skills are dirs with SKILL.md inside
           const skillPath = join(fullPath, "SKILL.md")
@@ -76,7 +79,7 @@ export async function scanDir(
             })
           }
         }
-      } else if (entry.isFile()) {
+      } else if (entry.isFile() || resolved?.isFile()) {
         // Skip non-relevant files
         if (!entry.name.endsWith(".md") && !entry.name.endsWith(".json")) continue
         // Skip installed_plugins.json, config.local.json etc at top level

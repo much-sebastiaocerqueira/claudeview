@@ -28,7 +28,7 @@ Grab the latest release for your platform from the [Releases page](https://githu
 ### Session Browser
 Browse all your Claude Code projects and sessions from a sidebar navigator. Sessions are grouped by project directory, sorted by recency, and show live status indicators for active sessions.
 
-- **Live sessions panel** — running sessions with status indicators (green=running, blue=tool_use, amber=thinking/processing, gray=idle, green ring=newly completed), RAM usage tooltips, and a kill button on hover
+- **Live sessions panel** — running sessions with status indicators (green=running, blue=tool_use, amber=thinking/processing/compacting, gray=idle, green ring=newly completed), RAM usage tooltips, and a kill button on hover
 - **Process monitor** — lists all system-wide `claude` processes with PID, memory, and CPU usage; detects orphaned processes not linked to any session
 - **Session cards** — model badge, turn count, git branch, file size, first message preview, and relative timestamps
 - **Search & filter** — debounced search across sessions and projects
@@ -41,7 +41,7 @@ Browse all your Claude Code projects and sessions from a sidebar navigator. Sess
 Every session is rendered as a structured conversation with:
 - **User messages** — including image attachments, expandable long text (truncated at 500 chars), and system tag stripping
 - **Thinking blocks** — expandable extended thinking sections, multiple blocks per turn
-- **Assistant text** — rendered Markdown with syntax highlighting (via Shiki), model badge, and per-response token usage tooltip
+- **Assistant text** — rendered Markdown with syntax highlighting (via Shiki), model badge, and per-response token usage tooltip; local image paths auto-converted to clickable thumbnails with full-screen expand dialog
 - **Tool calls** — color-coded badges (Read=blue, Write=green, Edit=amber, Bash=red, Grep=purple, Glob=cyan, Task=indigo, WebFetch=orange, AskUserQuestion=pink), expandable input/output, status indicators (success/error/in-progress)
 - **Edit diffs** — LCS-based line-by-line diffs with syntax highlighting, green/red additions/removals, line numbers, and full-screen expansion
 - **Sub-agent activity** — color-coded panels (5-color palette) showing nested agent thinking, text, and tool calls

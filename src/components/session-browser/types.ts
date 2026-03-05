@@ -55,4 +55,6 @@ export interface SessionBrowserProps {
   onDuplicateSession?: (dirName: string, fileName: string) => void
   /** Delete a session file */
   onDeleteSession?: (dirName: string, fileName: string) => void
+  /** Called before fetching a new session to free connections held by the current session */
+  onBeforeSessionSwitch?: () => void
 }

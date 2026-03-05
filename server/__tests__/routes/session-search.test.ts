@@ -7,11 +7,25 @@ vi.mock("../../helpers", () => ({
   readdir: vi.fn(),
   stat: vi.fn(),
   join: (...parts: string[]) => parts.join("/"),
+  basename: (p: string, ext?: string) => {
+    const base = p.split("/").pop() || p
+    return ext && base.endsWith(ext) ? base.slice(0, -ext.length) : base
+  },
   dirs: { PROJECTS_DIR: "/mock/projects" },
+  sendJson: (res: any, status: number, data: unknown) => {
+    res.statusCode = status
+    res.setHeader("Content-Type", "application/json")
+    res.end(JSON.stringify(data))
+  },
 }))
 
 vi.mock("../../../src/lib/parser", () => ({
   parseSession: vi.fn(),
+  getUserMessageText: (content: any) => {
+    if (content === null) return ""
+    if (typeof content === "string") return content
+    return (content as any[]).filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n") || ""
+  },
 }))
 
 import { findJsonlPath, readFile, readdir, stat } from "../../helpers"

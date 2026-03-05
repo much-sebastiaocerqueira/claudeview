@@ -35,24 +35,23 @@ export function usePtyChat({ sessionSource, parsedSessionId, cwd, permissions, o
   const fileBasedId = sessionSource?.fileName?.replace(".jsonl", "") ?? null
   const sessionId = parsedSessionId || fileBasedId
 
+  /** Reset all in-flight state -- shared by disconnect() and the sessionId-change effect. */
+  const resetState = useCallback(() => {
+    activeAbortRef.current?.abort()
+    activeAbortRef.current = null
+    creatingRef.current = false
+    setStatus("idle")
+    setError(undefined)
+    setPendingMessages([])
+  }, [])
+
   // When session changes, abort any in-flight request and reset state
   useEffect(() => {
     if (sessionIdRef.current !== sessionId) {
-      // Abort the previous request so it doesn't keep running in the background
-      activeAbortRef.current?.abort()
-      const wasCreating = creatingRef.current
-      creatingRef.current = false
+      resetState()
       sessionIdRef.current = sessionId
-      setStatus("idle")
-      setError(undefined)
-      // Preserve pending messages when transitioning from session creation —
-      // useChatScroll will clear them once the session's turns are rendered.
-      if (!wasCreating) {
-        setPendingMessages([])
-      }
-      activeAbortRef.current = null
     }
-  }, [sessionId])
+  }, [sessionId, resetState])
 
   // Abort any in-flight request on unmount
   useEffect(() => {
@@ -147,6 +146,12 @@ export function usePtyChat({ sessionSource, parsedSessionId, cwd, permissions, o
     [sessionId, cwd, permissions, onPermissionsApplied, model, onCreateSession]
   )
 
+  /** Abort the in-flight HTTP request without stopping the server-side agent.
+   *  Used when switching sessions to free the connection immediately. */
+  const disconnect = useCallback(() => {
+    resetState()
+  }, [resetState])
+
   /** Send a stop request to the server for the current session. */
   const sendStopRequest = useCallback(() => {
     if (!sessionId) return
@@ -179,6 +184,7 @@ export function usePtyChat({ sessionSource, parsedSessionId, cwd, permissions, o
     error,
     pendingMessages,
     sendMessage,
+    disconnect,
     interrupt,
     stopAgent,
     consumePending,
