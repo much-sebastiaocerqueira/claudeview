@@ -24,7 +24,7 @@ import { registerConfigBrowserRoutes } from "./routes/config-browser"
 import { registerSessionSearchRoutes, setSearchIndex, getSearchIndex } from "./routes/session-search"
 import { registerLocalFileRoutes } from "./routes/local-file"
 import { registerSearchIndexRoutes } from "./routes/search-index-stats"
-import { SearchIndex } from "./search-index"
+import { SearchIndex } from "../packages/cogpit-memory/src"
 
 export function sessionApiPlugin(): Plugin {
   return {
