@@ -10,6 +10,26 @@ import { useFileChangesData, buildGroupedFiles } from "./useFileChangesData"
 /** Custom event name for cross-panel file focus. */
 export const FOCUS_FILE_EVENT = "cogpit:focus-file"
 
+const PREFS_KEY = "cogpit:file-changes-prefs"
+
+function loadPref<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY)
+    if (!raw) return fallback
+    const prefs = JSON.parse(raw)
+    return key in prefs ? prefs[key] : fallback
+  } catch { return fallback }
+}
+
+function savePref(key: string, value: unknown): void {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY)
+    const prefs = raw ? JSON.parse(raw) : {}
+    prefs[key] = value
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs))
+  } catch { /* ignore */ }
+}
+
 /** Scope: last turn, all turns, or a specific turn index. */
 type Scope = "last" | "all" | number
 
@@ -30,11 +50,19 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
   const prevTurnCountRef = useRef(session.turns.length)
   const [canScrollUp, setCanScrollUp] = useState(false)
   const [canScrollDown, setCanScrollDown] = useState(false)
-  const [allExpanded, setAllExpanded] = useState(true)
-  const [diffMode, setDiffMode] = useState<DiffMode>("net")
+  const [allExpanded, setAllExpanded] = useState(() => loadPref("expanded", true))
+  const [diffMode, setDiffMode] = useState<DiffMode>(() => loadPref("diffMode", "net"))
 
   // Scope: "last" (default), "all", or a specific turn index
-  const [scope, setScope] = useState<Scope>("last")
+  const [scope, setScope] = useState<Scope>(() => loadPref("scope", "last") as Scope)
+
+  // Persist toggle preferences
+  useEffect(() => { savePref("expanded", allExpanded) }, [allExpanded])
+  useEffect(() => { savePref("diffMode", diffMode) }, [diffMode])
+  useEffect(() => {
+    // Only persist "last" or "all" — numeric scope is transient (from click events)
+    if (typeof scope !== "number") savePref("scope", scope)
+  }, [scope])
 
   // Highlighted file path (from TurnChangedFiles click)
   const [highlightPath, setHighlightPath] = useState<string | null>(null)
@@ -122,7 +150,7 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
     scrollOnNextChangeRef.current = false
     prevChangeCountRef.current = fileChanges.length
     prevTurnCountRef.current = session.turns.length
-    setScope("last")
+    setScope(loadPref("scope", "last") as Scope)
     setHighlightPath(null)
     updateScrollIndicators()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only runs on session switch
