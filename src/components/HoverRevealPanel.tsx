@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, type ReactNode } from "react"
+import { cn } from "@/lib/utils"
 
 interface HoverRevealPanelProps {
   side: "left" | "right"
@@ -69,16 +70,17 @@ export function HoverRevealPanel({
         onMouseLeave={handleLeave}
       >
         <div
-          className={`w-[2px] h-full mx-auto opacity-0 group-hover:opacity-100 bg-blue-500/40 transition-opacity duration-150`}
+          className="w-[2px] h-full mx-auto opacity-0 group-hover:opacity-100 bg-blue-500/40 transition-opacity duration-150"
         />
       </div>
 
       {/* Overlay sidebar — absolutely positioned, does not displace content */}
       {isRevealed && (
         <div
-          className={`absolute top-0 bottom-0 z-40 ${
-            side === "left" ? "left-0" : "right-0"
-          }`}
+          className={cn(
+            "absolute top-0 bottom-0 z-40",
+            side === "left" ? "left-0" : "right-0",
+          )}
           style={{
             boxShadow:
               side === "left"

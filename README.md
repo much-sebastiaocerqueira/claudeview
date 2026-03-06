@@ -43,7 +43,7 @@ Every session is rendered as a structured conversation with:
 - **Thinking blocks** — expandable extended thinking sections, multiple blocks per turn
 - **Assistant text** — rendered Markdown with syntax highlighting (via Shiki), model badge, and per-response token usage tooltip; local image paths auto-converted to clickable thumbnails with full-screen expand dialog
 - **Tool calls** — color-coded badges (Read=blue, Write=green, Edit=amber, Bash=red, Grep=purple, Glob=cyan, Task=indigo, WebFetch=orange, AskUserQuestion=pink), expandable input/output, status indicators (success/error/in-progress)
-- **Edit diffs** — LCS-based line-by-line diffs with syntax highlighting, green/red additions/removals, line numbers, and full-screen expansion
+- **Edit diffs** — LCS-based line-by-line diffs with syntax highlighting, green/red additions/removals, and full-screen expansion; toggle between net-diff (aggregated changes) and per-edit diffs (individual edits per turn)
 - **Sub-agent activity** — color-coded panels (5-color palette) showing nested agent thinking, text, and tool calls
 - **Background agent activity** — separate violet-themed panels for background agents
 - **Compaction markers** — collapsible indicators when context was compressed
@@ -70,6 +70,15 @@ Send messages to running Claude Code sessions directly from the dashboard:
 - **Permission-aware** sending with configurable tool access
 - **Pending message** status tracking with elapsed time counter
 - **Auto-expanding textarea** with Shift+Enter for newlines
+
+### File Changes UI
+Inspect all file modifications across a session with flexible viewing modes:
+- **Net-diff view** — aggregated changes per file (default): shows final state after all edits cancel out
+- **Per-edit view** — individual diffs per turn: see each Edit/Write operation chronologically with turn index
+- **Toggle** — switch between views via button in FileChangesPanel header (Sigma icon for net, List icon for per-edit)
+- **Sub-agent indicators** — clickable "S" badge on files modified by sub-agents, navigate directly to sub-agent session
+- **File sorting** — ordered by most-recently-edited files first, then by filename
+- **Open in editor** — context menu to open files or view git diffs
 
 ### Token Analytics & Cost Tracking
 A stats panel breaks down every session:

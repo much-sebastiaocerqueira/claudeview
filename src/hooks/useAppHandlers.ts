@@ -29,6 +29,11 @@ interface AppHandlersDeps {
   handleDashboardSelect: (dirName: string, fileName: string) => void
 }
 
+interface AppliedSettings {
+  model: string
+  effort: string
+}
+
 interface AppHandlersResult {
   // Session reload
   reloadSession: () => Promise<void>
@@ -173,7 +178,6 @@ export function useAppHandlers(deps: AppHandlersDeps): AppHandlersResult {
 
   // ── Model & effort tracking ────────────────────────────────────────────────
   // In-memory map: sessionId -> settings the persistent process was spawned with.
-  interface AppliedSettings { model: string; effort: string }
   const [appliedSettings, setAppliedSettings] = useState<Record<string, AppliedSettings>>({})
   const selectedModelRef = useRef(selectedModel)
   selectedModelRef.current = selectedModel

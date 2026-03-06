@@ -1,5 +1,6 @@
 import { Cpu, GitBranch, Gauge } from "lucide-react"
-import { cn, MODEL_OPTIONS, EFFORT_OPTIONS, DEFAULT_EFFORT } from "@/lib/utils"
+import { MODEL_OPTIONS, EFFORT_OPTIONS, DEFAULT_EFFORT } from "@/lib/utils"
+import { OptionGrid } from "@/components/OptionGrid"
 
 interface SessionSetupPanelProps {
   permissionsPanel?: React.ReactNode
@@ -43,25 +44,12 @@ export function SessionSetupPanel({
                 <Cpu className="size-3" />
                 Model
               </h3>
-              <div className="grid grid-cols-2 gap-1">
-                {MODEL_OPTIONS.map((opt) => {
-                  const isSelected = (selectedModel || "") === opt.value
-                  return (
-                    <button
-                      key={opt.value}
-                      onClick={() => onModelChange(opt.value)}
-                      className={cn(
-                        "rounded-md border px-2 py-1.5 text-[10px] font-medium transition-colors",
-                        isSelected
-                          ? "border-blue-500 text-blue-400 bg-blue-500/10"
-                          : "border-border text-muted-foreground hover:border-border hover:text-foreground elevation-1"
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  )
-                })}
-              </div>
+              <OptionGrid
+                options={MODEL_OPTIONS}
+                selected={selectedModel || ""}
+                onChange={onModelChange}
+                accentColor="blue"
+              />
             </section>
           </div>
         )}
@@ -75,25 +63,13 @@ export function SessionSetupPanel({
                 <Gauge className="size-3" />
                 Thinking Effort
               </h3>
-              <div className="grid grid-cols-3 gap-1">
-                {EFFORT_OPTIONS.map((opt) => {
-                  const isSelected = (selectedEffort || DEFAULT_EFFORT) === opt.value
-                  return (
-                    <button
-                      key={opt.value}
-                      onClick={() => onEffortChange(opt.value)}
-                      className={cn(
-                        "rounded-md border px-2 py-1.5 text-[10px] font-medium transition-colors",
-                        isSelected
-                          ? "border-orange-500 text-orange-400 bg-orange-500/10"
-                          : "border-border text-muted-foreground hover:border-border hover:text-foreground elevation-1"
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  )
-                })}
-              </div>
+              <OptionGrid
+                options={EFFORT_OPTIONS}
+                selected={selectedEffort || DEFAULT_EFFORT}
+                onChange={onEffortChange}
+                columns={3}
+                accentColor="orange"
+              />
             </section>
           </div>
         )}

@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { cn, MODEL_OPTIONS, EFFORT_OPTIONS, DEFAULT_EFFORT } from "@/lib/utils"
+import { OptionGrid } from "@/components/OptionGrid"
 import { SectionHeading } from "@/components/stats/SectionHeading"
 import { InputOutputChart } from "@/components/stats/InputOutputChart"
 import { ActivityHeatmap } from "@/components/stats/ActivityHeatmap"
@@ -104,12 +105,7 @@ function SearchHeader({ searchInputRef }: SearchHeaderProps): JSX.Element {
 
 // ── Model Selector ─────────────────────────────────────────────────────────
 
-interface ModelSelectorProps {
-  selectedModel?: string
-  onModelChange: (model: string) => void
-}
-
-function ModelSelector({ selectedModel, onModelChange }: ModelSelectorProps): JSX.Element {
+function ModelSelector({ selectedModel, onModelChange }: { selectedModel?: string; onModelChange: (model: string) => void }): JSX.Element {
   return (
     <div className="rounded-lg border border-border elevation-2 depth-low p-3">
       <section>
@@ -117,25 +113,12 @@ function ModelSelector({ selectedModel, onModelChange }: ModelSelectorProps): JS
           <Cpu className="size-3" />
           Model
         </SectionHeading>
-        <div className="grid grid-cols-2 gap-1">
-          {MODEL_OPTIONS.map((opt) => {
-            const isSelected = (selectedModel || "") === opt.value
-            return (
-              <button
-                key={opt.value}
-                onClick={() => onModelChange(opt.value)}
-                className={cn(
-                  "rounded-md border px-2 py-1.5 text-[10px] font-medium transition-colors",
-                  isSelected
-                    ? "border-blue-500 text-blue-400 bg-blue-500/10"
-                    : "border-border text-muted-foreground hover:border-border hover:text-foreground elevation-1"
-                )}
-              >
-                {opt.label}
-              </button>
-            )
-          })}
-        </div>
+        <OptionGrid
+          options={MODEL_OPTIONS}
+          selected={selectedModel || ""}
+          onChange={onModelChange}
+          accentColor="blue"
+        />
       </section>
     </div>
   )
@@ -143,12 +126,7 @@ function ModelSelector({ selectedModel, onModelChange }: ModelSelectorProps): JS
 
 // ── Effort Selector ───────────────────────────────────────────────────────
 
-interface EffortSelectorProps {
-  selectedEffort?: string
-  onEffortChange: (effort: string) => void
-}
-
-function EffortSelector({ selectedEffort, onEffortChange }: EffortSelectorProps): JSX.Element {
+function EffortSelector({ selectedEffort, onEffortChange }: { selectedEffort?: string; onEffortChange: (effort: string) => void }): JSX.Element {
   return (
     <div className="rounded-lg border border-border elevation-2 depth-low p-3">
       <section>
@@ -156,25 +134,13 @@ function EffortSelector({ selectedEffort, onEffortChange }: EffortSelectorProps)
           <Gauge className="size-3" />
           Thinking Effort
         </SectionHeading>
-        <div className="grid grid-cols-3 gap-1">
-          {EFFORT_OPTIONS.map((opt) => {
-            const isSelected = (selectedEffort || DEFAULT_EFFORT) === opt.value
-            return (
-              <button
-                key={opt.value}
-                onClick={() => onEffortChange(opt.value)}
-                className={cn(
-                  "rounded-md border px-2 py-1.5 text-[10px] font-medium transition-colors",
-                  isSelected
-                    ? "border-orange-500 text-orange-400 bg-orange-500/10"
-                    : "border-border text-muted-foreground hover:border-border hover:text-foreground elevation-1"
-                )}
-              >
-                {opt.label}
-              </button>
-            )
-          })}
-        </div>
+        <OptionGrid
+          options={EFFORT_OPTIONS}
+          selected={selectedEffort || DEFAULT_EFFORT}
+          onChange={onEffortChange}
+          columns={3}
+          accentColor="orange"
+        />
       </section>
     </div>
   )

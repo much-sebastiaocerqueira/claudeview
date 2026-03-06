@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { ToolCallCard, getToolBadgeStyle } from "./ToolCallCard"
 import { ThinkingBlock } from "./ThinkingBlock"
 import { toolCallCountLabel, activityCountLabel } from "@/lib/timelineHelpers"
-import type { ToolCall, ThinkingBlock as ThinkingBlockType } from "@/lib/types"
+import type { ToolCall } from "@/lib/types"
 import type { ActivityItem } from "@/lib/timelineHelpers"
 import { cn } from "@/lib/utils"
 
@@ -73,6 +73,21 @@ export const CollapsibleToolCalls = memo(function CollapsibleToolCalls({
     ? activityCountLabel(toolCalls.length, thinkingCount)
     : toolCallCountLabel(toolCalls.length)
 
+  function renderToolCallCard(tc: ToolCall, isLast: boolean) {
+    const isLastWithoutResult = isAgentActive && isLast && tc.result === null
+    return (
+      <div
+        key={tc.id}
+        ref={tc.id === activeToolCallId ? targetRef : undefined}
+        className={cn(
+          tc.id === activeToolCallId && "ring-1 ring-blue-500/50 rounded-md"
+        )}
+      >
+        <ToolCallCard toolCall={tc} expandAll={expandAll} isAgentActive={isLastWithoutResult} />
+      </div>
+    )
+  }
+
   if (isOpen) {
     return (
       <div className="space-y-2">
@@ -92,38 +107,15 @@ export const CollapsibleToolCalls = memo(function CollapsibleToolCalls({
                 <ThinkingBlock key={`thinking-${idx}`} blocks={item.blocks} expandAll={expandAll} />
               )
             }
-            return item.toolCalls.map((tc, ti) => {
-              const isLastWithoutResult = isAgentActive && idx === activityItems.length - 1 && ti === item.toolCalls.length - 1 && tc.result === null
-              return (
-                <div
-                  key={tc.id}
-                  ref={tc.id === activeToolCallId ? targetRef : undefined}
-                  className={cn(
-                    tc.id === activeToolCallId &&
-                      "ring-1 ring-blue-500/50 rounded-md"
-                  )}
-                >
-                  <ToolCallCard toolCall={tc} expandAll={expandAll} isAgentActive={isLastWithoutResult} />
-                </div>
-              )
-            })
-          })
-        ) : (
-          toolCalls.map((tc, i) => {
-            const isLastWithoutResult = isAgentActive && i === toolCalls.length - 1 && tc.result === null
-            return (
-              <div
-                key={tc.id}
-                ref={tc.id === activeToolCallId ? targetRef : undefined}
-                className={cn(
-                  tc.id === activeToolCallId &&
-                    "ring-1 ring-blue-500/50 rounded-md"
-                )}
-              >
-                <ToolCallCard toolCall={tc} expandAll={expandAll} isAgentActive={isLastWithoutResult} />
-              </div>
+            const isLastGroup = idx === activityItems.length - 1
+            return item.toolCalls.map((tc, ti) =>
+              renderToolCallCard(tc, isLastGroup && ti === item.toolCalls.length - 1)
             )
           })
+        ) : (
+          toolCalls.map((tc, i) =>
+            renderToolCallCard(tc, i === toolCalls.length - 1)
+          )
         )}
       </div>
     )

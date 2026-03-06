@@ -80,14 +80,13 @@ export interface NetDiffResult {
  * Write operations reset tracking (they replace the entire file).
  */
 export function computeNetDiff(ops: EditOp[]): NetDiffResult {
-  // Multiset: line -> count
   const netAdded = new Map<string, number>()
   const netRemoved = new Map<string, number>()
 
-  const addToSet = (set: Map<string, number>, line: string) => {
+  function addToMultiset(set: Map<string, number>, line: string): void {
     set.set(line, (set.get(line) ?? 0) + 1)
   }
-  const removeFromSet = (set: Map<string, number>, line: string): boolean => {
+  function removeFromMultiset(set: Map<string, number>, line: string): boolean {
     const count = set.get(line) ?? 0
     if (count <= 0) return false
     if (count === 1) set.delete(line)
@@ -103,7 +102,7 @@ export function computeNetDiff(ops: EditOp[]): NetDiffResult {
       // All lines of the new content are "added"
       const lines = op.newString ? op.newString.split("\n") : []
       for (const line of lines) {
-        addToSet(netAdded, line)
+        addToMultiset(netAdded, line)
       }
       continue
     }
@@ -112,8 +111,8 @@ export function computeNetDiff(ops: EditOp[]): NetDiffResult {
     const oldLines = op.oldString ? op.oldString.split("\n") : []
     for (const line of oldLines) {
       // If this line was previously added, they cancel out
-      if (!removeFromSet(netAdded, line)) {
-        addToSet(netRemoved, line)
+      if (!removeFromMultiset(netAdded, line)) {
+        addToMultiset(netRemoved, line)
       }
     }
 
@@ -121,21 +120,22 @@ export function computeNetDiff(ops: EditOp[]): NetDiffResult {
     const newLines = op.newString ? op.newString.split("\n") : []
     for (const line of newLines) {
       // If this line was previously removed, they cancel out
-      if (!removeFromSet(netRemoved, line)) {
-        addToSet(netAdded, line)
+      if (!removeFromMultiset(netRemoved, line)) {
+        addToMultiset(netAdded, line)
       }
     }
   }
 
-  // Flatten multisets to arrays
-  const removed: string[] = []
-  for (const [line, count] of netRemoved) {
-    for (let i = 0; i < count; i++) removed.push(line)
+  function flattenMultiset(set: Map<string, number>): string[] {
+    const lines: string[] = []
+    for (const [line, count] of set) {
+      for (let i = 0; i < count; i++) lines.push(line)
+    }
+    return lines
   }
-  const added: string[] = []
-  for (const [line, count] of netAdded) {
-    for (let i = 0; i < count; i++) added.push(line)
-  }
+
+  const removed = flattenMultiset(netRemoved)
+  const added = flattenMultiset(netAdded)
 
   return { removed, added, addCount: added.length, delCount: removed.length }
 }

@@ -62,6 +62,15 @@ export function useFileChangesData(session: ParsedSession) {
 
 // ── Grouped file types & builder ──────────────────────────────────────────
 
+/** A single edit/write operation with its before/after strings. */
+export interface IndividualEdit {
+  oldString: string
+  newString: string
+  toolName: "Edit" | "Write"
+  turnIndex: number
+  agentId?: string
+}
+
 export interface GroupedFile {
   filePath: string
   /** Short display path (last 3 segments). */
@@ -74,17 +83,37 @@ export interface GroupedFile {
   netRemoved: string[]
   addCount: number
   delCount: number
+  /** Last sub-agent ID that modified this file (for navigation). */
+  subAgentId: string | null
+  /** Individual edits in order, for per-edit diff view. */
+  edits: IndividualEdit[]
+}
+
+/** Extract the file path from an Edit or Write tool call. */
+function getToolCallFilePath(tc: ToolCall): string {
+  return String(tc.input.file_path ?? tc.input.path ?? "")
+}
+
+/** Convert a tool call into an EditOp for net diff computation. */
+function toEditOp(tc: ToolCall): EditOp {
+  const isEdit = tc.name === "Edit"
+  return {
+    oldString: isEdit ? String(tc.input.old_string ?? "") : "",
+    newString: isEdit
+      ? String(tc.input.new_string ?? "")
+      : String(tc.input.content ?? ""),
+    isWrite: !isEdit,
+  }
 }
 
 export function buildGroupedFiles(
   changes: FileChange[],
   scope: "all" | number,
 ): GroupedFile[] {
-  // Group tool calls by file path (filtered by scope)
   const byFile = new Map<string, FileChange[]>()
   for (const fc of changes) {
     if (scope !== "all" && fc.turnIndex !== scope) continue
-    const fp = String(fc.toolCall.input.file_path ?? fc.toolCall.input.path ?? "")
+    const fp = getToolCallFilePath(fc.toolCall)
     if (!fp) continue
     let arr = byFile.get(fp)
     if (!arr) {
@@ -96,43 +125,39 @@ export function buildGroupedFiles(
 
   const result: GroupedFile[] = []
   for (const [filePath, fcs] of byFile) {
-    // Build edit ops in order for net diff
-    const ops: EditOp[] = fcs.map((fc) => {
-      const isEdit = fc.toolCall.name === "Edit"
-      return {
-        oldString: isEdit ? String(fc.toolCall.input.old_string ?? "") : "",
-        newString: isEdit
-          ? String(fc.toolCall.input.new_string ?? "")
-          : String(fc.toolCall.input.content ?? ""),
-        isWrite: !isEdit,
-      }
-    })
-
+    const ops = fcs.map((fc) => toEditOp(fc.toolCall))
     const net = computeNetDiff(ops)
     const turns = fcs.map((fc) => fc.turnIndex)
-    const minTurn = Math.min(...turns)
-    const maxTurn = Math.max(...turns)
 
-    const typeSet = new Set<"Edit" | "Write">()
-    for (const fc of fcs) {
-      if (fc.toolCall.name === "Edit") typeSet.add("Edit")
-      else if (fc.toolCall.name === "Write") typeSet.add("Write")
-    }
+    const opTypes = [...new Set(fcs.map((fc) => fc.toolCall.name as "Edit" | "Write"))]
+    const subAgentFc = fcs.findLast((fc) => !!fc.agentId)
+
+    const edits: IndividualEdit[] = fcs.map((fc, i) => {
+      const op = ops[i]
+      return {
+        oldString: op.oldString,
+        newString: op.newString,
+        toolName: fc.toolCall.name as "Edit" | "Write",
+        turnIndex: fc.turnIndex,
+        agentId: fc.agentId,
+      }
+    })
 
     result.push({
       filePath,
       shortPath: filePath.split("/").slice(-3).join("/"),
       editCount: fcs.length,
-      turnRange: [minTurn, maxTurn],
-      opTypes: [...typeSet],
+      turnRange: [Math.min(...turns), Math.max(...turns)],
+      opTypes,
       netAdded: net.added,
       netRemoved: net.removed,
       addCount: net.addCount,
       delCount: net.delCount,
+      subAgentId: subAgentFc?.agentId ?? null,
+      edits,
     })
   }
 
-  // Sort by first turn index, then by file path
-  result.sort((a, b) => a.turnRange[0] - b.turnRange[0] || a.filePath.localeCompare(b.filePath))
+  result.sort((a, b) => a.turnRange[1] - b.turnRange[1] || a.turnRange[0] - b.turnRange[0] || a.filePath.localeCompare(b.filePath))
   return result
 }

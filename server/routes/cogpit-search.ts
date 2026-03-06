@@ -6,7 +6,7 @@
  */
 
 import type { UseFn } from "../helpers"
-import { findJsonlPath, getSessionMeta, projectDirToReadableName, sendJson, stat, basename, join } from "../helpers"
+import { findJsonlPath, getSessionMeta, projectDirToReadableName, sendJson, stat, basename, dirname } from "../helpers"
 import { searchSessions } from "../../packages/cogpit-memory/src/commands/search"
 
 export function registerCogpitSearchRoutes(use: UseFn) {
@@ -42,7 +42,7 @@ export function registerCogpitSearchRoutes(use: UseFn) {
           const jsonlPath = await findJsonlPath(sr.sessionId)
           if (!jsonlPath) return null
 
-          const dirName = basename(join(jsonlPath, ".."))
+          const dirName = basename(dirname(jsonlPath))
           const fileName = basename(jsonlPath)
 
           let meta: Awaited<ReturnType<typeof getSessionMeta>> | null = null
@@ -56,8 +56,6 @@ export function registerCogpitSearchRoutes(use: UseFn) {
           } catch { /* ignore */ }
 
           const { shortName } = projectDirToReadableName(dirName)
-
-          // Use the first hit's snippet as the matchedMessage
           const firstSnippet = sr.hits[0]?.snippet || ""
 
           return {

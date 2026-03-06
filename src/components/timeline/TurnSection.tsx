@@ -42,6 +42,9 @@ interface TurnSectionProps {
   branchCount?: number
 }
 
+/** Statuses that indicate the agent is still working (turn not yet done). */
+const ACTIVE_STATUSES = new Set(["thinking", "tool_use", "processing"])
+
 // ── TurnSection (thin context bridge → memo'd inner) ────────────────────────
 
 export function TurnSection({ turn, index, branchCount = 0 }: TurnSectionProps) {
@@ -54,10 +57,10 @@ export function TurnSection({ turn, index, branchCount = 0 }: TurnSectionProps) 
   // For all other turns, they're done by definition.
   let isTurnDone = !isAgentActive
   if (isAgentActive && session) {
-    const status = deriveSessionStatus(
+    const { status } = deriveSessionStatus(
       session.rawMessages as Array<{ type: string; [key: string]: unknown }>
     )
-    isTurnDone = status.status !== "thinking" && status.status !== "tool_use" && status.status !== "processing"
+    isTurnDone = !ACTIVE_STATUSES.has(status)
   }
 
   return (
@@ -254,7 +257,7 @@ function TurnTimer({
 }: {
   durationMs: number | null
   showLiveTimer: boolean
-  timestamp: string | null
+  timestamp: string
 }): React.ReactElement | null {
   if (durationMs !== null) {
     return (

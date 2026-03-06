@@ -277,7 +277,7 @@ export function LiveElapsed({ startTimestamp, className }: { startTimestamp: str
   }, [])
 
   return (
-    <span className={className ?? "text-[10px] text-muted-foreground/40 tabular-nums font-mono"}>
+    <span className={cn("text-[10px] text-muted-foreground/40 tabular-nums font-mono", className)}>
       {formatDuration(Math.max(0, elapsed))}
     </span>
   )

@@ -101,6 +101,12 @@ App.tsx
 │   │   │   └── Turn renderer
 │   │   │       ├── SubAgentPanel (blue)
 │   │   │       └── BackgroundAgentPanel (violet)
+│   │   ├── FileChangesPanel (file modifications)
+│   │   │   └── GroupedFileCard
+│   │   │       ├── PerEditDiffs (per-edit mode)
+│   │   │       └── EditDiffView (net-diff mode)
+│   │   │           ├── SubAgentIndicator (clickable "S")
+│   │   │           └── open-in-editor buttons
 │   │   └── ChatInput
 │   └── StatsPanel
 │       ├── TokenChart
@@ -156,6 +162,61 @@ App.tsx
   timestamp: string
   tokenUsage: TokenUsage | null
   isBackground: boolean  // ← TRUE for background agents
+}
+```
+
+### DiffMode
+```typescript
+"net" | "per-edit"  // Diff display mode toggle in FileChangesPanel
+```
+
+### IndividualEdit
+```typescript
+{
+  oldString: string              // Content before this edit
+  newString: string              // Content after this edit
+  toolName: "Edit" | "Write"    // Tool type
+  turnIndex: number              // Which turn this edit occurred
+  agentId?: string               // Sub-agent ID if from sub-agent
+}
+```
+
+### GroupedFile (extended)
+```typescript
+{
+  filePath: string               // Full file path
+  shortPath: string              // Last 3 path segments
+  editCount: number              // Number of edits
+  turnRange: [number, number]   // [first-turn, last-turn]
+  opTypes: ("Edit" | "Write")[] // Tool types used
+  netAdded: string[]             // Net-added lines (aggregated)
+  netRemoved: string[]           // Net-removed lines (aggregated)
+  addCount: number               // Total additions
+  delCount: number               // Total deletions
+  hasSubAgent: boolean            // NEW: Sub-agents modified this file
+  subAgentId: string | null      // NEW: Last sub-agent ID
+  edits: IndividualEdit[]        // NEW: Individual edit history
+}
+```
+
+### Custom Events
+
+**FOCUS_FILE_EVENT** — Navigate to file in FileChangesPanel
+```typescript
+"cogpit:focus-file"  // Dispatched by: TurnChangedFiles (clicked file)
+                     // Listened by: FileChangesPanel (useEffect)
+{
+  filePath: string     // File path to focus
+  turnIndex: number    // Turn index to show
+}
+```
+
+**OPEN_SUBAGENT_EVENT** — Open sub-agent's session
+```typescript
+"cogpit:open-subagent"  // Dispatched by: SubAgentIndicator (clicked "S" badge)
+                        // Listened by: App.tsx (useEffect)
+{
+  agentId: string  // Sub-agent ID to navigate to
 }
 ```
 

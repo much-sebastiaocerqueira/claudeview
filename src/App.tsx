@@ -44,6 +44,7 @@ import { usePanelState } from "@/hooks/usePanelState"
 import { useAppHandlers } from "@/hooks/useAppHandlers"
 import { detectPendingInteraction } from "@/lib/parser"
 import { dirNameToPath, shortPath, parseSubAgentPath } from "@/lib/format"
+import { OPEN_SUBAGENT_EVENT } from "@/components/FileChangesPanel/file-change-indicators"
 import type { ParsedSession } from "@/lib/types"
 import { authFetch } from "@/lib/auth"
 import { DEFAULT_EFFORT } from "@/lib/utils"
@@ -228,9 +229,7 @@ export default function App() {
       setTimeout(() => liveSessionsRefreshRef.current?.(), 300)
       setTimeout(() => liveSessionsRefreshRef.current?.(), 2000)
     },
-    onCreateStarted: useCallback((message: string) => {
-      setPendingFirstMessage(message)
-    }, []),
+    onCreateStarted: setPendingFirstMessage,
     model: selectedModel,
     effort: selectedEffort,
   })
@@ -420,6 +419,22 @@ export default function App() {
   const handleBackToMain = useCallback(() => {
     if (!state.sessionSource || !subAgentInfo) return
     navigateToSession(state.sessionSource.dirName, subAgentInfo.parentFileName)
+  }, [state.sessionSource, subAgentInfo, navigateToSession])
+
+  // Navigate to a sub-agent's session when clicking the "S" indicator
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { agentId } = (e as CustomEvent<{ agentId: string }>).detail ?? {}
+      if (!agentId || !state.sessionSource) return
+      // Derive the parent session ID: if already viewing a sub-agent, use its parentSessionId;
+      // otherwise strip .jsonl from the current fileName.
+      const parentId = subAgentInfo
+        ? subAgentInfo.parentSessionId
+        : state.sessionSource.fileName.replace(/\.jsonl$/, "")
+      navigateToSession(state.sessionSource.dirName, `${parentId}/subagents/agent-${agentId}.jsonl`)
+    }
+    window.addEventListener(OPEN_SUBAGENT_EVENT, handler)
+    return () => window.removeEventListener(OPEN_SUBAGENT_EVENT, handler)
   }, [state.sessionSource, subAgentInfo, navigateToSession])
 
   const branchModalBranches = handlers.branchModalTurn !== null ? undoRedo.branchesAtTurn(handlers.branchModalTurn) : []

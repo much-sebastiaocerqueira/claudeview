@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react"
-import { FileCode2, ChevronsDownUp, ChevronsUpDown, Layers, Clock, X } from "lucide-react"
+import { FileCode2, ChevronsDownUp, ChevronsUpDown, Layers, Clock, X, Sigma, List } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import type { ParsedSession } from "@/lib/types"
@@ -12,6 +12,9 @@ export const FOCUS_FILE_EVENT = "cogpit:focus-file"
 
 /** Scope: last turn, all turns, or a specific turn index. */
 type Scope = "last" | "all" | number
+
+/** Diff display mode: aggregated net diff or individual per-edit diffs. */
+export type DiffMode = "net" | "per-edit"
 
 interface FileChangesPanelProps {
   session: ParsedSession
@@ -28,6 +31,7 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
   const [canScrollUp, setCanScrollUp] = useState(false)
   const [canScrollDown, setCanScrollDown] = useState(false)
   const [allExpanded, setAllExpanded] = useState(true)
+  const [diffMode, setDiffMode] = useState<DiffMode>("net")
 
   // Scope: "last" (default), "all", or a specific turn index
   const [scope, setScope] = useState<Scope>("last")
@@ -49,14 +53,12 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
     return buildGroupedFiles(fileChanges, scope)
   }, [fileChanges, scope])
 
-  let activeGrouped: typeof groupedByFile
-  if (typeof scope === "number") {
-    activeGrouped = groupedForTurn ?? []
-  } else if (scope === "all") {
-    activeGrouped = groupedByFile
-  } else {
-    activeGrouped = groupedLastTurn
+  function getActiveGrouped(): typeof groupedByFile {
+    if (typeof scope === "number") return groupedForTurn ?? []
+    if (scope === "all") return groupedByFile
+    return groupedLastTurn
   }
+  const activeGrouped = getActiveGrouped()
 
   // Refs for scrolling to grouped file cards
   const fileCardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map())
@@ -153,7 +155,6 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
 
   if (fileChanges.length === 0) return null
 
-  // Compute totals for grouped view
   let groupedAdd = 0
   let groupedDel = 0
   for (const g of activeGrouped) {
@@ -161,20 +162,16 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
     groupedDel += g.delCount
   }
 
-  // Cycle: last → all → last (specific turn is set via event, dismissed with X)
-  const handleScopeToggle = () => {
+  function handleScopeToggle(): void {
     setScope(scope === "last" ? "all" : "last")
   }
 
-  // Human-readable scope label
-  let scopeLabel: string
-  if (typeof scope === "number") {
-    scopeLabel = `Turn ${scope + 1}`
-  } else if (scope === "all") {
-    scopeLabel = "All turns"
-  } else {
-    scopeLabel = `Last turn (T${lastTurnIndex + 1})`
+  function getScopeLabel(): string {
+    if (typeof scope === "number") return `Turn ${scope + 1}`
+    if (scope === "all") return "All turns"
+    return `Last turn (T${lastTurnIndex + 1})`
   }
+  const scopeLabel = getScopeLabel()
 
   return (
     <div className="flex flex-col h-full overflow-hidden border-border min-w-0 elevation-1">
@@ -217,6 +214,29 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
             {scope === "last"
               ? "Click for all turns"
               : "Click for last turn only"}
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Diff mode toggle */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => setDiffMode(diffMode === "net" ? "per-edit" : "net")}
+              className={cn(
+                "p-1 transition-colors rounded",
+                diffMode === "per-edit"
+                  ? "text-violet-400 bg-violet-400/10"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              aria-label={diffMode === "net" ? "Show per-edit diffs" : "Show net diff"}
+            >
+              {diffMode === "net" ? <Sigma className="size-3.5" /> : <List className="size-3.5" />}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {diffMode === "net"
+              ? "Switch to per-edit diffs"
+              : "Switch to net diff"}
           </TooltipContent>
         </Tooltip>
 
@@ -278,6 +298,7 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
                   file={file}
                   defaultOpen={allExpanded}
                   isHighlighted={highlightPath === file.filePath}
+                  diffMode={diffMode}
                 />
               ))
             ) : (

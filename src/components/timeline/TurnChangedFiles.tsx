@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect, memo } from "react"
 import { ChevronDown, ChevronRight, Folder, ChevronsDownUp, ChevronsUpDown, FileCode2 } from "lucide-react"
 import { diffLineCount } from "@/lib/diffUtils"
 import { FOCUS_FILE_EVENT } from "@/components/FileChangesPanel"
-import { OpIndicator } from "@/components/FileChangesPanel/file-change-indicators"
+import { OpIndicator, SubAgentIndicator } from "@/components/FileChangesPanel/file-change-indicators"
 import { cn } from "@/lib/utils"
 import type { Turn, ToolCall } from "@/lib/types"
 
@@ -15,6 +15,8 @@ interface FileChangeInfo {
   /** Whether file was edited, written (created/overwritten), or both. */
   hasEdit: boolean
   hasWrite: boolean
+  /** Agent ID if this change came from a sub-agent. */
+  subAgentId: string | null
 }
 
 interface TreeNode {
@@ -27,15 +29,17 @@ interface TreeNode {
   deletions: number
   hasEdit: boolean
   hasWrite: boolean
+  /** Last sub-agent ID that modified this file (null if main agent only). */
+  subAgentId: string | null
   children: TreeNode[]
 }
 
 // ── Compute per-turn file changes (aggregated by file path) ───────────────────
 
 function computeTurnFileChanges(turn: Turn): FileChangeInfo[] {
-  const fileMap = new Map<string, { add: number; del: number; hasEdit: boolean; hasWrite: boolean }>()
+  const fileMap = new Map<string, { add: number; del: number; hasEdit: boolean; hasWrite: boolean; subAgentId: string | null }>()
 
-  const process = (tc: ToolCall) => {
+  function processToolCall(tc: ToolCall, agentId?: string) {
     if (tc.name !== "Edit" && tc.name !== "Write") return
     const fp = String(tc.input.file_path ?? tc.input.path ?? "")
     if (!fp) return
@@ -45,23 +49,25 @@ function computeTurnFileChanges(turn: Turn): FileChangeInfo[] {
       ? String(tc.input.new_string ?? "")
       : String(tc.input.content ?? "")
     const d = diffLineCount(oldStr, newStr)
-    const existing = fileMap.get(fp) ?? { add: 0, del: 0, hasEdit: false, hasWrite: false }
+    const existing = fileMap.get(fp) ?? { add: 0, del: 0, hasEdit: false, hasWrite: false, subAgentId: null }
     existing.add += d.add
     existing.del += d.del
     if (isEdit) existing.hasEdit = true
     else existing.hasWrite = true
+    if (agentId) existing.subAgentId = agentId
     fileMap.set(fp, existing)
   }
 
-  turn.toolCalls.forEach(process)
-  turn.subAgentActivity.forEach((msg) => msg.toolCalls.forEach(process))
+  turn.toolCalls.forEach((tc) => processToolCall(tc))
+  turn.subAgentActivity.forEach((msg) => msg.toolCalls.forEach((tc) => processToolCall(tc, msg.agentId)))
 
-  return [...fileMap.entries()].map(([filePath, { add, del, hasEdit, hasWrite }]) => ({
+  return [...fileMap.entries()].map(([filePath, { add, del, hasEdit, hasWrite, subAgentId }]) => ({
     filePath,
     additions: add,
     deletions: del,
     hasEdit,
     hasWrite,
+    subAgentId,
   }))
 }
 
@@ -75,13 +81,18 @@ interface TrieNode {
   deletions: number
   hasEdit: boolean
   hasWrite: boolean
+  subAgentId: string | null
+}
+
+function createTrieNode(): TrieNode {
+  return { children: new Map(), isFile: false, absPath: "", additions: 0, deletions: 0, hasEdit: false, hasWrite: false, subAgentId: null }
 }
 
 function buildFileTree(changes: FileChangeInfo[], cwd: string): TreeNode[] {
   if (changes.length === 0) return []
 
   const normalizedCwd = cwd.endsWith("/") ? cwd.slice(0, -1) : cwd
-  const root: TrieNode = { children: new Map(), isFile: false, absPath: "", additions: 0, deletions: 0, hasEdit: false, hasWrite: false }
+  const root = createTrieNode()
 
   for (const c of changes) {
     let rel = c.filePath
@@ -96,7 +107,7 @@ function buildFileTree(changes: FileChangeInfo[], cwd: string): TreeNode[] {
     for (let i = 0; i < segs.length; i++) {
       let child = node.children.get(segs[i])
       if (!child) {
-        child = { children: new Map(), isFile: false, absPath: "", additions: 0, deletions: 0, hasEdit: false, hasWrite: false }
+        child = createTrieNode()
         node.children.set(segs[i], child)
       }
       if (i === segs.length - 1) {
@@ -106,6 +117,7 @@ function buildFileTree(changes: FileChangeInfo[], cwd: string): TreeNode[] {
         child.deletions += c.deletions
         if (c.hasEdit) child.hasEdit = true
         if (c.hasWrite) child.hasWrite = true
+        if (c.subAgentId) child.subAgentId = c.subAgentId
       }
       node = child
     }
@@ -134,6 +146,7 @@ function buildFileTree(changes: FileChangeInfo[], cwd: string): TreeNode[] {
           deletions: child.deletions,
           hasEdit: child.hasEdit,
           hasWrite: child.hasWrite,
+          subAgentId: child.subAgentId,
           children: [],
         }
       }
@@ -152,16 +165,18 @@ function buildFileTree(changes: FileChangeInfo[], cwd: string): TreeNode[] {
 
       const children = toTree(c, cPath)
 
-      // Sum additions/deletions and aggregate hasEdit/hasWrite from children
+      // Sum additions/deletions and aggregate hasEdit/hasWrite/subAgentId from children
       let totalAdd = 0
       let totalDel = 0
       let hasEdit = c.isFile ? c.hasEdit : false
       let hasWrite = c.isFile ? c.hasWrite : false
+      let subAgentId: string | null = c.isFile ? c.subAgentId : null
       for (const ch of children) {
         totalAdd += ch.additions
         totalDel += ch.deletions
         if (ch.hasEdit) hasEdit = true
         if (ch.hasWrite) hasWrite = true
+        if (ch.subAgentId) subAgentId = ch.subAgentId
       }
       // Include own file data if this node is also a file (edge case)
       if (c.isFile) {
@@ -178,6 +193,7 @@ function buildFileTree(changes: FileChangeInfo[], cwd: string): TreeNode[] {
         deletions: totalDel,
         hasEdit,
         hasWrite,
+        subAgentId,
         children,
       }
     })
@@ -308,6 +324,7 @@ function TreeRow({
       >
         <FileTypeIndicator name={node.name} />
         <OpIndicator hasEdit={node.hasEdit} hasWrite={node.hasWrite} />
+        {node.subAgentId && <SubAgentIndicator agentId={node.subAgentId} />}
         <span className="text-foreground/75 truncate">{node.name}</span>
         <div className="flex-1 min-w-2" />
         <LineCounts add={node.additions} del={node.deletions} />
@@ -391,4 +408,3 @@ function FileTypeIndicator({ name }: { name: string }) {
   const color = EXT_COLORS[ext] ?? "bg-muted-foreground/40"
   return <div className={cn("size-2 rounded-[2px] shrink-0", color)} />
 }
-

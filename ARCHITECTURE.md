@@ -276,6 +276,43 @@ Displays running background servers (dev servers, API servers):
 - Provides "Stop" button to kill on port (via `/api/kill-port`)
 - Shows output file link (click to stream in ServerPanel)
 
+#### File Changes Panel (`src/components/FileChangesPanel/`)
+
+Comprehensive file modification tracking across sessions:
+
+**Two Viewing Modes (toggle via button):**
+- **"net" mode (default):** Aggregated net-diff per file
+  - Shows final state after all edits cancel out
+  - Combines all Edit/Write operations into single before/after view
+  - Fast to understand overall file impact
+- **"per-edit" mode:** Individual diffs per Edit/Write operation
+  - Shows each operation chronologically
+  - Header per edit: "Edit N/M", turn index, sub-agent badge
+  - Useful for step-by-step code review
+
+**Data Model:**
+- `GroupedFile` interface includes:
+  - `hasSubAgent: boolean` — True if any edit came from sub-agent
+  - `subAgentId: string | null` — Last sub-agent ID that modified file
+  - `edits: IndividualEdit[]` — Array of individual edit operations
+- `IndividualEdit` tracks: oldString, newString, toolName ("Edit"/"Write"), turnIndex, agentId
+
+**File Sorting:** Ordered by last-modified turn (descending), then first-modified turn, then filename
+- Most recently edited files appear first
+- Helps focus on latest changes
+
+**Sub-Agent Navigation:**
+- Files modified by sub-agents display clickable "S" badge in header
+- Click to open sub-agent's session in main view
+- Dispatches `OPEN_SUBAGENT_EVENT` custom event (handled in App.tsx)
+
+**Components:**
+- `FileChangesPanel` — Main container, manages diffMode and scope state
+- `GroupedFileCard` — Individual file card with collapsible diff
+- `PerEditDiffs` — Per-edit diff renderer (shows each edit with headers)
+- `EditDiffView` — LCS-based line-by-line diff (shared with ConversationTimeline)
+- `SubAgentIndicator` — Clickable "S" badge for sub-agent file changes
+
 ---
 
 ## Cross-Component Communication: File Focus Event
@@ -316,6 +353,38 @@ Displays running background servers (dev servers, API servers):
 - FileChangesPanel and TurnChangedFiles are siblings; no shared parent to pass props
 - Avoids tight coupling between timeline and file panel
 - Allows independent panel lifecycle and re-renders
+
+### Sub-Agent Navigation Event
+
+**Problem:** Files modified by sub-agents display "S" badge; clicking it should navigate to that sub-agent's session.
+
+**Solution:** Custom event dispatched by SubAgentIndicator, listened by App.tsx for session navigation.
+
+**Event Details:**
+- **Name:** `"cogpit:open-subagent"`
+- **Exported from:** `src/components/FileChangesPanel/file-change-indicators.tsx`
+- **Emitted by:** `SubAgentIndicator` when "S" badge clicked
+- **Listened by:** `App.tsx` (useEffect at line ~421)
+
+**Payload:**
+```typescript
+{
+  agentId: string  // Sub-agent ID (e.g., "c1a2b3c4")
+}
+```
+
+**Handler Behavior in App.tsx:**
+1. **Derive parent session ID** — If viewing a sub-agent, use its parentSessionId; otherwise strip `.jsonl` from current fileName
+2. **Build sub-agent path** — Construct path: `{parentId}/subagents/agent-{agentId}.jsonl`
+3. **Navigate** — Call `navigateToSession()` with derived parent directory and sub-agent path
+4. **Update main view** — Session switches to show selected sub-agent's session
+
+**Example Flow:**
+- User in session `/project/session1.jsonl` viewing file modified by agent-xyz
+- Click "S" badge → dispatches event with agentId="xyz"
+- App derives parentSessionId from current session
+- Navigates to `/project/session1/subagents/agent-xyz.jsonl`
+- Main view shows sub-agent session with "Back to main" button
 
 ---
 

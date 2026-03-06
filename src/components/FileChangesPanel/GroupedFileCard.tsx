@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { EditDiffView } from "../timeline/EditDiffView"
 import { cn } from "@/lib/utils"
-import { OpIndicator } from "./file-change-indicators"
+import { OpIndicator, SubAgentIndicator } from "./file-change-indicators"
 import { openInEditor } from "./open-in-editor"
-import type { GroupedFile } from "./useFileChangesData"
+import type { GroupedFile, IndividualEdit } from "./useFileChangesData"
+import type { DiffMode } from "."
 
 const EXT_COLORS: Record<string, string> = {
   tsx: "text-blue-400",
@@ -48,10 +49,11 @@ interface GroupedFileCardProps {
   file: GroupedFile
   defaultOpen: boolean
   isHighlighted?: boolean
+  diffMode: DiffMode
 }
 
 export const GroupedFileCard = forwardRef<HTMLDivElement, GroupedFileCardProps>(
-  function GroupedFileCard({ file, defaultOpen, isHighlighted }, forwardedRef) {
+  function GroupedFileCard({ file, defaultOpen, isHighlighted, diffMode }, forwardedRef) {
     const { ref: nearRef, isNear } = useNearViewport()
     const [open, setOpen] = useState(defaultOpen)
     const prevDefaultRef = useRef(defaultOpen)
@@ -66,10 +68,11 @@ export const GroupedFileCard = forwardRef<HTMLDivElement, GroupedFileCardProps>(
     const ext = file.filePath.split(".").pop()?.toLowerCase() ?? ""
     const extColor = EXT_COLORS[ext] ?? "text-muted-foreground"
 
-    // Synthesize old/new strings for EditDiffView
     const oldString = file.netRemoved.join("\n")
     const newString = file.netAdded.join("\n")
-    const hasDiff = oldString || newString
+    const hasNetDiff = Boolean(oldString || newString)
+    const hasPerEditDiff = file.edits.some((e) => Boolean(e.oldString || e.newString))
+    const hasDiff = diffMode === "per-edit" ? hasPerEditDiff : hasNetDiff
 
     const showDiff = open && isNear && hasDiff
     const diffRef = useRef<HTMLDivElement>(null)
@@ -79,17 +82,14 @@ export const GroupedFileCard = forwardRef<HTMLDivElement, GroupedFileCardProps>(
       if (showDiff && diffRef.current) {
         lastDiffHeightRef.current = diffRef.current.offsetHeight
       }
-    }, [showDiff])
+    }, [showDiff, diffMode])
 
     const turnLabel = file.turnRange[0] === file.turnRange[1]
       ? `T${file.turnRange[0] + 1}`
       : `T${file.turnRange[0] + 1}–T${file.turnRange[1] + 1}`
 
-    // Merge refs
     const setRef = (el: HTMLDivElement | null) => {
-      // nearRef for viewport detection
       ;(nearRef as React.MutableRefObject<HTMLDivElement | null>).current = el
-      // forward ref for external scroll-to
       if (typeof forwardedRef === "function") forwardedRef(el)
       else if (forwardedRef) forwardedRef.current = el
     }
@@ -119,6 +119,7 @@ export const GroupedFileCard = forwardRef<HTMLDivElement, GroupedFileCardProps>(
               {ext}
             </span>
             <OpIndicator hasEdit={file.opTypes.includes("Edit")} hasWrite={file.opTypes.includes("Write")} />
+            {file.subAgentId && <SubAgentIndicator agentId={file.subAgentId} />}
             <span className="text-[10px] text-muted-foreground font-mono truncate">
               {file.shortPath}
             </span>
@@ -142,34 +143,32 @@ export const GroupedFileCard = forwardRef<HTMLDivElement, GroupedFileCardProps>(
               <span className="text-[10px] font-mono tabular-nums text-red-400/80">-{file.delCount}</span>
             )}
             <ChangeBar add={file.addCount} del={file.delCount} />
-            {file.filePath && (
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => openInEditor(file.filePath, "file")}
-                      className="p-1 text-muted-foreground hover:text-blue-400 transition-colors"
-                      aria-label="Open file in editor"
-                    >
-                      <Code2 className="size-3" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Open in editor</TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={() => openInEditor(file.filePath, "diff")}
-                      className="p-1 text-muted-foreground hover:text-amber-400 transition-colors"
-                      aria-label="View git diff"
-                    >
-                      <GitCompareArrows className="size-3" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>View git diff</TooltipContent>
-                </Tooltip>
-              </div>
-            )}
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => openInEditor(file.filePath, "file")}
+                    className="p-1 text-muted-foreground hover:text-blue-400 transition-colors"
+                    aria-label="Open file in editor"
+                  >
+                    <Code2 className="size-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Open in editor</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => openInEditor(file.filePath, "diff")}
+                    className="p-1 text-muted-foreground hover:text-amber-400 transition-colors"
+                    aria-label="View git diff"
+                  >
+                    <GitCompareArrows className="size-3" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>View git diff</TooltipContent>
+              </Tooltip>
+            </div>
           </div>
         </div>
         <DiffContent
@@ -181,6 +180,8 @@ export const GroupedFileCard = forwardRef<HTMLDivElement, GroupedFileCardProps>(
           oldString={oldString}
           newString={newString}
           filePath={file.filePath}
+          diffMode={diffMode}
+          edits={file.edits}
         />
       </div>
     )
@@ -196,25 +197,33 @@ function DiffContent({
   oldString,
   newString,
   filePath,
+  diffMode,
+  edits,
 }: {
   showDiff: boolean
   open: boolean
-  hasDiff: string | boolean
+  hasDiff: boolean
   diffRef: React.RefObject<HTMLDivElement | null>
   lastDiffHeight: number
   oldString: string
   newString: string
   filePath: string
+  diffMode: DiffMode
+  edits: IndividualEdit[]
 }): React.ReactElement | null {
   if (showDiff) {
     return (
       <div ref={diffRef} className="overflow-hidden rounded-b-md">
-        <EditDiffView
-          oldString={oldString}
-          newString={newString}
-          filePath={filePath}
-          compact={false}
-        />
+        {diffMode === "per-edit" ? (
+          <PerEditDiffs edits={edits} filePath={filePath} />
+        ) : (
+          <EditDiffView
+            oldString={oldString}
+            newString={newString}
+            filePath={filePath}
+            compact={false}
+          />
+        )}
       </div>
     )
   }
@@ -224,10 +233,44 @@ function DiffContent({
   if (open && !hasDiff) {
     return (
       <div className="px-3 py-2 text-[10px] text-muted-foreground/50 italic">
-        No net changes (all edits cancelled out)
+        {diffMode === "per-edit" ? "No edits" : "No net changes (all edits cancelled out)"}
       </div>
     )
   }
   return null
 }
 
+function PerEditDiffs({ edits, filePath }: { edits: IndividualEdit[]; filePath: string }) {
+  const total = edits.length
+  return (
+    <div className="divide-y divide-border/30">
+      {edits.map((edit, i) => {
+        const hasContent = Boolean(edit.oldString || edit.newString)
+        if (!hasContent) return null
+        return (
+          <div key={i}>
+            {total > 1 && (
+              <div className="flex items-center gap-2 px-2.5 py-1 bg-elevation-1/50">
+                <span className="text-[9px] font-mono text-muted-foreground/60">
+                  {edit.toolName} {i + 1}/{total}
+                </span>
+                <span className="text-[9px] text-muted-foreground/40">
+                  T{edit.turnIndex + 1}
+                </span>
+                {edit.agentId && (
+                  <span className="text-[9px] font-bold text-indigo-400/60">S</span>
+                )}
+              </div>
+            )}
+            <EditDiffView
+              oldString={edit.oldString}
+              newString={edit.newString}
+              filePath={filePath}
+              compact={false}
+            />
+          </div>
+        )
+      })}
+    </div>
+  )
+}
