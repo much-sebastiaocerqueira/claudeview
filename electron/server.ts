@@ -31,6 +31,7 @@ import { registerConfigBrowserRoutes } from "../server/routes/config-browser"
 import { registerSessionSearchRoutes, setSearchIndex, getSearchIndex } from "../server/routes/session-search"
 import { registerLocalFileRoutes } from "../server/routes/local-file"
 import { registerSearchIndexRoutes } from "../server/routes/search-index-stats"
+import { registerCogpitSearchRoutes } from "../server/routes/cogpit-search"
 import { SearchIndex } from "../server/search-index"
 
 // ── PTY types ───────────────────────────────────────────────────────
@@ -128,6 +129,7 @@ export async function createAppServer(staticDir: string, userDataDir: string) {
   registerSessionSearchRoutes(use)
   registerLocalFileRoutes(use)
   registerSearchIndexRoutes(use)
+  registerCogpitSearchRoutes(use)
 
   // ── Static files / dev proxy ────────────────────────────────────
   const viteDevUrl = process.env.ELECTRON_RENDERER_URL

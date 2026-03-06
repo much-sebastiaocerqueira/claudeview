@@ -160,7 +160,7 @@ Access Cogpit from other devices on your local network:
 The server binds to `0.0.0.0:19384` when network access is enabled. Local clients (localhost) bypass authentication entirely.
 
 ### File Changes Panel
-Track all file modifications in a session — shows Edit and Write operations with +/- line counts, deleted file tracking, and a resizable split-pane view. Click any file to open it in your editor.
+Track all file modifications in a session. Files are grouped by path showing net changes (accounting for multiple edits that may cancel out), edit count, and operation types (Edit/Write). Switch between "Last turn only" (Clock icon) and "All turns" (Layers icon) views, or drill down to a specific turn by clicking files in the timeline. Each file card shows line deltas, change intensity bar, and quick actions: expand to view the full net diff, open in editor, or view git diff. Supports expand/collapse all files.
 
 ### Responsive Layout
 Full desktop and mobile support with distinct layouts:

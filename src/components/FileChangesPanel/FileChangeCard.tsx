@@ -7,15 +7,7 @@ import { EditDiffView } from "../timeline/EditDiffView"
 import { getToolBadgeStyle } from "../timeline/ToolCallCard"
 import type { ToolCall } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { authFetch } from "@/lib/auth"
-
-function openInEditor(filePath: string, mode: "file" | "diff") {
-  authFetch("/api/open-in-editor", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ path: filePath, mode }),
-  })
-}
+import { openInEditor } from "./open-in-editor"
 
 interface FileChangeCardProps {
   turnIndex: number
@@ -123,27 +115,65 @@ export function FileChangeCard({ turnIndex, toolCall, agentId, defaultOpen }: Fi
               )}
             </>
           )}
-          {toolCall.isError ? (
-            <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
-          ) : toolCall.result !== null ? (
-            <CheckCircle className="w-3.5 h-3.5 text-green-500/60 shrink-0" />
-          ) : null}
+          <ToolCallStatusIcon isError={toolCall.isError} hasResult={toolCall.result !== null} />
         </div>
       </div>
-      {showDiff ? (
-        <div ref={diffRef} className="overflow-hidden rounded-b-md">
-          <EditDiffView
-            oldString={oldString}
-            newString={newString}
-            filePath={filePath}
-            compact={false}
-          />
-        </div>
-      ) : open && lastDiffHeightRef.current > 0 ? (
-        <div style={{ height: lastDiffHeightRef.current }} />
-      ) : null}
+      <DiffContent
+        showDiff={showDiff}
+        open={open}
+        diffRef={diffRef}
+        lastDiffHeight={lastDiffHeightRef.current}
+        oldString={oldString}
+        newString={newString}
+        filePath={filePath}
+      />
     </div>
   )
+}
+
+function ToolCallStatusIcon({ isError, hasResult }: { isError?: boolean; hasResult: boolean }): React.ReactElement | null {
+  if (isError) {
+    return <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+  }
+  if (hasResult) {
+    return <CheckCircle className="w-3.5 h-3.5 text-green-500/60 shrink-0" />
+  }
+  return null
+}
+
+function DiffContent({
+  showDiff,
+  open,
+  diffRef,
+  lastDiffHeight,
+  oldString,
+  newString,
+  filePath,
+}: {
+  showDiff: boolean
+  open: boolean
+  diffRef: React.RefObject<HTMLDivElement | null>
+  lastDiffHeight: number
+  oldString: string
+  newString: string
+  filePath: string
+}): React.ReactElement | null {
+  if (showDiff) {
+    return (
+      <div ref={diffRef} className="overflow-hidden rounded-b-md">
+        <EditDiffView
+          oldString={oldString}
+          newString={newString}
+          filePath={filePath}
+          compact={false}
+        />
+      </div>
+    )
+  }
+  if (open && lastDiffHeight > 0) {
+    return <div style={{ height: lastDiffHeight }} />
+  }
+  return null
 }
 
 export function DeletedFileCard({ filePath, lineCount, turnIndex }: { filePath: string; lineCount: number; turnIndex: number }) {

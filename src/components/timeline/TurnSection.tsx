@@ -1,4 +1,4 @@
-import { memo, useRef, useLayoutEffect, useState, useEffect } from "react"
+import { memo, useRef, useLayoutEffect } from "react"
 import { useNearViewport } from "@/hooks/useNearViewport"
 import { Clock, RotateCcw } from "lucide-react"
 import { UserMessage } from "./UserMessage"
@@ -176,7 +176,7 @@ const TurnSectionInner = memo(function TurnSectionInner({
           />
 
           {isTurnDone && hasFileChanges && (
-            <TurnChangedFiles turn={turn} cwd={cwd} />
+            <TurnChangedFiles turn={turn} turnIndex={index} cwd={cwd} />
           )}
         </div>
       ) : (
@@ -217,17 +217,7 @@ function TurnHeader({
       <div className="flex items-center justify-center w-6 h-6 rounded-full bg-elevation-2 border border-border/50 text-[10px] font-mono text-muted-foreground shrink-0">
         {index + 1}
       </div>
-      {durationMs !== null ? (
-        <span className="flex items-center gap-1 text-[10px] text-muted-foreground/60 font-mono tabular-nums">
-          <Clock className="w-2.5 h-2.5" />
-          {formatDuration(durationMs)}
-        </span>
-      ) : showLiveTimer ? (
-        <span className="flex items-center gap-1 text-[10px] text-amber-400/70 font-mono tabular-nums">
-          <Clock className="w-2.5 h-2.5 animate-pulse" />
-          <LiveElapsed startTimestamp={turn.timestamp} className="tabular-nums" />
-        </span>
-      ) : null}
+      <TurnTimer durationMs={durationMs} showLiveTimer={showLiveTimer} timestamp={turn.timestamp} />
       {turn.timestamp && (
         <span className="text-[10px] text-muted-foreground/40">
           {new Date(turn.timestamp).toLocaleTimeString()}
@@ -253,6 +243,36 @@ function TurnHeader({
       )}
     </div>
   )
+}
+
+// ── Turn timer ───────────────────────────────────────────────────────────────
+
+function TurnTimer({
+  durationMs,
+  showLiveTimer,
+  timestamp,
+}: {
+  durationMs: number | null
+  showLiveTimer: boolean
+  timestamp: string | null
+}): React.ReactElement | null {
+  if (durationMs !== null) {
+    return (
+      <span className="flex items-center gap-1 text-[10px] text-muted-foreground/60 font-mono tabular-nums">
+        <Clock className="w-2.5 h-2.5" />
+        {formatDuration(durationMs)}
+      </span>
+    )
+  }
+  if (showLiveTimer) {
+    return (
+      <span className="flex items-center gap-1 text-[10px] text-amber-400/70 font-mono tabular-nums">
+        <Clock className="w-2.5 h-2.5 animate-pulse" />
+        <LiveElapsed startTimestamp={timestamp} className="tabular-nums" />
+      </span>
+    )
+  }
+  return null
 }
 
 // ── Content blocks renderer ──────────────────────────────────────────────────

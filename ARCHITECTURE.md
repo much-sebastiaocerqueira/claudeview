@@ -116,6 +116,19 @@ Gracefully terminates process listening on a port:
 - Waits for graceful shutdown
 - Falls back to `SIGKILL` after 5s
 
+### 6. Cogpit Session Search (`/api/cogpit-search`)
+
+**Route:** `server/routes/cogpit-search.ts`
+
+Deep session search powered by the local `packages/cogpit-memory` indexing package:
+- **Query params:**
+  - `q` (required, min 2 chars) — Search query
+  - `limit` (optional, default 20, max 100) — Max results to return
+  - `maxAge` (optional, default "30d") — Filter to recent sessions (e.g., "7d", "30d")
+- **Returns:** `ActiveSessionInfo[]` shaped for LiveSessions UI
+  - Fields: dirName, projectShortName, cwd, firstUserMessage, lastUserMessage, gitBranch, lastModified, turnCount, isActive, matchedMessage (snippet), hitCount
+- **Used by:** LiveSessions panel for fast deep search across all sessions via pre-built cogpit-memory index (faster than full JSONL scan)
+
 ---
 
 ## Backend API Routes
@@ -135,6 +148,7 @@ All routes are registered in **both** `server/api-plugin.ts` (Vite) and `electro
 | `/api/teams` | GET | List teams in `~/.claude/teams/` |
 | `/api/team-detail/:name` | GET | Team config, tasks, and inbox |
 | `/api/watch-team/:name` | GET (SSE) | Live stream for team updates |
+| `/api/cogpit-search` | GET | Deep session search via cogpit-memory (query, limit, maxAge params) |
 | `/api/check-ports` | GET | Test TCP listening on ports |
 | `/api/background-tasks` | GET | Scan Claude's task dir for background Bash tasks |
 | `/api/background-agents` | GET | Scan `projects/` for background agent symlinks |
@@ -261,6 +275,47 @@ Displays running background servers (dev servers, API servers):
 - Shows port status (green = listening, gray = stopped)
 - Provides "Stop" button to kill on port (via `/api/kill-port`)
 - Shows output file link (click to stream in ServerPanel)
+
+---
+
+## Cross-Component Communication: File Focus Event
+
+### FileChangesPanel ↔ TurnChangedFiles Interaction
+
+**Problem:** User clicks a file in TurnChangedFiles tree; need to navigate to that file card in FileChangesPanel, switch to that turn's scope, and scroll to it.
+
+**Solution:** Custom DOM event with typed payload
+
+**Event Details:**
+- **Name:** `"cogpit:focus-file"`
+- **Exported from:** `src/components/FileChangesPanel/index.tsx`
+- **Emitted by:** `TurnChangedFiles` when file clicked
+- **Listened by:** `FileChangesPanel` (useEffect at line 71)
+
+**Payload:**
+```typescript
+{
+  filePath: string    // Absolute file path (e.g., "/Users/.../src/App.tsx")
+  turnIndex: number   // Zero-indexed turn number
+}
+```
+
+**Handler Behavior in FileChangesPanel:**
+1. **Switch scope** — Set panel to show that specific turn (`setScope(detail.turnIndex)`)
+2. **Highlight file** — Visual feedback for 3 seconds (`setHighlightPath(detail.filePath)`)
+3. **Scroll to file** — Use stored refs to scroll card into view (`element.scrollIntoView()` with `smooth` behavior)
+4. **Cleanup highlight** — Auto-dismiss after 3s with `clearTimeout()` and `setTimeout()`
+
+**Implementation Details:**
+- **Ref tracking:** Map of file paths to `<div>` elements (`fileCardRefs.current`)
+- **Scroll optimization:** Use `requestAnimationFrame()` to defer scroll until after scope change renders
+- **No prop drilling:** Custom events avoid threading callbacks through multiple component levels
+- **Isolated lifecycle:** Each panel manages its own state; event is fire-and-forget
+
+**Why Custom Events?**
+- FileChangesPanel and TurnChangedFiles are siblings; no shared parent to pass props
+- Avoids tight coupling between timeline and file panel
+- Allows independent panel lifecycle and re-renders
 
 ---
 

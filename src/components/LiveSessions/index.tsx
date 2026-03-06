@@ -92,9 +92,12 @@ export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSel
     setLoading(true)
     if (search) setSearching(true)
     try {
-      const searchParam = search ? `?search=${encodeURIComponent(search)}&limit=50` : ""
+      // Use cogpit-memory deep search when query is >= 2 chars, otherwise list active sessions
+      const sessUrl = search && search.length >= 2
+        ? `/api/cogpit-search?q=${encodeURIComponent(search)}&limit=50`
+        : "/api/active-sessions"
       const [sessRes, procRes] = await Promise.all([
-        authFetch(`/api/active-sessions${searchParam}`, { signal: ac.signal }),
+        authFetch(sessUrl, { signal: ac.signal }),
         authFetch("/api/running-processes", { signal: ac.signal }),
       ])
       if (ac.signal.aborted) return

@@ -52,3 +52,90 @@ export function diffLineCount(oldStr: string, newStr: string): { add: number; de
 
   return { add, del }
 }
+
+// ── Net diff across multiple edits ─────────────────────────────────────────
+
+export interface EditOp {
+  oldString: string
+  newString: string
+  /** If true, this replaces the entire file (Write tool). */
+  isWrite: boolean
+}
+
+export interface NetDiffResult {
+  /** Lines that were net-removed (present in original, absent in final). */
+  removed: string[]
+  /** Lines that were net-added (absent in original, present in final). */
+  added: string[]
+  addCount: number
+  delCount: number
+}
+
+/**
+ * Compute the net diff for a single file across multiple sequential edit operations.
+ *
+ * Uses multiset-based line tracking: if a line was added by one edit and removed
+ * by a later edit, they cancel out and neither appears in the result.
+ *
+ * Write operations reset tracking (they replace the entire file).
+ */
+export function computeNetDiff(ops: EditOp[]): NetDiffResult {
+  // Multiset: line -> count
+  const netAdded = new Map<string, number>()
+  const netRemoved = new Map<string, number>()
+
+  const addToSet = (set: Map<string, number>, line: string) => {
+    set.set(line, (set.get(line) ?? 0) + 1)
+  }
+  const removeFromSet = (set: Map<string, number>, line: string): boolean => {
+    const count = set.get(line) ?? 0
+    if (count <= 0) return false
+    if (count === 1) set.delete(line)
+    else set.set(line, count - 1)
+    return true
+  }
+
+  for (const op of ops) {
+    if (op.isWrite) {
+      // Write replaces entire file — reset all tracking
+      netAdded.clear()
+      netRemoved.clear()
+      // All lines of the new content are "added"
+      const lines = op.newString ? op.newString.split("\n") : []
+      for (const line of lines) {
+        addToSet(netAdded, line)
+      }
+      continue
+    }
+
+    // Edit: process removals (old_string lines)
+    const oldLines = op.oldString ? op.oldString.split("\n") : []
+    for (const line of oldLines) {
+      // If this line was previously added, they cancel out
+      if (!removeFromSet(netAdded, line)) {
+        addToSet(netRemoved, line)
+      }
+    }
+
+    // Edit: process additions (new_string lines)
+    const newLines = op.newString ? op.newString.split("\n") : []
+    for (const line of newLines) {
+      // If this line was previously removed, they cancel out
+      if (!removeFromSet(netRemoved, line)) {
+        addToSet(netAdded, line)
+      }
+    }
+  }
+
+  // Flatten multisets to arrays
+  const removed: string[] = []
+  for (const [line, count] of netRemoved) {
+    for (let i = 0; i < count; i++) removed.push(line)
+  }
+  const added: string[] = []
+  for (const [line, count] of netAdded) {
+    for (let i = 0; i < count; i++) added.push(line)
+  }
+
+  return { removed, added, addCount: added.length, delCount: removed.length }
+}

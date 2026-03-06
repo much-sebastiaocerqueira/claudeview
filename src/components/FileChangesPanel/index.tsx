@@ -1,17 +1,17 @@
-import { useState, useRef, useCallback, useEffect, memo } from "react"
-import { FileCode2, ChevronsDownUp, ChevronsUpDown } from "lucide-react"
+import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react"
+import { FileCode2, ChevronsDownUp, ChevronsUpDown, Layers, Clock, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import type { ParsedSession } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { FileChangeCard, DeletedFileCard } from "./FileChangeCard"
-import { useFileChangesData } from "./useFileChangesData"
+import { GroupedFileCard } from "./GroupedFileCard"
+import { useFileChangesData, buildGroupedFiles } from "./useFileChangesData"
 
-// Re-export sub-components and hooks for external consumers
-export { FileChangeCard, DeletedFileCard } from "./FileChangeCard"
-export { useFileChangesData } from "./useFileChangesData"
-export type { FileChange, RenderItem } from "./useFileChangesData"
-export { diffLineCount } from "@/lib/diffUtils"
+/** Custom event name for cross-panel file focus. */
+export const FOCUS_FILE_EVENT = "cogpit:focus-file"
+
+/** Scope: last turn, all turns, or a specific turn index. */
+type Scope = "last" | "all" | number
 
 interface FileChangesPanelProps {
   session: ParsedSession
@@ -29,7 +29,69 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
   const [canScrollDown, setCanScrollDown] = useState(false)
   const [allExpanded, setAllExpanded] = useState(true)
 
-  const { fileChanges, renderItems, totalAdditions, totalDeletions } = useFileChangesData(session)
+  // Scope: "last" (default), "all", or a specific turn index
+  const [scope, setScope] = useState<Scope>("last")
+
+  // Highlighted file path (from TurnChangedFiles click)
+  const [highlightPath, setHighlightPath] = useState<string | null>(null)
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const {
+    fileChanges,
+    groupedByFile,
+    groupedLastTurn,
+    lastTurnIndex,
+  } = useFileChangesData(session)
+
+  // Compute grouped files for specific turn on demand
+  const groupedForTurn = useMemo(() => {
+    if (typeof scope !== "number") return null
+    return buildGroupedFiles(fileChanges, scope)
+  }, [fileChanges, scope])
+
+  let activeGrouped: typeof groupedByFile
+  if (typeof scope === "number") {
+    activeGrouped = groupedForTurn ?? []
+  } else if (scope === "all") {
+    activeGrouped = groupedByFile
+  } else {
+    activeGrouped = groupedLastTurn
+  }
+
+  // Refs for scrolling to grouped file cards
+  const fileCardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map())
+  const setFileCardRef = useCallback((filePath: string) => (el: HTMLDivElement | null) => {
+    if (el) fileCardRefs.current.set(filePath, el)
+    else fileCardRefs.current.delete(filePath)
+  }, [])
+
+  // Listen for focus-file events from TurnChangedFiles
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ filePath: string; turnIndex: number }>).detail
+      if (!detail?.filePath) return
+
+      // Switch to that specific turn's scope
+      setScope(detail.turnIndex)
+
+      // Highlight and scroll to the file
+      setHighlightPath(detail.filePath)
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current)
+      highlightTimerRef.current = setTimeout(() => setHighlightPath(null), 3000)
+
+      // Scroll after a tick (to let scope change render)
+      requestAnimationFrame(() => {
+        const el = fileCardRefs.current.get(detail.filePath)
+        el?.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      })
+    }
+
+    window.addEventListener(FOCUS_FILE_EVENT, handler)
+    return () => {
+      window.removeEventListener(FOCUS_FILE_EVENT, handler)
+      if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current)
+    }
+  }, [])
 
   const updateScrollIndicators = useCallback(() => {
     const el = scrollRef.current
@@ -38,7 +100,6 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
     setCanScrollDown(el.scrollHeight - el.scrollTop - el.clientHeight > 10)
   }, [])
 
-  // Track whether user is scrolled to the bottom + update indicators
   const handleScroll = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
@@ -47,12 +108,11 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
     updateScrollIndicators()
   }, [updateScrollIndicators])
 
-  // Update indicators when content changes
   useEffect(() => {
     updateScrollIndicators()
-  }, [fileChanges.length, updateScrollIndicators])
+  }, [fileChanges.length, activeGrouped.length, updateScrollIndicators])
 
-  // Reset scroll position instantly when switching sessions
+  // Reset scroll position on session switch
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
@@ -60,11 +120,13 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
     scrollOnNextChangeRef.current = false
     prevChangeCountRef.current = fileChanges.length
     prevTurnCountRef.current = session.turns.length
+    setScope("last")
+    setHighlightPath(null)
     updateScrollIndicators()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only runs on session switch
   }, [sessionChangeKey])
 
-  // Detect new turns (user sent a new prompt)
+  // Detect new turns
   useEffect(() => {
     const turnCount = session.turns.length
     if (turnCount > prevTurnCountRef.current) {
@@ -73,7 +135,7 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
     prevTurnCountRef.current = turnCount
   }, [session.turns.length])
 
-  // Auto-scroll when new file changes arrive
+  // Auto-scroll on new changes
   useEffect(() => {
     if (fileChanges.length <= prevChangeCountRef.current) {
       prevChangeCountRef.current = fileChanges.length
@@ -91,6 +153,29 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
 
   if (fileChanges.length === 0) return null
 
+  // Compute totals for grouped view
+  let groupedAdd = 0
+  let groupedDel = 0
+  for (const g of activeGrouped) {
+    groupedAdd += g.addCount
+    groupedDel += g.delCount
+  }
+
+  // Cycle: last → all → last (specific turn is set via event, dismissed with X)
+  const handleScopeToggle = () => {
+    setScope(scope === "last" ? "all" : "last")
+  }
+
+  // Human-readable scope label
+  let scopeLabel: string
+  if (typeof scope === "number") {
+    scopeLabel = `Turn ${scope + 1}`
+  } else if (scope === "all") {
+    scopeLabel = "All turns"
+  } else {
+    scopeLabel = `Last turn (T${lastTurnIndex + 1})`
+  }
+
   return (
     <div className="flex flex-col h-full overflow-hidden border-border min-w-0 elevation-1">
       <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-border">
@@ -102,15 +187,39 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
           variant="outline"
           className="h-4 px-1.5 text-[10px] border-border/70 text-muted-foreground"
         >
-          {fileChanges.length}
+          {activeGrouped.length} file{activeGrouped.length !== 1 ? "s" : ""}
         </Badge>
         <div className="flex-1" />
         <span className="text-[10px] font-mono tabular-nums text-green-500/70">
-          +{totalAdditions}
+          +{groupedAdd}
         </span>
         <span className="text-[10px] font-mono tabular-nums text-red-400/70">
-          -{totalDeletions}
+          -{groupedDel}
         </span>
+
+        {/* Scope toggle */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={handleScopeToggle}
+              className={cn(
+                "p-1 transition-colors rounded",
+                scope === "all"
+                  ? "text-amber-400 bg-amber-400/10"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+              aria-label={scope === "last" ? "Show all turns" : "Show last turn only"}
+            >
+              {scope === "all" ? <Layers className="size-3.5" /> : <Clock className="size-3.5" />}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {scope === "last"
+              ? "Click for all turns"
+              : "Click for last turn only"}
+          </TooltipContent>
+        </Tooltip>
+
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -124,6 +233,29 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
           <TooltipContent>{allExpanded ? "Collapse all" : "Expand all"}</TooltipContent>
         </Tooltip>
       </div>
+
+      {/* Scope indicator bar */}
+      <div className="shrink-0 flex items-center gap-2 px-3 py-1 border-b border-border/50 bg-elevation-1/50">
+        <span className="text-[10px] text-muted-foreground/70">
+          Showing:
+        </span>
+        <span className={cn(
+          "text-[10px] font-medium",
+          typeof scope === "number" ? "text-blue-400" : "text-muted-foreground",
+        )}>
+          {scopeLabel}
+        </span>
+        {typeof scope === "number" && (
+          <button
+            onClick={() => setScope("last")}
+            className="p-0.5 text-muted-foreground/50 hover:text-foreground transition-colors"
+            title="Back to last turn"
+          >
+            <X className="size-3" />
+          </button>
+        )}
+      </div>
+
       <div className="relative flex-1 min-h-0">
         {/* Top fade */}
         <div
@@ -138,23 +270,20 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
           className="h-full overflow-y-auto"
         >
           <div className="p-3 space-y-3">
-            {renderItems.map((item) =>
-              item.type === "change" ? (
-                <FileChangeCard
-                  key={item.key}
-                  turnIndex={item.turnIndex}
-                  toolCall={item.toolCall}
-                  agentId={item.agentId}
+            {activeGrouped.length > 0 ? (
+              activeGrouped.map((file) => (
+                <GroupedFileCard
+                  key={file.filePath}
+                  ref={setFileCardRef(file.filePath)}
+                  file={file}
                   defaultOpen={allExpanded}
+                  isHighlighted={highlightPath === file.filePath}
                 />
-              ) : (
-                <DeletedFileCard
-                  key={item.key}
-                  filePath={item.filePath}
-                  lineCount={item.lines}
-                  turnIndex={item.turnIndex}
-                />
-              )
+              ))
+            ) : (
+              <div className="text-[11px] text-muted-foreground/50 text-center py-4">
+                No file changes in {scopeLabel.toLowerCase()}
+              </div>
             )}
           </div>
           <div ref={bottomRef} />

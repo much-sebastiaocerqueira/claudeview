@@ -4,6 +4,21 @@ Chronological record of all documentation audits for the agent-window project.
 
 ## Recent Audits
 
+### 2026-03-06 — Grouped File Changes Panel & Cogpit Search Route
+- **File:** `audit-history/audit-20260306-1619-uncommitted.md`
+- **Status:** DOCUMENTATION UPDATES REQUIRED
+- **Changes:** 9 files modified, 2 new files (component + route), net +411 lines
+- **Key updates:**
+  - New `/api/cogpit-search` route for deep session search via cogpit-memory
+  - FileChangesPanel refactored to group changes by file path with net diff computation
+  - New `computeNetDiff()` utility with multiset-based line tracking (cancellation of add/remove pairs)
+  - New `GroupedFileCard` component for file summary display with editor/diff actions
+  - Scope toggling: last turn / all turns / specific turn (via custom event from TurnChangedFiles)
+  - Cross-panel file focus via `cogpit:focus-file` custom event (filePath + turnIndex payload)
+  - All new exports from FileChangesPanel for external consumers (GroupedFile type, utility functions)
+- **Risk:** LOW (all backward-compatible, grouped view is opt-in via UI toggle)
+- **Doc updates needed:** ARCHITECTURE.md (API table row + 2 new sections), README.md (1 expanded bullet)
+
 ### 2026-03-05 — Session Search Refactor, Local File API, Image Preprocessing
 - **File:** `audit-history/audit-20260305-d43aa53.md`
 - **Status:** PASS WITH DOCUMENTATION UPDATES REQUIRED

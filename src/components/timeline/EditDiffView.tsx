@@ -190,9 +190,17 @@ function DiffLines({
     >
       {lines.map((line, idx) => {
         const tokens = resolveTokens(line, oldTokens, newTokens)
+        const oldNum = line.type !== "added" && line.oldIdx != null ? line.oldIdx + 1 : ""
+        const newNum = line.type !== "removed" && line.newIdx != null ? line.newIdx + 1 : ""
 
         return (
           <div key={idx} className={cn("flex", LINE_BG[line.type])}>
+            <span className={cn("select-none shrink-0 w-8 text-right pr-1 border-r text-[10px]", GUTTER_STYLE[line.type])}>
+              {oldNum}
+            </span>
+            <span className={cn("select-none shrink-0 w-8 text-right pr-1 border-r text-[10px]", GUTTER_STYLE[line.type])}>
+              {newNum}
+            </span>
             <span className={cn("select-none shrink-0 w-5 text-right pr-1 border-r", GUTTER_STYLE[line.type])}>
               <GutterIcon type={line.type} />
             </span>

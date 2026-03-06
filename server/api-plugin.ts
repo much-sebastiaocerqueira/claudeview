@@ -24,6 +24,7 @@ import { registerConfigBrowserRoutes } from "./routes/config-browser"
 import { registerSessionSearchRoutes, setSearchIndex, getSearchIndex } from "./routes/session-search"
 import { registerLocalFileRoutes } from "./routes/local-file"
 import { registerSearchIndexRoutes } from "./routes/search-index-stats"
+import { registerCogpitSearchRoutes } from "./routes/cogpit-search"
 import { SearchIndex } from "./search-index"
 
 export function sessionApiPlugin(): Plugin {
@@ -103,6 +104,7 @@ export function sessionApiPlugin(): Plugin {
       registerSessionSearchRoutes(use)
       registerLocalFileRoutes(use)
       registerSearchIndexRoutes(use)
+      registerCogpitSearchRoutes(use)
     },
   }
 }

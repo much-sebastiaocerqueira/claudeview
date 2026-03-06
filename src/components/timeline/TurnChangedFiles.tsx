@@ -1,6 +1,8 @@
 import { useMemo, useState, useEffect, memo } from "react"
 import { ChevronDown, ChevronRight, Folder, ChevronsDownUp, ChevronsUpDown, FileCode2 } from "lucide-react"
 import { diffLineCount } from "@/lib/diffUtils"
+import { FOCUS_FILE_EVENT } from "@/components/FileChangesPanel"
+import { OpIndicator } from "@/components/FileChangesPanel/file-change-indicators"
 import { cn } from "@/lib/utils"
 import type { Turn, ToolCall } from "@/lib/types"
 
@@ -10,21 +12,28 @@ interface FileChangeInfo {
   filePath: string
   additions: number
   deletions: number
+  /** Whether file was edited, written (created/overwritten), or both. */
+  hasEdit: boolean
+  hasWrite: boolean
 }
 
 interface TreeNode {
   name: string
   fullPath: string
+  /** Original absolute file path (only set on file nodes). */
+  absPath: string
   isFile: boolean
   additions: number
   deletions: number
+  hasEdit: boolean
+  hasWrite: boolean
   children: TreeNode[]
 }
 
 // ── Compute per-turn file changes (aggregated by file path) ───────────────────
 
 function computeTurnFileChanges(turn: Turn): FileChangeInfo[] {
-  const fileMap = new Map<string, { add: number; del: number }>()
+  const fileMap = new Map<string, { add: number; del: number; hasEdit: boolean; hasWrite: boolean }>()
 
   const process = (tc: ToolCall) => {
     if (tc.name !== "Edit" && tc.name !== "Write") return
@@ -36,19 +45,23 @@ function computeTurnFileChanges(turn: Turn): FileChangeInfo[] {
       ? String(tc.input.new_string ?? "")
       : String(tc.input.content ?? "")
     const d = diffLineCount(oldStr, newStr)
-    const existing = fileMap.get(fp) ?? { add: 0, del: 0 }
+    const existing = fileMap.get(fp) ?? { add: 0, del: 0, hasEdit: false, hasWrite: false }
     existing.add += d.add
     existing.del += d.del
+    if (isEdit) existing.hasEdit = true
+    else existing.hasWrite = true
     fileMap.set(fp, existing)
   }
 
   turn.toolCalls.forEach(process)
   turn.subAgentActivity.forEach((msg) => msg.toolCalls.forEach(process))
 
-  return [...fileMap.entries()].map(([filePath, { add, del }]) => ({
+  return [...fileMap.entries()].map(([filePath, { add, del, hasEdit, hasWrite }]) => ({
     filePath,
     additions: add,
     deletions: del,
+    hasEdit,
+    hasWrite,
   }))
 }
 
@@ -57,15 +70,18 @@ function computeTurnFileChanges(turn: Turn): FileChangeInfo[] {
 interface TrieNode {
   children: Map<string, TrieNode>
   isFile: boolean
+  absPath: string
   additions: number
   deletions: number
+  hasEdit: boolean
+  hasWrite: boolean
 }
 
 function buildFileTree(changes: FileChangeInfo[], cwd: string): TreeNode[] {
   if (changes.length === 0) return []
 
   const normalizedCwd = cwd.endsWith("/") ? cwd.slice(0, -1) : cwd
-  const root: TrieNode = { children: new Map(), isFile: false, additions: 0, deletions: 0 }
+  const root: TrieNode = { children: new Map(), isFile: false, absPath: "", additions: 0, deletions: 0, hasEdit: false, hasWrite: false }
 
   for (const c of changes) {
     let rel = c.filePath
@@ -80,13 +96,16 @@ function buildFileTree(changes: FileChangeInfo[], cwd: string): TreeNode[] {
     for (let i = 0; i < segs.length; i++) {
       let child = node.children.get(segs[i])
       if (!child) {
-        child = { children: new Map(), isFile: false, additions: 0, deletions: 0 }
+        child = { children: new Map(), isFile: false, absPath: "", additions: 0, deletions: 0, hasEdit: false, hasWrite: false }
         node.children.set(segs[i], child)
       }
       if (i === segs.length - 1) {
         child.isFile = true
+        child.absPath = c.filePath
         child.additions += c.additions
         child.deletions += c.deletions
+        if (c.hasEdit) child.hasEdit = true
+        if (c.hasWrite) child.hasWrite = true
       }
       node = child
     }
@@ -109,9 +128,12 @@ function buildFileTree(changes: FileChangeInfo[], cwd: string): TreeNode[] {
         return {
           name,
           fullPath: path,
+          absPath: child.absPath,
           isFile: true,
           additions: child.additions,
           deletions: child.deletions,
+          hasEdit: child.hasEdit,
+          hasWrite: child.hasWrite,
           children: [],
         }
       }
@@ -130,12 +152,16 @@ function buildFileTree(changes: FileChangeInfo[], cwd: string): TreeNode[] {
 
       const children = toTree(c, cPath)
 
-      // Sum additions/deletions from children (each child already includes its own subtree total)
+      // Sum additions/deletions and aggregate hasEdit/hasWrite from children
       let totalAdd = 0
       let totalDel = 0
+      let hasEdit = c.isFile ? c.hasEdit : false
+      let hasWrite = c.isFile ? c.hasWrite : false
       for (const ch of children) {
         totalAdd += ch.additions
         totalDel += ch.deletions
+        if (ch.hasEdit) hasEdit = true
+        if (ch.hasWrite) hasWrite = true
       }
       // Include own file data if this node is also a file (edge case)
       if (c.isFile) {
@@ -146,9 +172,12 @@ function buildFileTree(changes: FileChangeInfo[], cwd: string): TreeNode[] {
       return {
         name: cName,
         fullPath: cPath,
+        absPath: c.absPath,
         isFile: false,
         additions: totalAdd,
         deletions: totalDel,
+        hasEdit,
+        hasWrite,
         children,
       }
     })
@@ -184,10 +213,11 @@ function ChangeBar({ add, del }: { add: number; del: number }) {
 
 interface TurnChangedFilesProps {
   turn: Turn
+  turnIndex: number
   cwd: string
 }
 
-export const TurnChangedFiles = memo(function TurnChangedFiles({ turn, cwd }: TurnChangedFilesProps) {
+export const TurnChangedFiles = memo(function TurnChangedFiles({ turn, turnIndex, cwd }: TurnChangedFilesProps) {
   const fileChanges = useMemo(() => computeTurnFileChanges(turn), [turn])
   const tree = useMemo(() => buildFileTree(fileChanges, cwd), [fileChanges, cwd])
 
@@ -233,7 +263,7 @@ export const TurnChangedFiles = memo(function TurnChangedFiles({ turn, cwd }: Tu
       {/* Tree */}
       <div className="px-2 py-1">
         {tree.map((node) => (
-          <TreeRow key={node.fullPath} node={node} depth={0} allExpanded={allExpanded} />
+          <TreeRow key={node.fullPath} node={node} depth={0} allExpanded={allExpanded} turnIndex={turnIndex} />
         ))}
       </div>
     </div>
@@ -246,10 +276,12 @@ function TreeRow({
   node,
   depth,
   allExpanded,
+  turnIndex,
 }: {
   node: TreeNode
   depth: number
   allExpanded: boolean
+  turnIndex: number
 }) {
   const [expanded, setExpanded] = useState(true)
 
@@ -261,12 +293,21 @@ function TreeRow({
   const paddingLeft = depth * 16 + 8
 
   if (node.isFile) {
+    const handleFileClick = () => {
+      if (node.absPath) {
+        window.dispatchEvent(new CustomEvent(FOCUS_FILE_EVENT, { detail: { filePath: node.absPath, turnIndex } }))
+      }
+    }
+
     return (
       <div
-        className="flex items-center gap-1.5 py-[3px] text-[11px] font-mono rounded-sm hover:bg-white/[0.02] transition-colors"
+        className="flex items-center gap-1.5 py-[3px] text-[11px] font-mono rounded-sm hover:bg-white/[0.05] transition-colors cursor-pointer"
         style={{ paddingLeft }}
+        onClick={handleFileClick}
+        title="Click to focus in sidebar"
       >
         <FileTypeIndicator name={node.name} />
+        <OpIndicator hasEdit={node.hasEdit} hasWrite={node.hasWrite} />
         <span className="text-foreground/75 truncate">{node.name}</span>
         <div className="flex-1 min-w-2" />
         <LineCounts add={node.additions} del={node.deletions} />
@@ -299,6 +340,7 @@ function TreeRow({
             node={child}
             depth={depth + 1}
             allExpanded={allExpanded}
+            turnIndex={turnIndex}
           />
         ))}
     </>
@@ -349,3 +391,4 @@ function FileTypeIndicator({ name }: { name: string }) {
   const color = EXT_COLORS[ext] ?? "bg-muted-foreground/40"
   return <div className={cn("size-2 rounded-[2px] shrink-0", color)} />
 }
+
