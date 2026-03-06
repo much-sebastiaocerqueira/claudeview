@@ -106,12 +106,14 @@ export function registerCogpitSearchRoutes(use: UseFn) {
       return sendJson(res, 400, { error: "Query parameter 'q' is required and must be at least 2 characters" })
     }
 
-    const limit = Math.min(Math.max(1, parseInt(limitRaw, 10) || 20), 100)
+    const sessionLimit = Math.min(Math.max(1, parseInt(limitRaw, 10) || 20), 100)
 
     try {
       const stdout = await runCli([
         "search", query,
-        "--limit", String(limit),
+        "--limit", "200",
+        "--session-limit", String(sessionLimit),
+        "--hits-per-session", "2",
         "--max-age", maxAge,
       ])
 

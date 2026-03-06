@@ -31,6 +31,8 @@ export function parseArgs(argv: string[]): CLICommand {
           case "--session": args.session = argv[++i]; break
           case "--max-age": args.maxAge = argv[++i]; break
           case "--limit": args.limit = parseInt(argv[++i], 10); break
+          case "--session-limit": args.sessionLimit = parseInt(argv[++i], 10); break
+          case "--hits-per-session": args.hitsPerSession = parseInt(argv[++i], 10); break
           case "--case-sensitive": args.caseSensitive = true; break
         }
       }
@@ -97,6 +99,16 @@ async function main() {
         limit: cmd.args.limit,
         caseSensitive: cmd.args.caseSensitive,
       })
+      // --session-limit: cap unique sessions, --hits-per-session: trim hits per session
+      if (result && !("error" in result) && (cmd.args.sessionLimit || cmd.args.hitsPerSession)) {
+        const sl = cmd.args.sessionLimit ?? result.results.length
+        const hpp = cmd.args.hitsPerSession ?? Infinity
+        result.results = result.results.slice(0, sl).map(sr => ({
+          ...sr,
+          hits: sr.hits.slice(0, hpp),
+        }))
+        result.returnedHits = result.results.reduce((n, sr) => n + sr.hits.length, 0)
+      }
       break
 
     case "context":
@@ -156,6 +168,8 @@ Commands:
     --session <id>            Scope to single session
     --max-age <5d>            Time window (default: 5d)
     --limit <20>              Max hits (default: 20)
+    --session-limit <N>       Cap unique sessions returned
+    --hits-per-session <N>    Max hits kept per session
     --case-sensitive          Case sensitive matching
 
   context <sessionId>         Session overview (L1)
