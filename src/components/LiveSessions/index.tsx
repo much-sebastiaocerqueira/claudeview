@@ -94,7 +94,7 @@ export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSel
     try {
       // Use cogpit-memory deep search when query is >= 2 chars, otherwise list active sessions
       const sessUrl = search && search.length >= 2
-        ? `/api/cogpit-search?q=${encodeURIComponent(search)}&limit=50`
+        ? `/api/cogpit-search?q=${encodeURIComponent(search)}&limit=50&maxAge=365d`
         : "/api/active-sessions"
       const [sessRes, procRes] = await Promise.all([
         authFetch(sessUrl, { signal: ac.signal }),
