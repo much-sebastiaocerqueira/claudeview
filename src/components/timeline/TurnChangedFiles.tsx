@@ -252,9 +252,9 @@ export const TurnChangedFiles = memo(function TurnChangedFiles({ turn, turnIndex
   if (fileChanges.length === 0) return null
 
   return (
-    <div className="rounded-lg border border-border/30 overflow-hidden bg-elevation-1/30">
+    <div className="border-l-2 border-green-500/30 pl-3 ml-1">
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-border/20">
+      <div className="flex items-center gap-2 py-1">
         <FileCode2 className="size-3.5 text-muted-foreground/50" />
         <span className="text-[11px] font-medium text-muted-foreground/70">
           {fileChanges.length} file{fileChanges.length !== 1 ? "s" : ""} changed
@@ -277,7 +277,7 @@ export const TurnChangedFiles = memo(function TurnChangedFiles({ turn, turnIndex
       </div>
 
       {/* Tree */}
-      <div className="px-2 py-1">
+      <div className="py-0.5">
         {tree.map((node) => (
           <TreeRow key={node.fullPath} node={node} depth={0} allExpanded={allExpanded} turnIndex={turnIndex} />
         ))}

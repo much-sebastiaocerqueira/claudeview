@@ -10,7 +10,7 @@ interface TodoProgressPanelProps {
 export const TodoProgressPanel = memo(function TodoProgressPanel({
   progress,
 }: TodoProgressPanelProps) {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed, setCollapsed] = useState(true)
   const { todos, completed, total } = progress
   const pct = total > 0 ? (completed / total) * 100 : 0
 

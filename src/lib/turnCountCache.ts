@@ -33,10 +33,9 @@ export function resolveTurnCount(sessionId: string, serverCount?: number): numbe
   return Math.max(cached ?? 0, serverCount ?? 0)
 }
 
-/** Turn count to Tailwind text color: green (few) → red (many). */
+/** Turn count to Tailwind text color: muted by default, warm colors only for high counts. */
 export function turnCountColor(count: number): string {
-  if (count <= 3) return "text-green-400"
-  if (count <= 10) return "text-emerald-400"
+  if (count <= 10) return "text-muted-foreground"
   if (count <= 25) return "text-amber-400"
   if (count <= 50) return "text-orange-400"
   return "text-red-400"

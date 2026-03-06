@@ -406,6 +406,8 @@ interface EditDiffViewProps {
   compact?: boolean
   /** 1-based starting line number for real file line numbers. Default 1. */
   startLine?: number
+  /** Hide the file-path + stats header bar. Useful when parent already shows this info. */
+  hideHeader?: boolean
 }
 
 export function EditDiffView({
@@ -414,6 +416,7 @@ export function EditDiffView({
   filePath,
   compact: isCompact = true,
   startLine = 1,
+  hideHeader = false,
 }: EditDiffViewProps): React.ReactElement {
   const [modalOpen, setModalOpen] = useState(false)
   const isDark = useIsDarkMode()
@@ -431,25 +434,28 @@ export function EditDiffView({
     <>
       <div className={cn(
         "rounded border border-border/40 bg-elevation-1 overflow-hidden",
-        isCompact && "mt-1.5"
+        isCompact && "mt-1.5",
+        hideHeader && "border-0 rounded-none"
       )}>
-        <div className="flex items-center justify-between px-2 py-1 border-b border-border/40 bg-elevation-1">
-          <span className="text-[10px] text-muted-foreground font-mono truncate">
-            {shortPath}
-          </span>
-          <div className="flex items-center gap-2">
-            <DiffStats lines={lines} />
-            {isCompact && (
-              <button
-                onClick={() => setModalOpen(true)}
-                className="text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded hover:bg-elevation-2"
-                title="Expand diff"
-              >
-                <Maximize2 className="w-3 h-3" />
-              </button>
-            )}
+        {!hideHeader && (
+          <div className="flex items-center justify-between px-2 py-1 border-b border-border/40 bg-elevation-1">
+            <span className="text-[10px] text-muted-foreground font-mono truncate">
+              {shortPath}
+            </span>
+            <div className="flex items-center gap-2">
+              <DiffStats lines={lines} />
+              {isCompact && (
+                <button
+                  onClick={() => setModalOpen(true)}
+                  className="text-muted-foreground hover:text-foreground transition-colors p-0.5 rounded hover:bg-elevation-2"
+                  title="Expand diff"
+                >
+                  <Maximize2 className="w-3 h-3" />
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
         <DiffLines
           lines={lines}
           oldTokens={oldTokens}

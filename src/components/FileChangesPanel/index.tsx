@@ -199,7 +199,7 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
 
   return (
     <div className="flex flex-col h-full overflow-hidden border-border min-w-0 elevation-1">
-      <div className="shrink-0 flex items-center gap-2 px-3 py-2 border-b border-border">
+      <div className="shrink-0 flex items-center gap-2 px-3 h-8 border-b border-border/50">
         <FileCode2 className="size-3.5 text-amber-400" />
         <span className="text-xs font-medium text-foreground">
           File Changes
@@ -342,7 +342,7 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
           onScroll={handleScroll}
           className="h-full overflow-y-auto"
         >
-          <div className="p-3 space-y-3">
+          <div className="p-1.5 space-y-1">
             {activeGrouped.length > 0 ? (
               activeGrouped.map((file) => (
                 <GroupedFileCard

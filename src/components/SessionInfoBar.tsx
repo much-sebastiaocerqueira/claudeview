@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/tooltip"
 import { shortenModel, parseSubAgentPath } from "@/lib/format"
 import { formatAgentLabel } from "@/components/timeline/agent-utils"
-import { ContextBadge, HeaderActionButton } from "@/components/header-shared"
+import { ContextBadge, HeaderIconButton } from "@/components/header-shared"
 import { authFetch } from "@/lib/auth"
 import { useAppContext } from "@/contexts/AppContext"
 import { useSessionContext } from "@/contexts/SessionContext"
@@ -135,9 +135,6 @@ function SessionActions({
   const session = sessionOrNull!
   const sessionSrc = sessionSource!
   const hasProject = !!(session.cwd || sessionSrc.dirName)
-  const newIcon = creatingSession
-    ? <Loader2 className="size-3 animate-spin" />
-    : <Plus className="size-3" />
 
   /** POST path + dirName to an action endpoint (fire-and-forget). */
   function postAction(endpoint: string): void {
@@ -162,7 +159,7 @@ function SessionActions({
           disabled={creatingSession}
           onClick={handleNewSession}
         >
-          {newIcon}
+          {creatingSession ? <Loader2 className="size-3 animate-spin" /> : <Plus className="size-3" />}
           New
         </Button>
         {onDuplicateSession && (
@@ -182,54 +179,49 @@ function SessionActions({
 
   return (
     <>
-      <HeaderActionButton
-        icon={newIcon}
-        label="New"
-        tooltip="New session in this project"
+      <HeaderIconButton
+        icon={creatingSession ? Loader2 : Plus}
+        label="New session in this project"
         onClick={handleNewSession}
         disabled={creatingSession}
         className="text-muted-foreground hover:text-green-400 hover:bg-green-500/20"
+        iconClassName={creatingSession ? "animate-spin" : undefined}
       />
       {onDuplicateSession && (
-        <HeaderActionButton
-          icon={<Copy className="size-3" />}
-          label="Duplicate"
-          tooltip="Duplicate this session"
+        <HeaderIconButton
+          icon={Copy}
+          label="Duplicate this session"
           onClick={onDuplicateSession}
           className="text-muted-foreground hover:text-purple-400 hover:bg-purple-500/20"
         />
       )}
       {hasProject && (
-        <HeaderActionButton
-          icon={<Code2 className="size-3" />}
-          label="Open"
-          tooltip="Open project in editor"
-          onClick={() => postAction("/api/open-in-editor")}
-          className="text-muted-foreground hover:text-blue-400 hover:bg-blue-500/20"
-        />
-      )}
-      {hasProject && (
-        <HeaderActionButton
-          icon={<FolderSearch className="size-3" />}
-          label="Reveal"
-          tooltip="Reveal in file manager"
-          onClick={() => postAction("/api/reveal-in-folder")}
-          className="text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10"
-        />
+        <>
+          <HeaderIconButton
+            icon={Code2}
+            label="Open project in editor"
+            onClick={() => postAction("/api/open-in-editor")}
+            className="text-muted-foreground hover:text-blue-400 hover:bg-blue-500/20"
+          />
+          <HeaderIconButton
+            icon={FolderSearch}
+            label="Reveal in file manager"
+            onClick={() => postAction("/api/reveal-in-folder")}
+            className="text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10"
+          />
+        </>
       )}
       {onOpenTerminal && (
-        <HeaderActionButton
-          icon={<TerminalSquare className="size-3" />}
-          label="Terminal"
-          tooltip="Open terminal in project"
+        <HeaderIconButton
+          icon={TerminalSquare}
+          label="Open terminal in project"
           onClick={onOpenTerminal}
           className="text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/20"
         />
       )}
-      <HeaderActionButton
-        icon={<FolderOpen className="size-3" />}
-        label="All Sessions"
-        tooltip="View all sessions in this project"
+      <HeaderIconButton
+        icon={FolderOpen}
+        label="View all sessions in this project"
         onClick={() => {
           const dirName = sessionSrc.dirName
           dispatch({ type: "GO_HOME", isMobile: false })

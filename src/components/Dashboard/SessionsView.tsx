@@ -171,11 +171,11 @@ export function SessionsView({
                   <button
                     onClick={() => onSelectSession(selectedProject.dirName, s.fileName)}
                     className={cn(
-                      "card-glow group relative w-full rounded-lg border elevation-1 p-4 text-left transition-smooth",
+                      "card-glow group relative w-full rounded-lg elevation-1 p-4 text-left transition-smooth",
                       "hover:bg-elevation-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
                       live
-                        ? "border-l-[3px] border-l-green-500 border-t-border/40 border-r-border/40 border-b-border/40 live-pulse"
-                        : "border-border/40"
+                        ? "border-l-[3px] border-l-green-500 live-pulse"
+                        : ""
                     )}
                   >
                     <div className="flex items-center justify-between gap-2 mb-1">

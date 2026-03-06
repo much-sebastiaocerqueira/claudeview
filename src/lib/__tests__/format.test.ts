@@ -176,47 +176,47 @@ describe("formatRelativeTime", () => {
   })
 
   it("returns 'just now' for times less than 1 minute ago", () => {
-    expect(formatRelativeTime("2025-01-15T11:59:30Z")).toBe("just now")
+    expect(formatRelativeTime("2025-01-15T11:59:30Z")).toBe("now")
   })
 
   it("formats minutes ago", () => {
-    expect(formatRelativeTime("2025-01-15T11:45:00Z")).toBe("15m ago")
+    expect(formatRelativeTime("2025-01-15T11:45:00Z")).toBe("15m")
   })
 
   it("formats 1 minute ago", () => {
-    expect(formatRelativeTime("2025-01-15T11:59:00Z")).toBe("1m ago")
+    expect(formatRelativeTime("2025-01-15T11:59:00Z")).toBe("1m")
   })
 
   it("formats hours ago", () => {
-    expect(formatRelativeTime("2025-01-15T09:00:00Z")).toBe("3h ago")
+    expect(formatRelativeTime("2025-01-15T09:00:00Z")).toBe("3h")
   })
 
   it("formats 1 hour ago", () => {
-    expect(formatRelativeTime("2025-01-15T11:00:00Z")).toBe("1h ago")
+    expect(formatRelativeTime("2025-01-15T11:00:00Z")).toBe("1h")
   })
 
   it("formats days ago", () => {
-    expect(formatRelativeTime("2025-01-13T12:00:00Z")).toBe("2d ago")
+    expect(formatRelativeTime("2025-01-13T12:00:00Z")).toBe("2d")
   })
 
   it("formats exactly 59 minutes ago as minutes", () => {
-    expect(formatRelativeTime("2025-01-15T11:01:00Z")).toBe("59m ago")
+    expect(formatRelativeTime("2025-01-15T11:01:00Z")).toBe("59m")
   })
 
   it("formats exactly 60 minutes ago as 1h (boundary)", () => {
-    expect(formatRelativeTime("2025-01-15T11:00:00Z")).toBe("1h ago")
+    expect(formatRelativeTime("2025-01-15T11:00:00Z")).toBe("1h")
   })
 
   it("formats exactly 23 hours ago as hours", () => {
-    expect(formatRelativeTime("2025-01-14T13:00:00Z")).toBe("23h ago")
+    expect(formatRelativeTime("2025-01-14T13:00:00Z")).toBe("23h")
   })
 
   it("formats exactly 24 hours ago as 1d (boundary)", () => {
-    expect(formatRelativeTime("2025-01-14T12:00:00Z")).toBe("1d ago")
+    expect(formatRelativeTime("2025-01-14T12:00:00Z")).toBe("1d")
   })
 
   it("formats exactly 6 days ago as days", () => {
-    expect(formatRelativeTime("2025-01-09T12:00:00Z")).toBe("6d ago")
+    expect(formatRelativeTime("2025-01-09T12:00:00Z")).toBe("6d")
   })
 
   it("formats exactly 7 days ago as locale date (boundary)", () => {

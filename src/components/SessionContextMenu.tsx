@@ -43,7 +43,7 @@ export function SessionContextMenu({
   return (
     <>
       <ContextMenu.Root>
-        <ContextMenu.Trigger asChild>{children}</ContextMenu.Trigger>
+        <ContextMenu.Trigger asChild><div className="w-full">{children}</div></ContextMenu.Trigger>
         <ContextMenu.Portal>
           <ContextMenu.Content className="min-w-[180px] rounded-lg elevation-3 border border-border/30 p-1 z-50">
             {onRename && (

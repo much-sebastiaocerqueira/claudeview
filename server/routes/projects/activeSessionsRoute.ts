@@ -2,6 +2,9 @@ import type { IncomingMessage, ServerResponse } from "node:http"
 import { dirs, projectDirToReadableName, getSessionMeta, getSessionStatus, searchSessionMessages, readdir, stat, join } from "../../helpers"
 import type { NextFn } from "../../helpers"
 
+const DEFAULT_PER_PROJECT = 10
+const DEFAULT_TOTAL = 50
+
 export async function handleActiveSessions(
   req: IncomingMessage,
   res: ServerResponse,
@@ -12,8 +15,10 @@ export async function handleActiveSessions(
 
   const url = new URL((req.url || "/").replace(/^\/?/, "/"), "http://localhost")
   const search = url.searchParams.get("search")?.trim() || ""
-  const defaultLimit = search ? 50 : 30
-  const limit = Math.min(parseInt(url.searchParams.get("limit") || String(defaultLimit), 10), 100)
+  const perProject = Math.min(parseInt(url.searchParams.get("perProject") || String(DEFAULT_PER_PROJECT), 10), 100)
+  const totalLimit = Math.min(parseInt(url.searchParams.get("limit") || String(search ? 50 : DEFAULT_TOTAL), 10), 200)
+  // Optional: load sessions for a specific project only (used by "show more")
+  const projectFilter = url.searchParams.get("project")?.trim() || ""
 
   try {
     const entries = await readdir(dirs.PROJECTS_DIR, { withFileTypes: true })
@@ -29,6 +34,7 @@ export async function handleActiveSessions(
 
     for (const entry of entries) {
       if (!entry.isDirectory() || entry.name === "memory") continue
+      if (projectFilter && entry.name !== projectFilter) continue
       const projectDir = join(dirs.PROJECTS_DIR, entry.name)
 
       let files: string[]
@@ -54,9 +60,33 @@ export async function handleActiveSessions(
       }
     }
 
-    // Sort by mtime descending; when searching, scan top 50 then filter
+    // Sort by mtime descending within each project, then pick top N per project
     candidates.sort((a, b) => b.mtimeMs - a.mtimeMs)
-    const scanPool = search ? candidates.slice(0, 50) : candidates.slice(0, limit)
+
+    let scanPool: typeof candidates
+    if (search) {
+      // When searching, scan a wider pool then filter
+      scanPool = candidates.slice(0, 100)
+    } else if (projectFilter) {
+      // Loading more for a specific project — use totalLimit directly
+      scanPool = candidates.slice(0, totalLimit)
+    } else {
+      // Default: pick top `perProject` from each project, then cap at totalLimit
+      const byProject = new Map<string, typeof candidates>()
+      for (const c of candidates) {
+        const list = byProject.get(c.dirName)
+        if (list) list.push(c)
+        else byProject.set(c.dirName, [c])
+      }
+
+      const selected: typeof candidates = []
+      for (const [, projectCandidates] of byProject) {
+        selected.push(...projectCandidates.slice(0, perProject))
+      }
+      // Re-sort combined list by mtime and cap
+      selected.sort((a, b) => b.mtimeMs - a.mtimeMs)
+      scanPool = selected.slice(0, totalLimit)
+    }
 
     // Second pass: read metadata (+ search) in parallel for speed
     const now = Date.now()
@@ -102,6 +132,7 @@ export async function handleActiveSessions(
             gitBranch: meta.gitBranch,
             cwd: meta.cwd,
             lastModified,
+            lastActivityAt: meta.lastTimestamp || lastModified,
             turnCount: meta.turnCount,
             size: c.size,
             isActive: now - c.mtimeMs < 5 * 60 * 1000,

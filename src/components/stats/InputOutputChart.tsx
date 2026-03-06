@@ -53,7 +53,7 @@ function computeTurnData(turns: Turn[]): TurnData[] {
 function ChartTooltip({ data }: { data: TurnData }): JSX.Element {
   return (
     <div className="pointer-events-none absolute left-0 right-0 top-[28px] z-10 px-1">
-      <div className="rounded-md border border-border bg-elevation-2 px-2.5 py-2 text-[10px] shadow-lg w-fit">
+      <div className="rounded-md bg-elevation-2 px-2.5 py-2 text-[10px] shadow-lg w-fit">
         <div className="font-medium text-foreground mb-1">Turn {data.turn}</div>
         <div className="flex flex-col gap-0.5 text-muted-foreground">
           <span>Input: <span className="text-blue-400">{formatTokenCount(data.totalInput)}</span>

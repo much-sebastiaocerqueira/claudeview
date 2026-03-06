@@ -22,7 +22,7 @@ export function ModelDistribution({ turns }: { turns: Turn[] }): JSX.Element | n
         {models.map(([model, count]) => (
           <div
             key={model}
-            className="flex items-center justify-between rounded border border-border elevation-2 depth-low px-2.5 py-1.5 text-[11px]"
+            className="flex items-center justify-between rounded elevation-2 depth-low px-2.5 py-1.5 text-[11px]"
           >
             <span className="truncate text-foreground">{model}</span>
             <span className="ml-2 shrink-0 text-muted-foreground">{count}</span>

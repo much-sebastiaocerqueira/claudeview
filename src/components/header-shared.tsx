@@ -1,5 +1,5 @@
 import { memo } from "react"
-import type { ReactNode, HTMLAttributes } from "react"
+import type { HTMLAttributes } from "react"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -55,7 +55,7 @@ export const HeaderIconButton = memo(function HeaderIconButton({
   iconClassName,
   size = "sm",
 }: HeaderIconButtonProps) {
-  const sizeClass = size === "sm" ? "h-7 w-7 p-0" : "h-8 w-8 p-0"
+  const sizeClass = size === "sm" ? "h-6 w-6 p-0" : "h-7 w-7 p-0"
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -71,48 +71,6 @@ export const HeaderIconButton = memo(function HeaderIconButton({
         </Button>
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  )
-})
-
-// ── HeaderActionButton ───────────────────────────────────────────────────────
-
-interface HeaderActionButtonProps {
-  icon: ReactNode
-  label: string
-  tooltip: string
-  onClick: () => void
-  disabled?: boolean
-  className?: string
-}
-
-/**
- * Labeled action button with tooltip, used in SessionInfoBar for actions
- * like "New", "Duplicate", "Open", etc.
- */
-export const HeaderActionButton = memo(function HeaderActionButton({
-  icon,
-  label,
-  tooltip,
-  onClick,
-  disabled,
-  className,
-}: HeaderActionButtonProps) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Button
-          variant="ghost"
-          size="sm"
-          className={cn("h-6 px-2 gap-1.5 text-[11px]", className)}
-          onClick={onClick}
-          disabled={disabled}
-        >
-          {icon}
-          {label}
-        </Button>
-      </TooltipTrigger>
-      <TooltipContent>{tooltip}</TooltipContent>
     </Tooltip>
   )
 })

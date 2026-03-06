@@ -154,13 +154,11 @@ export const ToolCallCard = memo(function ToolCallCard({ toolCall, expandAll, is
   return (
     <div
       className={cn(
-        "rounded-md border p-2.5 elevation-1 card-hover",
-        toolCall.isError
-          ? "border-red-500/30 bg-red-50 dark:bg-red-950/20"
-          : "border-border/40"
+        "py-1.5",
+        toolCall.isError && "bg-red-950/10 rounded-md px-2"
       )}
     >
-      <div className="flex items-start gap-2">
+      <div className="flex items-center gap-2">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <Badge
             variant="outline"
@@ -179,7 +177,7 @@ export const ToolCallCard = memo(function ToolCallCard({ toolCall, expandAll, is
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {toolCall.timestamp && (
-            <span className="text-[10px] text-muted-foreground font-mono tabular-nums">
+            <span className="text-[10px] text-muted-foreground/40 font-mono tabular-nums">
               {new Date(toolCall.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
             </span>
           )}
@@ -187,7 +185,7 @@ export const ToolCallCard = memo(function ToolCallCard({ toolCall, expandAll, is
         </div>
       </div>
 
-      <div className="flex gap-3 mt-1.5">
+      <div className="flex gap-3 mt-1">
         {hasEditDiff && (
           <ToggleButton
             isOpen={showDiff}

@@ -88,6 +88,11 @@ export const CollapsibleToolCalls = memo(function CollapsibleToolCalls({
     )
   }
 
+  // Single tool call with no thinking → render directly, no collapsible wrapper
+  if (toolCalls.length === 1 && thinkingCount === 0 && !activityItems) {
+    return <div className="space-y-2">{renderToolCallCard(toolCalls[0], true)}</div>
+  }
+
   if (isOpen) {
     return (
       <div className="space-y-2">
@@ -97,14 +102,23 @@ export const CollapsibleToolCalls = memo(function CollapsibleToolCalls({
             className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
           >
             <ChevronDown className="size-3" />
-            <span>{label}</span>
+            {toolCalls.length > 0 ? (
+              <span>{label}</span>
+            ) : (
+              <Badge
+                variant="outline"
+                className={cn("text-[10px] px-1.5 py-0 h-4 font-mono", THINKING_BADGE_STYLE)}
+              >
+                Thinking{thinkingCount > 1 ? ` ×${thinkingCount}` : ""}
+              </Badge>
+            )}
           </button>
         )}
         {activityItems ? (
           activityItems.map((item, idx) => {
             if (item.kind === "thinking") {
               return (
-                <ThinkingBlock key={`thinking-${idx}`} blocks={item.blocks} expandAll={expandAll} />
+                <ThinkingBlock key={`thinking-${idx}`} blocks={item.blocks} expandAll />
               )
             }
             const isLastGroup = idx === activityItems.length - 1
@@ -124,12 +138,14 @@ export const CollapsibleToolCalls = memo(function CollapsibleToolCalls({
   return (
     <button
       onClick={() => setManualOpen(true)}
-      className="flex items-center gap-2 w-full rounded-md border border-border/40 bg-elevation-1 px-2.5 py-2 text-left transition-colors hover:bg-elevation-2 hover:border-border/60"
+      className="flex items-center gap-2 w-full py-1 text-left transition-colors hover:opacity-80"
     >
       <ChevronRight className="size-3.5 text-muted-foreground shrink-0" />
-      <span className="text-xs text-muted-foreground shrink-0">
-        {label}
-      </span>
+      {toolCalls.length > 0 && (
+        <span className="text-xs text-muted-foreground shrink-0">
+          {label}
+        </span>
+      )}
       <div className="flex items-center gap-1 flex-wrap">
         {thinkingCount > 0 && (
           <Badge

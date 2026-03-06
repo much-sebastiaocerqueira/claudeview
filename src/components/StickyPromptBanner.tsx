@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react"
-import { User, ChevronUp } from "lucide-react"
+import { ChevronUp } from "lucide-react"
 import type { ParsedSession } from "@/lib/types"
 import { getUserMessageText } from "@/lib/parser"
 import { cn } from "@/lib/utils"
@@ -117,17 +117,16 @@ export const StickyPromptBanner = memo(function StickyPromptBanner({
     }
   }, [scrollContainerRef, computeStickyTurn])
 
-  const stickyTurnIndex = stickyTurn?.index ?? null
   const promptText = useMemo(() => {
-    if (stickyTurnIndex === null || !stickyTurn) return null
-    const turn = session.turns[stickyTurnIndex]
+    if (!stickyTurn) return null
+    const turn = session.turns[stickyTurn.index]
     if (!turn?.userMessage) return null
     const raw = getUserMessageText(turn.userMessage)
     const clean = raw.replace(SYSTEM_TAG_RE, "").trim()
     if (!clean) return null
     const firstLine = clean.split("\n")[0]
     return firstLine.length > 150 ? firstLine.slice(0, 150) + "..." : firstLine
-  }, [stickyTurnIndex, stickyTurn, session.turns])
+  }, [stickyTurn, session.turns])
 
   const scrollToPrompt = () => {
     const container = scrollContainerRef.current
@@ -149,25 +148,20 @@ export const StickyPromptBanner = memo(function StickyPromptBanner({
       aria-label={`Scroll to turn ${stickyTurn.index + 1} prompt`}
       className={cn(
         "absolute inset-x-0 top-0 z-20",
-        "border-b border-blue-500/10 bg-elevation-1",
-        "px-4 py-2.5 flex items-center gap-3 cursor-pointer",
-        "transition-colors duration-200 hover:bg-elevation-2"
+        "bg-blue-950 border-b border-blue-500/20",
+        "px-3 py-1.5 flex items-center gap-2 cursor-pointer",
+        "transition-colors duration-200 hover:bg-blue-900"
       )}
       onClick={scrollToPrompt}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") scrollToPrompt() }}
     >
-      <div className="flex-shrink-0">
-        <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center">
-          <User className="w-3.5 h-3.5 text-blue-400" />
-        </div>
-      </div>
-      <span className="text-xs font-medium text-blue-400/70 shrink-0">
+      <span className="text-[11px] font-medium text-blue-400/80 shrink-0">
         Turn {stickyTurn.index + 1}
       </span>
-      <span className="text-sm text-muted-foreground truncate min-w-0">
+      <span className="text-xs text-blue-100/70 truncate min-w-0">
         {promptText}
       </span>
-      <ChevronUp className="size-3.5 text-muted-foreground shrink-0 ml-auto" />
+      <ChevronUp className="size-3 text-blue-400/60 shrink-0 ml-auto" />
     </div>
   )
 })

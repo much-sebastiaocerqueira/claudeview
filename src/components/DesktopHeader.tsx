@@ -79,7 +79,7 @@ export const DesktopHeader = memo(function DesktopHeader({
   }
 
   return (
-    <header className="flex h-11 shrink-0 items-center border-b border-border/50 bg-elevation-2 depth-mid px-3 electron-drag">
+    <header className="flex h-8 shrink-0 items-center border-b border-border/50 bg-elevation-2 depth-mid px-2.5 electron-drag">
       <div className="flex items-center gap-2 min-w-0">
         <Tooltip>
           <TooltipTrigger asChild>
@@ -158,7 +158,7 @@ export const DesktopHeader = memo(function DesktopHeader({
         onCopyUrl={handleCopyNetworkUrl}
       />
 
-      <div className="flex items-center gap-1 shrink-0">
+      <div className="flex items-center gap-0.5 shrink-0">
         {onToggleConfig && (
           <HeaderIconButton
             icon={SlidersHorizontal}

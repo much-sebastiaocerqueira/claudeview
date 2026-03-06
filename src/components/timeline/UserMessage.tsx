@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, memo, type ReactNode } from "react"
-import { User, Cog, ChevronDown, ChevronRight, Eye, EyeOff, Terminal, Pencil, Loader2, CheckCircle2, XCircle, Clock } from "lucide-react"
+import { ChevronDown, ChevronRight, Eye, EyeOff, Terminal, Pencil, Loader2, CheckCircle2, XCircle, Clock } from "lucide-react"
 import ReactMarkdown from "react-markdown"
 import { markdownComponents, markdownPlugins } from "./markdown-components"
 import type { UserContent } from "@/lib/types"
@@ -151,23 +151,6 @@ function extractCommandArgs(text: string): string | null {
   return match ? match[1].trim() : null
 }
 
-// ── Variant styles ───────────────────────────────────────────────────────
-
-const VARIANT_STYLES = {
-  user: {
-    avatar: "w-7 h-7 rounded-full bg-blue-500/20 flex items-center justify-center",
-    Icon: User,
-    icon: "w-4 h-4 text-blue-400",
-    label: "text-xs font-medium text-blue-400",
-  },
-  agent: {
-    avatar: "w-7 h-7 rounded-full bg-green-500/20 flex items-center justify-center",
-    Icon: Cog,
-    icon: "w-4 h-4 text-green-400",
-    label: "text-xs font-medium text-green-400",
-  },
-} as const
-
 // ── Expanded command content ─────────────────────────────────────────────
 
 function ExpandedCommandContent({ loading, content }: { loading: boolean; content: string | null }): ReactNode {
@@ -196,13 +179,11 @@ function ExpandedCommandContent({ loading, content }: { loading: boolean; conten
 interface UserMessageProps {
   content: UserContent
   timestamp: string
-  label?: string
-  variant?: "user" | "agent"
   onEditCommand?: (commandName: string) => void
   onExpandCommand?: (commandName: string, args?: string) => Promise<string | null>
 }
 
-export const UserMessage = memo(function UserMessage({ content, timestamp, label = "User", variant = "user", onEditCommand, onExpandCommand }: UserMessageProps) {
+export const UserMessage = memo(function UserMessage({ content, timestamp, onEditCommand, onExpandCommand }: UserMessageProps) {
   const [expanded, setExpanded] = useState(false)
   const [showRaw, setShowRaw] = useState(false)
   const [commandExpanded, setCommandExpanded] = useState(false)
@@ -245,24 +226,10 @@ export const UserMessage = memo(function UserMessage({ content, timestamp, label
   const isTruncated = displayText.length > 500 && !expanded
   const visibleText = isTruncated ? displayText.slice(0, 500) + "..." : displayText
 
-  const styles = VARIANT_STYLES[variant]
-  const { Icon } = styles
-
   return (
-    <div className="flex gap-3 group">
-      <div className="flex-shrink-0 mt-1">
-        <div className={styles.avatar}>
-          <Icon className={styles.icon} />
-        </div>
-      </div>
+    <div className="group">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <span className={styles.label}>{label}</span>
-          {timestamp && (
-            <span className="text-xs text-muted-foreground">
-              {new Date(timestamp).toLocaleTimeString()}
-            </span>
-          )}
           {hasTags && (
             <button
               onClick={() => setShowRaw(!showRaw)}
@@ -370,6 +337,13 @@ export const UserMessage = memo(function UserMessage({ content, timestamp, label
               </>
             )}
           </button>
+        )}
+        {timestamp && (
+          <div className="flex items-center mt-1.5 ml-auto">
+            <span className="text-[10px] text-muted-foreground/50">
+              {new Date(timestamp).toLocaleTimeString()}
+            </span>
+          </div>
         )}
       </div>
 

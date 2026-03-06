@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react"
-import { Loader2, RefreshCw, Activity, X, Search, AlertTriangle } from "lucide-react"
+import { Loader2, RefreshCw, Activity, X, Search, AlertTriangle, FolderOpen, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { authFetch } from "@/lib/auth"
 import { shortPath, dirNameToPath } from "@/lib/format"
 import { SessionRow } from "./SessionRow"
-import { ProcessList } from "./ProcessList"
 import type { ActiveSessionInfo, RunningProcess } from "./SessionRow"
 import type { PendingSessionInfo } from "@/components/session-browser/types"
 import { useSessionNames } from "@/hooks/useSessionNames"
@@ -14,7 +13,6 @@ import { useSessionNames } from "@/hooks/useSessionNames"
 // Re-export extracted modules so external imports remain unchanged
 export { SessionRow } from "./SessionRow"
 export type { ActiveSessionInfo, RunningProcess } from "./SessionRow"
-export { ProcessList } from "./ProcessList"
 
 interface LiveSessionsProps {
   activeSessionKey: string | null
@@ -27,27 +25,29 @@ interface LiveSessionsProps {
   refreshRef?: React.MutableRefObject<(() => void) | null>
 }
 
-/** Partition processes into a session-keyed map and an unmatched list. */
-function partitionProcesses(processes: RunningProcess[]): {
-  procBySession: Map<string, RunningProcess>
-  unmatchedProcs: RunningProcess[]
-} {
-  const procBySession = new Map<string, RunningProcess>()
-  const unmatchedProcs: RunningProcess[] = []
-
+/** Map processes to sessions by sessionId (keep highest-mem per session). */
+function buildProcMap(processes: RunningProcess[]): Map<string, RunningProcess> {
+  const map = new Map<string, RunningProcess>()
   for (const p of processes) {
-    if (!p.sessionId) {
-      unmatchedProcs.push(p)
-      continue
-    }
-    const existing = procBySession.get(p.sessionId)
+    if (!p.sessionId) continue
+    const existing = map.get(p.sessionId)
     if (!existing || p.memMB > existing.memMB) {
-      procBySession.set(p.sessionId, p)
-      if (existing) unmatchedProcs.push(existing)
+      map.set(p.sessionId, p)
     }
   }
+  return map
+}
 
-  return { procBySession, unmatchedProcs }
+/** Group sessions by project path for compact display. */
+function groupByProject(sessions: ActiveSessionInfo[]): Map<string, ActiveSessionInfo[]> {
+  const groups = new Map<string, ActiveSessionInfo[]>()
+  for (const s of sessions) {
+    const key = shortPath(s.cwd ?? dirNameToPath(s.dirName), 2)
+    const list = groups.get(key)
+    if (list) list.push(s)
+    else groups.set(key, [s])
+  }
+  return groups
 }
 
 export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSelectSession, onDuplicateSession, onDeleteSession, pendingSession, refreshRef }: LiveSessionsProps) {
@@ -137,14 +137,15 @@ export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSel
     return () => clearInterval(interval)
   }, [fetchData])
 
-  const { procBySession, unmatchedProcs } = useMemo(
-    () => partitionProcesses(processes),
+  const procBySession = useMemo(
+    () => buildProcMap(processes),
     [processes]
   )
 
+  // Group sessions by project path
+  const grouped = useMemo(() => groupByProject(sessions), [sessions])
+
   // Detect status transitions to "completed" — only highlight newly completed sessions.
-  // Skip recording until we have real data so the mount render (empty sessions) doesn't
-  // cause the first real fetch to look like every session just transitioned.
   useEffect(() => {
     if (sessions.length === 0) return
 
@@ -157,7 +158,6 @@ export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSel
     }
 
     if (prev !== null) {
-      // After first load: detect transitions
       setNewlyCompleted((nc) => {
         let next: Set<string> | null = null
         for (const [id, status] of currentStatuses) {
@@ -200,7 +200,6 @@ export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSel
   }, [fetchData])
 
   const handleSelectSession = useCallback((dirName: string, fileName: string) => {
-    // Dismiss the completed highlight on click
     const match = sessionsRef.current.find((s) => s.dirName === dirName && s.fileName === fileName)
     if (match) {
       setNewlyCompleted((prev) => {
@@ -220,42 +219,17 @@ export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSel
 
   return (
     <div className="flex h-full flex-col">
-      <div className="shrink-0 flex items-center justify-between px-3 py-2">
-        <span className="text-xs font-medium text-foreground flex items-center gap-1.5">
-          <Activity className="size-3" />
-          Live & Recent
-        </span>
-        <div className="flex items-center gap-1">
-          {processes.length > 0 && (
-            <span className="text-[10px] text-muted-foreground mr-1">
-              {processes.length} proc{processes.length !== 1 ? "s" : ""}
-            </span>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0"
-            onClick={() => fetchData(debouncedSearch || undefined)}
-            aria-label="Refresh live sessions"
-          >
-            <RefreshCw
-              className={cn("size-3", loading && "animate-spin")}
-            />
-          </Button>
-        </div>
-      </div>
-
-      {/* Search bar */}
-      <div className="shrink-0 px-2 pb-2 pt-1">
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+      {/* Search bar + proc count */}
+      <div className="shrink-0 flex items-center gap-1.5 px-2 py-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
           <input
             ref={searchInputRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search sessions & prompts\u2026"
-            className="w-full rounded-lg border border-border/60 elevation-2 depth-low py-2 pl-8 pr-8 text-xs text-foreground placeholder:text-muted-foreground focus:border-blue-500/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
+            className="w-full rounded-md border border-border/60 elevation-2 depth-low py-1.5 pl-7 pr-7 text-xs text-foreground placeholder:text-muted-foreground focus:border-blue-500/40 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors"
           />
           {searchQuery && !searching && (
             <button
@@ -269,12 +243,28 @@ export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSel
             <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 size-3 animate-spin text-muted-foreground" />
           )}
         </div>
+        {processes.length > 0 && (
+          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+            {processes.length}
+          </span>
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0 shrink-0"
+          onClick={() => fetchData(debouncedSearch || undefined)}
+          aria-label="Refresh live sessions"
+        >
+          <RefreshCw
+            className={cn("size-3", loading && "animate-spin")}
+          />
+        </Button>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="flex flex-col gap-1.5 px-2 pt-1 pb-3">
+        <div className="flex flex-col gap-4 px-1.5 pt-0.5 pb-3">
           {fetchError && (
-            <div className="mx-2 mb-1 flex items-center gap-2 rounded-md border border-red-900/50 bg-red-950/30 px-2 py-1.5">
+            <div className="mx-1 mb-1 flex items-center gap-2 rounded-md border border-red-900/50 bg-red-950/30 px-2 py-1.5">
               <AlertTriangle className="size-3 text-red-400 shrink-0" />
               <span className="text-[10px] text-red-400 flex-1 truncate">{fetchError}</span>
               <button
@@ -286,7 +276,7 @@ export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSel
             </div>
           )}
 
-          {sessions.length === 0 && unmatchedProcs.length === 0 && !loading && !fetchError && (
+          {sessions.length === 0 && !loading && !fetchError && (
             <div className="px-3 py-8 text-center">
               {debouncedSearch ? (
                 <>
@@ -310,15 +300,141 @@ export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSel
             </div>
           )}
 
-          {/* Pending session placeholder — shown while a new session is being created */}
-          {pendingSession && (
-            <PendingSessionRow
-              dirName={pendingSession.dirName}
-              cwd={pendingSession.cwd}
-              firstMessage={pendingSession.firstMessage}
-            />
-          )}
+          {/* Grouped sessions by project — pending session is placed inside its matching group */}
+          {(() => {
+            const pendingProjectPath = pendingSession
+              ? shortPath(pendingSession.cwd || dirNameToPath(pendingSession.dirName), 2)
+              : null
+            return [...grouped.entries()].map(([projectPath, projectSessions], idx) => (
+              <ProjectGroup
+                key={projectPath}
+                projectPath={projectPath}
+                sessions={projectSessions}
+                defaultCollapsed={idx >= 3}
+                forceExpand={!!debouncedSearch}
+                activeSessionKey={activeSessionKey}
+                procBySession={procBySession}
+                killingPids={killingPids}
+                newlyCompleted={newlyCompleted}
+                sessionNames={sessionNames}
+                onSelectSession={handleSelectSession}
+                onKill={handleKill}
+                onDuplicateSession={onDuplicateSession}
+                onDeleteSession={onDeleteSession ? handleDeleteSession : undefined}
+                onRenameSession={renameSession}
+                pendingSession={pendingProjectPath === projectPath ? pendingSession : undefined}
+              />
+            ))
+          })()}
 
+          {/* Pending session in a new group if no matching project group exists yet */}
+          {pendingSession && (() => {
+            const pendingProjectPath = shortPath(pendingSession.cwd || dirNameToPath(pendingSession.dirName), 2)
+            if (!grouped.has(pendingProjectPath)) {
+              return (
+                <ProjectGroup
+                  key={`pending-${pendingProjectPath}`}
+                  projectPath={pendingProjectPath}
+                  sessions={[]}
+                  activeSessionKey={activeSessionKey}
+                  procBySession={procBySession}
+                  killingPids={killingPids}
+                  newlyCompleted={newlyCompleted}
+                  sessionNames={sessionNames}
+                  onSelectSession={handleSelectSession}
+                  onKill={handleKill}
+                  onDuplicateSession={onDuplicateSession}
+                  onDeleteSession={onDeleteSession ? handleDeleteSession : undefined}
+                  onRenameSession={renameSession}
+                  pendingSession={pendingSession}
+                />
+              )
+            }
+            return null
+          })()}
+
+        </div>
+      </ScrollArea>
+    </div>
+  )
+})
+
+// -- Collapsible project group --
+
+function ProjectGroup({
+  projectPath,
+  sessions,
+  activeSessionKey,
+  procBySession,
+  killingPids,
+  newlyCompleted,
+  sessionNames,
+  defaultCollapsed = false,
+  forceExpand = false,
+  onSelectSession,
+  onKill,
+  onDuplicateSession,
+  onDeleteSession,
+  onRenameSession,
+  pendingSession,
+}: {
+  projectPath: string
+  sessions: ActiveSessionInfo[]
+  activeSessionKey: string | null
+  procBySession: Map<string, RunningProcess>
+  killingPids: Set<number>
+  newlyCompleted: Set<string>
+  sessionNames: Record<string, string>
+  defaultCollapsed?: boolean
+  forceExpand?: boolean
+  onSelectSession: (dirName: string, fileName: string) => void
+  onKill: (pid: number, e: React.MouseEvent) => void
+  onDuplicateSession?: (dirName: string, fileName: string) => void
+  onDeleteSession?: (session: ActiveSessionInfo) => void
+  onRenameSession?: (sessionId: string, name: string) => void
+  pendingSession?: PendingSessionInfo | null
+}) {
+  const hasPending = !!pendingSession
+  const [collapsed, setCollapsed] = useState(defaultCollapsed)
+  const isCollapsed = (forceExpand || hasPending) ? false : collapsed
+
+  // Each row is ~28px; show 5 visible, rest scrollable
+  const VISIBLE_COUNT = 5
+  const totalCount = sessions.length + (hasPending ? 1 : 0)
+  const needsScroll = totalCount > VISIBLE_COUNT
+
+  return (
+    <div className="flex flex-col">
+      {/* Collapsible group header */}
+      <button
+        onClick={() => setCollapsed((c) => !c)}
+        className="flex items-center gap-1 px-1.5 pt-2 pb-0.5 w-full text-left hover:bg-white/[0.02] rounded-sm transition-colors"
+      >
+        <ChevronRight className={cn(
+          "size-2.5 text-muted-foreground/50 transition-transform duration-150 shrink-0",
+          !isCollapsed && "rotate-90"
+        )} />
+        <FolderOpen className="size-3 text-muted-foreground/60 shrink-0" />
+        <span className="text-[10px] font-medium text-muted-foreground/70 truncate">
+          {projectPath}
+        </span>
+        <span className="text-[9px] text-muted-foreground/40 shrink-0">
+          {totalCount}
+        </span>
+      </button>
+
+      {/* Session rows — left border + scrollable when > 5 */}
+      {!isCollapsed && (
+        <div
+          className={cn(
+            "flex flex-col gap-px ml-2.5 border-l border-border/40 pl-1",
+            needsScroll && "overflow-y-auto scrollbar-thin"
+          )}
+          style={needsScroll ? { maxHeight: VISIBLE_COUNT * 28 } : undefined}
+        >
+          {hasPending && (
+            <PendingSessionRow firstMessage={pendingSession.firstMessage} />
+          )}
           {sessions.map((s) => (
             <SessionRow
               key={`${s.dirName}/${s.fileName}`}
@@ -328,60 +444,28 @@ export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSel
               killingPids={killingPids}
               isNewlyCompleted={newlyCompleted.has(s.sessionId)}
               customName={sessionNames[s.sessionId]}
-              onSelectSession={handleSelectSession}
-              onKill={handleKill}
+              onSelectSession={onSelectSession}
+              onKill={onKill}
               onDuplicateSession={onDuplicateSession}
-              onDeleteSession={onDeleteSession ? handleDeleteSession : undefined}
-              onRenameSession={renameSession}
+              onDeleteSession={onDeleteSession}
+              onRenameSession={onRenameSession}
             />
           ))}
-
-          {/* Unmatched processes */}
-          <ProcessList
-            unmatchedProcs={unmatchedProcs}
-            killingPids={killingPids}
-            onKill={handleKill}
-          />
         </div>
-      </ScrollArea>
+      )}
     </div>
   )
-})
+}
 
-// ── Pending session placeholder ─────────────────────────────────────────
+// -- Pending session placeholder --
 
-function PendingSessionRow({ dirName, cwd, firstMessage }: {
-  dirName: string
-  cwd?: string | null
-  firstMessage?: string
-}) {
+function PendingSessionRow({ firstMessage }: { firstMessage?: string }) {
   return (
-    <div
-      className="group relative w-full flex flex-col gap-1 rounded-lg px-2.5 py-2.5 text-left bg-blue-500/10 ring-1 ring-blue-500/50 shadow-[0_0_16px_-3px_rgba(59,130,246,0.25)]"
-    >
-      {/* Top row: spinner + message */}
-      <div className="flex items-center gap-2">
-        <span className="relative flex h-3.5 w-3.5 shrink-0 items-center justify-center">
-          <span className="absolute inline-flex h-2.5 w-2.5 animate-ping rounded-full bg-blue-400 opacity-75" />
-          <span className="relative inline-flex h-2 w-2 rounded-full bg-blue-500" />
-        </span>
-        <span className="text-xs font-medium truncate flex-1 text-foreground">
-          {firstMessage || "New session"}
-        </span>
-        <Loader2 className="size-3 animate-spin text-blue-400 shrink-0" />
-      </div>
-
-      {/* Project path */}
-      <div className="ml-5.5 text-[10px] text-blue-400/70">
-        {shortPath(cwd ?? dirNameToPath(dirName), 2)}
-      </div>
-
-      {/* Status */}
-      <div className="ml-5.5 flex items-center gap-2 text-[10px] text-muted-foreground">
-        <span className="flex items-center gap-0.5 font-medium text-blue-400">
-          Creating session…
-        </span>
-      </div>
+    <div className="relative w-full flex items-center gap-1.5 rounded-r-md px-2 py-1 text-left border-l-2 border-l-blue-500 rounded-l-none">
+      <Loader2 className="size-2.5 animate-spin text-blue-400 shrink-0" />
+      <span className="text-[11px] leading-tight truncate flex-1 text-foreground">
+        {firstMessage || "New session"}
+      </span>
     </div>
   )
 }

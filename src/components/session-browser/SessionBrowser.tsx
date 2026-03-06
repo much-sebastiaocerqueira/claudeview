@@ -1,11 +1,14 @@
 import { useCallback, memo } from "react"
-import { Users } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LiveSessions } from "@/components/LiveSessions"
 import { TeamsList } from "@/components/TeamsList"
 import type { SessionBrowserProps } from "./types"
 import { BrowseTab } from "./BrowseTab"
 import { useSessionBrowser } from "./useSessionBrowser"
+
+// ── Tab type ───────────────────────────────────────────────────────────────
+
+type SidebarTab = "live" | "browse" | "teams"
 
 // ── Tab Bar ────────────────────────────────────────────────────────────────
 
@@ -14,9 +17,9 @@ function SidebarTabBar({
   isMobile,
   onTabChange,
 }: {
-  activeTab: "browse" | "teams"
+  activeTab: SidebarTab
   isMobile?: boolean
-  onTabChange: (tab: "browse" | "teams") => void
+  onTabChange: (tab: SidebarTab) => void
 }): React.ReactElement {
   const paddingClass = isMobile ? "py-3" : "py-2"
 
@@ -35,9 +38,17 @@ function SidebarTabBar({
     <div className="flex shrink-0 border-b border-border/50" role="tablist">
       <button
         role="tab"
+        aria-selected={activeTab === "live"}
+        onClick={() => onTabChange("live")}
+        className={tabClassName(activeTab === "live", "flex items-center justify-center")}
+      >
+        Live & Recent
+      </button>
+      <button
+        role="tab"
         aria-selected={activeTab === "browse"}
         onClick={() => onTabChange("browse")}
-        className={tabClassName(activeTab === "browse")}
+        className={tabClassName(activeTab === "browse", "flex items-center justify-center")}
       >
         Browse
       </button>
@@ -45,9 +56,8 @@ function SidebarTabBar({
         role="tab"
         aria-selected={activeTab === "teams"}
         onClick={() => onTabChange("teams")}
-        className={tabClassName(activeTab === "teams", "flex items-center justify-center gap-1.5")}
+        className={tabClassName(activeTab === "teams", "flex items-center justify-center")}
       >
-        <Users className="size-3" />
         Teams
       </button>
     </div>
@@ -107,29 +117,27 @@ export const SessionBrowser = memo(function SessionBrowser({
     <aside
       className={cn(
         "flex h-full shrink-0 flex-col elevation-1",
-        isMobile ? "w-full" : "w-80 border-r border-border/50 panel-enter"
+        isMobile ? "w-full" : "w-80 panel-enter"
       )}
       aria-label="Session browser"
     >
-      {/* Top: Live Sessions */}
-      <div className="flex min-h-0 flex-[55_1_0%] flex-col overflow-hidden">
-        <LiveSessions
-          activeSessionKey={activeSessionKey}
-          onSelectSession={browser.loadLiveSession}
-          onDuplicateSession={onDuplicateSession}
-          onDeleteSession={onDeleteSession}
-          pendingSession={pendingSession}
-          refreshRef={liveSessionsRefreshRef}
-        />
-      </div>
+      <SidebarTabBar
+        activeTab={sidebarTab}
+        isMobile={isMobile}
+        onTabChange={onSidebarTabChange}
+      />
 
-      {/* Bottom: Browse / Teams */}
-      <div className="flex min-h-0 flex-[45_1_0%] flex-col overflow-hidden border-t border-border/50">
-        <SidebarTabBar
-          activeTab={sidebarTab}
-          isMobile={isMobile}
-          onTabChange={onSidebarTabChange}
-        />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {sidebarTab === "live" && (
+          <LiveSessions
+            activeSessionKey={activeSessionKey}
+            onSelectSession={browser.loadLiveSession}
+            onDuplicateSession={onDuplicateSession}
+            onDeleteSession={onDeleteSession}
+            pendingSession={pendingSession}
+            refreshRef={liveSessionsRefreshRef}
+          />
+        )}
 
         {sidebarTab === "browse" && (
           <BrowseTab

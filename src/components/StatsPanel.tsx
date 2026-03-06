@@ -107,7 +107,7 @@ function SearchHeader({ searchInputRef }: SearchHeaderProps): JSX.Element {
 
 function ModelSelector({ selectedModel, onModelChange }: { selectedModel?: string; onModelChange: (model: string) => void }): JSX.Element {
   return (
-    <div className="rounded-lg border border-border elevation-2 depth-low p-3">
+    <div className="rounded-lg elevation-2 depth-low p-3">
       <section>
         <SectionHeading>
           <Cpu className="size-3" />
@@ -128,7 +128,7 @@ function ModelSelector({ selectedModel, onModelChange }: { selectedModel?: strin
 
 function EffortSelector({ selectedEffort, onEffortChange }: { selectedEffort?: string; onEffortChange: (effort: string) => void }): JSX.Element {
   return (
-    <div className="rounded-lg border border-border elevation-2 depth-low p-3">
+    <div className="rounded-lg elevation-2 depth-low p-3">
       <section>
         <SectionHeading>
           <Gauge className="size-3" />
@@ -242,7 +242,7 @@ export const StatsPanel = memo(function StatsPanel({
 
       <div className={cn("flex flex-col gap-6", isMobile ? "p-4" : "p-3")}>
         {permissionsPanel && (
-          <div className="rounded-lg border border-border elevation-2 depth-low p-3">
+          <div className="rounded-lg elevation-2 depth-low p-3">
             {permissionsPanel}
           </div>
         )}

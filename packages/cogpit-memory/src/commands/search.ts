@@ -73,6 +73,8 @@ export async function searchSessions(
     try {
       index = new SearchIndex(DEFAULT_DB_PATH)
       ownedIndex = true
+      // Incrementally index any new/changed files before querying
+      index.updateStale(dirs.PROJECTS_DIR)
     } catch { /* DB corrupt or locked — fall through to raw scan */ }
   }
 

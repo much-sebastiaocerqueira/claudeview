@@ -188,7 +188,7 @@ export function WorktreePanel({
             return (
               <div
                 key={wt.name}
-                className="rounded-lg border border-border p-3 hover:bg-elevation-1/50 transition-colors"
+                className="rounded-lg p-3 hover:bg-elevation-1/50 transition-colors"
               >
                 {/* Header row */}
                 <div className="flex items-center justify-between mb-1.5">
@@ -260,7 +260,7 @@ export function WorktreePanel({
                       </span>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
-                      <div className="mt-1.5 space-y-px rounded-md border border-border/50 bg-elevation-1/50 p-1.5">
+                      <div className="mt-1.5 space-y-px rounded-md bg-elevation-1/50 p-1.5">
                         {wt.changedFiles.map((f) => (
                           <div key={f.path} className="flex items-center gap-2 text-[10px] font-mono py-0.5 px-1">
                             <span className={cn("shrink-0 w-3 text-center", statusColors[f.status] ?? "text-muted-foreground")}>

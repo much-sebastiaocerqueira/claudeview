@@ -20,6 +20,18 @@ Every new route must be registered in **both** places:
 
 Registering in only one means the route works in dev but not in the built app, or vice versa.
 
+## External Session API (cogpit-sessions skill)
+
+Other agents can create and manage Claude Code sessions via the HTTP API on `localhost:19384`. Key endpoints:
+
+- `POST /api/create-and-send` — Start a new session with a message (responds in 5–15s)
+- `POST /api/send-message` — Send follow-up to an existing session (waits for full turn)
+- `POST /api/stop-session` — Stop a running session
+- `GET /api/projects` — List available projects and their `dirName`s
+- `GET /api/sessions/:dirName/:fileName` — Read session output
+
+See the `cogpit-sessions` skill (`.claude/skills/cogpit-sessions/SKILL.md`) for full usage, timeouts, and permissions.
+
 <!-- gitnexus:start -->
 # GitNexus MCP
 

@@ -100,16 +100,16 @@ export const GroupedFileCard = memo(function GroupedFileCard({ file, defaultOpen
       ref={nearRef}
       data-file-path={file.filePath}
       className={cn(
-        "rounded-md border elevation-2 depth-low transition-colors",
+        "rounded border elevation-2 depth-low transition-colors",
         isHighlighted
           ? "border-blue-500/40 ring-1 ring-blue-500/20"
           : "border-border",
       )}
     >
-      <div className="sticky top-0 z-10 flex items-center w-full bg-elevation-2 rounded-t-md hover:bg-elevation-3 transition-colors group">
+      <div className="sticky top-0 z-10 flex items-center w-full bg-elevation-2 rounded-t hover:bg-elevation-3 transition-colors group">
         <button
           onClick={() => setOpen(!open)}
-          className="flex items-center gap-2 flex-1 min-w-0 px-2.5 py-1.5"
+          className="flex items-center gap-1.5 flex-1 min-w-0 px-2 py-1"
         >
           {open ? (
             <ChevronDown className="size-3 text-muted-foreground shrink-0" />
@@ -137,13 +137,6 @@ export const GroupedFileCard = memo(function GroupedFileCard({ file, defaultOpen
           )}
         </button>
         <div className="flex items-center gap-1.5 pr-2 shrink-0">
-          {file.addCount > 0 && (
-            <span className="text-[10px] font-mono tabular-nums text-green-500/80">+{file.addCount}</span>
-          )}
-          {file.delCount > 0 && (
-            <span className="text-[10px] font-mono tabular-nums text-red-400/80">-{file.delCount}</span>
-          )}
-          <ChangeBar add={file.addCount} del={file.delCount} />
           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
             <Tooltip>
               <TooltipTrigger asChild>
@@ -170,6 +163,13 @@ export const GroupedFileCard = memo(function GroupedFileCard({ file, defaultOpen
               <TooltipContent>View git diff</TooltipContent>
             </Tooltip>
           </div>
+          {file.addCount > 0 && (
+            <span className="text-[10px] font-mono tabular-nums text-green-500/80">+{file.addCount}</span>
+          )}
+          {file.delCount > 0 && (
+            <span className="text-[10px] font-mono tabular-nums text-red-400/80">-{file.delCount}</span>
+          )}
+          <ChangeBar add={file.addCount} del={file.delCount} />
         </div>
       </div>
       <DiffContent
@@ -216,7 +216,7 @@ const DiffContent = memo(function DiffContent({
 }): React.ReactElement | null {
   if (showDiff) {
     return (
-      <div ref={diffRef} className="overflow-hidden rounded-b-md">
+      <div ref={diffRef} className="overflow-hidden rounded-b">
         {diffMode === "per-edit" ? (
           <PerEditDiffs edits={edits} filePath={filePath} />
         ) : (
@@ -226,6 +226,7 @@ const DiffContent = memo(function DiffContent({
             filePath={filePath}
             compact={false}
             startLine={netStartLine}
+            hideHeader
           />
         )}
       </div>
@@ -272,6 +273,7 @@ const PerEditDiffs = memo(function PerEditDiffs({ edits, filePath }: { edits: In
               filePath={filePath}
               compact={false}
               startLine={edit.startLine}
+              hideHeader
             />
           </div>
         )

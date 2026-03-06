@@ -1,7 +1,9 @@
-import { useMemo, useState, useEffect } from "react"
+import { useMemo, useState, useEffect, useRef } from "react"
 import type { ParsedSession, ToolCall } from "@/lib/types"
 import { computeNetDiff, type EditOp } from "@/lib/diffUtils"
 import { authFetch } from "@/lib/auth"
+import { useSessionContext } from "@/contexts/SessionContext"
+import { parseSubagentJsonl } from "@/hooks/useSubagentContent"
 
 interface FileChange {
   turnIndex: number
@@ -9,7 +11,13 @@ interface FileChange {
   agentId?: string
 }
 
+// Module-level cache for background agent file changes
+const bgAgentCache = new Map<string, ToolCall[]>()
+
 export function useFileChangesData(session: ParsedSession) {
+  const { sessionSource } = useSessionContext()
+  const dirName = sessionSource?.dirName
+
   // Stable cache key: total tool call count across all turns (cheaper than session object identity)
   const turnCount = session.turns.length
   const lastTurnToolCallCount = session.turns.at(-1)?.toolCalls.length ?? 0
@@ -23,6 +31,82 @@ export function useFileChangesData(session: ParsedSession) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- cheap proxy deps to avoid full array comparison
   }, [turnCount, lastTurnToolCallCount])
 
+  // Identify background agents that need their JSONL fetched for file changes
+  const bgAgentsToLoad = useMemo(() => {
+    const agents: Array<{ agentId: string; turnIndex: number }> = []
+    for (let turnIndex = 0; turnIndex < session.turns.length; turnIndex++) {
+      for (const msg of session.turns[turnIndex].subAgentActivity) {
+        if (msg.isBackground && msg.toolCalls.length === 0) {
+          agents.push({ agentId: msg.agentId, turnIndex })
+        }
+      }
+    }
+    return agents
+  }, [session.turns, totalToolCallCount]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch background agent JSONL files to extract their tool calls
+  const [bgToolCalls, setBgToolCalls] = useState<Map<string, ToolCall[]>>(new Map())
+  const fetchedBgRef = useRef(new Set<string>())
+
+  useEffect(() => {
+    if (!dirName || !session.sessionId || bgAgentsToLoad.length === 0) return
+
+    const toFetch: Array<{ agentId: string; cacheKey: string }> = []
+    for (const { agentId } of bgAgentsToLoad) {
+      const cacheKey = `${dirName}/${session.sessionId}/${agentId}`
+      if (fetchedBgRef.current.has(cacheKey)) continue
+      if (bgAgentCache.has(cacheKey)) {
+        setBgToolCalls((prev) => {
+          const next = new Map(prev)
+          next.set(agentId, bgAgentCache.get(cacheKey)!)
+          return next
+        })
+        fetchedBgRef.current.add(cacheKey)
+        continue
+      }
+      toFetch.push({ agentId, cacheKey })
+    }
+
+    if (toFetch.length === 0) return
+
+    let cancelled = false
+
+    async function fetchAll() {
+      const results = new Map<string, ToolCall[]>()
+      await Promise.all(
+        toFetch.map(async ({ agentId, cacheKey }) => {
+          try {
+            const url = `/api/sessions/${encodeURIComponent(dirName!)}/${encodeURIComponent(session.sessionId)}` +
+              `/subagents/agent-${encodeURIComponent(agentId)}.jsonl`
+            const res = await authFetch(url)
+            if (!res.ok) return
+            const text = await res.text()
+            const parsed = parseSubagentJsonl(text, agentId)
+            const tcs: ToolCall[] = []
+            for (const msg of parsed) {
+              for (const tc of msg.toolCalls) {
+                if (tc.name === "Edit" || tc.name === "Write") tcs.push(tc)
+              }
+            }
+            bgAgentCache.set(cacheKey, tcs)
+            fetchedBgRef.current.add(cacheKey)
+            results.set(agentId, tcs)
+          } catch { /* skip */ }
+        })
+      )
+      if (!cancelled && results.size > 0) {
+        setBgToolCalls((prev) => {
+          const next = new Map(prev)
+          for (const [id, tcs] of results) next.set(id, tcs)
+          return next
+        })
+      }
+    }
+
+    fetchAll()
+    return () => { cancelled = true }
+  }, [dirName, session.sessionId, bgAgentsToLoad])
+
   const fileChanges = useMemo(() => {
     const changes: FileChange[] = []
     for (let turnIndex = 0; turnIndex < session.turns.length; turnIndex++) {
@@ -33,16 +117,26 @@ export function useFileChangesData(session: ParsedSession) {
         }
       }
       for (const msg of turn.subAgentActivity) {
+        // For foreground sub-agents with inline tool calls
         for (const tc of msg.toolCalls) {
           if (tc.name === "Edit" || tc.name === "Write") {
             changes.push({ turnIndex, toolCall: tc, agentId: msg.agentId })
+          }
+        }
+        // For background agents: use fetched tool calls from their JSONL files
+        if (msg.isBackground && msg.toolCalls.length === 0) {
+          const fetched = bgToolCalls.get(msg.agentId)
+          if (fetched) {
+            for (const tc of fetched) {
+              changes.push({ turnIndex, toolCall: tc, agentId: msg.agentId })
+            }
           }
         }
       }
     }
     return changes
     // eslint-disable-next-line react-hooks/exhaustive-deps -- totalToolCallCount is an intentional cache-busting key
-  }, [totalToolCallCount, session.turns])
+  }, [totalToolCallCount, session.turns, bgToolCalls])
 
   // Fetch actual file contents from disk for line number resolution
   const filePaths = useMemo(() => {

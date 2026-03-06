@@ -2,7 +2,6 @@ import { memo, useRef, useLayoutEffect } from "react"
 import { useNearViewport } from "@/hooks/useNearViewport"
 import { Clock, RotateCcw } from "lucide-react"
 import { UserMessage } from "./UserMessage"
-import { ThinkingBlock } from "./ThinkingBlock"
 import { AssistantText } from "./AssistantText"
 import { SubAgentPanel } from "./SubAgentPanel"
 import { BackgroundAgentPanel } from "./BackgroundAgentPanel"
@@ -21,17 +20,8 @@ import { formatDuration, getTurnDuration } from "@/lib/format"
 // ── Style constants ──────────────────────────────────────────────────────────
 
 const CARD_STYLES = {
-  user:        "bg-blue-500/[0.06] border border-blue-500/10",
-  userAgent:   "bg-green-500/[0.06] border border-green-500/10",
-  assistant:   "bg-green-500/[0.06] border border-green-500/10",
-  subAgent:    "bg-indigo-500/[0.06] border border-indigo-500/10",
-  thinking:    "bg-violet-500/[0.06] border border-violet-500/10",
-  orphanTools: "bg-muted-foreground/[0.06] border border-border/30",
-} as const
-
-const BORDER_STYLES = {
-  assistant: "border-green-500/10",
-  subAgent:  "border-indigo-500/10",
+  user:      "bg-blue-500/[0.12] border border-blue-500/20",
+  userAgent: "bg-green-500/[0.12] border border-green-500/20",
 } as const
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -155,14 +145,12 @@ const TurnSectionInner = memo(function TurnSectionInner({
       />
 
       {isNear ? (
-        <div ref={contentRef} className="space-y-4">
+        <div ref={contentRef} className="space-y-3">
           {turn.userMessage && (
             <div className={cn("rounded-lg p-3", isSubAgentView ? CARD_STYLES.userAgent : CARD_STYLES.user)}>
               <UserMessage
                 content={turn.userMessage}
                 timestamp={turn.timestamp}
-                label={isSubAgentView ? "Agent" : undefined}
-                variant={isSubAgentView ? "agent" : undefined}
                 onEditCommand={onEditCommand}
                 onExpandCommand={onExpandCommand}
               />
@@ -286,7 +274,7 @@ function ContentBlocks({
   expandAll,
   activeToolCallId,
   isAgentActive,
-  isSubAgentView,
+  isSubAgentView: _isSubAgentView,
 }: {
   blocks: TurnContentBlock[]
   model: string | null
@@ -296,8 +284,6 @@ function ContentBlocks({
   isSubAgentView: boolean
 }) {
   const elements: React.ReactNode[] = []
-  const assistantCard = isSubAgentView ? CARD_STYLES.subAgent : CARD_STYLES.assistant
-  const assistantBorder = isSubAgentView ? BORDER_STYLES.subAgent : BORDER_STYLES.assistant
 
   let i = 0
   while (i < blocks.length) {
@@ -307,17 +293,10 @@ function ContentBlocks({
     if (block.kind === "thinking" || block.kind === "tool_calls") {
       const { items, toolCalls, thinkingCount, nextIndex } = collectActivity(blocks, i)
 
-      // Single thinking block with no tool calls → render standalone (original style)
-      if (items.length === 1 && items[0].kind === "thinking") {
+      // Single tool_calls group with no thinking → render as orphan tool calls
+      if (items.length === 1 && items[0].kind === "tool_calls") {
         elements.push(
-          <div key={`thinking-${i}`} className={cn("rounded-lg p-3", CARD_STYLES.thinking)}>
-            <ThinkingBlock blocks={items[0].blocks} expandAll={expandAll} />
-          </div>
-        )
-      // Single tool_calls group with no thinking → render as orphan tool calls (original style)
-      } else if (items.length === 1 && items[0].kind === "tool_calls") {
-        elements.push(
-          <div key={`tools-${i}`} className={cn("rounded-lg p-3", CARD_STYLES.orphanTools)}>
+          <div key={`tools-${i}`} className="border-l-2 border-border/40 pl-3 ml-1">
             <CollapsibleToolCalls
               toolCalls={toolCalls}
               expandAll={expandAll}
@@ -329,7 +308,7 @@ function ContentBlocks({
       // Mixed or multiple items → grouped collapsible
       } else {
         elements.push(
-          <div key={`activity-${i}`} className={cn("rounded-lg p-3", CARD_STYLES.orphanTools)}>
+          <div key={`activity-${i}`} className="border-l-2 border-border/40 pl-3 ml-1">
             <CollapsibleToolCalls
               toolCalls={toolCalls}
               expandAll={expandAll}
@@ -349,18 +328,17 @@ function ContentBlocks({
       const { toolCalls, nextIndex } = collectToolCalls(blocks, i + 1)
       block.text.forEach((text, ti) => {
         const isLastTextInBlock = ti === block.text.length - 1
+        const hasFollowingTools = isLastTextInBlock && toolCalls.length > 0
         elements.push(
-          <div key={`text-${i}-${ti}`} className={cn("rounded-lg p-3", assistantCard)}>
+          <div key={`text-${i}-${ti}`}>
             <AssistantText
               text={text}
               model={model}
               tokenUsage={null}
-              label={isSubAgentView ? "Sub Agent" : undefined}
-              variant={isSubAgentView ? "subagent" : undefined}
               timestamp={block.timestamp}
             />
-            {isLastTextInBlock && toolCalls.length > 0 && (
-              <div className={cn("mt-3 pt-3 border-t", assistantBorder)}>
+            {hasFollowingTools && (
+              <div className="mt-1.5 border-l-2 border-border/40 pl-3 ml-1">
                 <CollapsibleToolCalls
                   toolCalls={toolCalls}
                   expandAll={expandAll}
@@ -378,7 +356,7 @@ function ContentBlocks({
 
     if (block.kind === "sub_agent") {
       elements.push(
-        <div key={`agent-${i}`} className={cn("rounded-lg p-3", CARD_STYLES.subAgent)}>
+        <div key={`agent-${i}`} className="border-l-2 border-indigo-500/30 pl-3 ml-1">
           <SubAgentPanel messages={block.messages} expandAll={expandAll} />
         </div>
       )
@@ -388,7 +366,7 @@ function ContentBlocks({
 
     if (block.kind === "background_agent") {
       elements.push(
-        <div key={`bg-agent-${i}`} className={cn("rounded-lg p-3", CARD_STYLES.thinking)}>
+        <div key={`bg-agent-${i}`} className="border-l-2 border-violet-500/30 pl-3 ml-1">
           <BackgroundAgentPanel messages={block.messages} expandAll={expandAll} />
         </div>
       )

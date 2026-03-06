@@ -78,7 +78,7 @@ export function TeamsList({ onSelectTeam }: TeamsListProps) {
               <button
                 key={team.name}
                 onClick={() => onSelectTeam(team.name)}
-                className="group flex flex-col gap-1.5 rounded-lg px-2.5 py-2.5 text-left transition-colors elevation-2 depth-low border border-border/40 hover:bg-elevation-3 card-hover"
+                className="group flex flex-col gap-1.5 rounded-lg px-2.5 py-2.5 text-left transition-colors elevation-2 depth-low hover:bg-elevation-3 card-hover"
               >
                 {/* Top row: icon + name */}
                 <div className="flex items-center gap-2">

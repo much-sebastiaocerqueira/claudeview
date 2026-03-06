@@ -47,8 +47,8 @@ export interface SessionBrowserProps {
     session: ParsedSession,
     source: { dirName: string; fileName: string; rawText: string }
   ) => void
-  sidebarTab: "browse" | "teams"
-  onSidebarTabChange: (tab: "browse" | "teams") => void
+  sidebarTab: "live" | "browse" | "teams"
+  onSidebarTabChange: (tab: "live" | "browse" | "teams") => void
   onSelectTeam?: (teamName: string) => void
   /** Create a new Claude session in the given project */
   onNewSession?: (dirName: string, cwd?: string) => void

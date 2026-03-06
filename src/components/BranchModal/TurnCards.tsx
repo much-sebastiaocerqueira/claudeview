@@ -25,7 +25,7 @@ export function FullTurnCard({
       : null
 
   return (
-    <div className="rounded-lg border border-border elevation-1 overflow-hidden">
+    <div className="rounded-lg elevation-1 overflow-hidden">
       <div className="p-3 space-y-2">
         {/* User message */}
         {userText && (
@@ -114,7 +114,7 @@ export function ArchivedTurnCard({
   onRedoToHere: (branchId: string, archiveTurnIndex: number) => void
 }) {
   return (
-    <div className="rounded-lg border border-border elevation-1 overflow-hidden">
+    <div className="rounded-lg elevation-1 overflow-hidden">
       <div className="p-3 space-y-2">
         {turn.userMessage && (
           <div className="flex items-start gap-2">

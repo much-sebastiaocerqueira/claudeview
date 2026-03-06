@@ -1,4 +1,4 @@
-import { X, GitBranch, MessageSquare, Cpu } from "lucide-react"
+import { X, MessageSquare, Cpu, GitBranch } from "lucide-react"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import { SessionContextMenu } from "@/components/SessionContextMenu"
 import { cn } from "@/lib/utils"
@@ -6,8 +6,6 @@ import {
   formatFileSize,
   formatRelativeTime,
   truncate,
-  shortPath,
-  dirNameToPath,
 } from "@/lib/format"
 import { getStatusLabel } from "@/lib/sessionStatus"
 import type { SessionStatus } from "@/lib/sessionStatus"
@@ -24,6 +22,7 @@ export interface ActiveSessionInfo {
   gitBranch?: string
   cwd?: string
   lastModified: string
+  lastActivityAt?: string
   turnCount?: number
   size: number
   isActive?: boolean
@@ -74,97 +73,97 @@ export function SessionRow({
     ? (getStatusLabel(s.agentStatus, s.agentToolName) ?? "Idle")
     : null
   const turnCount = resolveTurnCount(s.sessionId, s.turnCount)
+  const title = customName || truncate(s.lastUserMessage || s.firstUserMessage || s.slug || s.sessionId, 50)
+
+  // Build tooltip details
+  const tooltipLines: string[] = []
+  if (statusLabel) tooltipLines.push(statusLabel)
+  if (s.gitBranch) tooltipLines.push(`${s.gitBranch}`)
+  tooltipLines.push(formatFileSize(s.size))
+  if (hasProcess) tooltipLines.push(`${proc.memMB} MB RAM`)
+  tooltipLines.push(formatRelativeTime(s.lastActivityAt || s.lastModified))
 
   const sessionRow = (
-    <div
-      role="button"
-      tabIndex={0}
-      data-live-session
-      onClick={() => onSelectSession(s.dirName, s.fileName)}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectSession(s.dirName, s.fileName) } }}
-      className={cn(
-        "group relative w-full flex flex-col gap-1 rounded-lg px-2.5 py-2.5 text-left transition-colors duration-150 cursor-pointer card-hover",
-        cardStyle(isActiveSession, hasProcess && s.agentStatus === "completed" && !!isNewlyCompleted),
-      )}
-    >
-      {/* Top row: status dot + last prompt + kill button */}
-      <div className="flex items-center gap-2">
-        <StatusDot hasProcess={hasProcess} agentStatus={s.agentStatus} />
-        <span className="text-xs font-medium truncate flex-1 text-foreground">
-          {customName || s.lastUserMessage || s.firstUserMessage || s.slug || truncate(s.sessionId, 16)}
-        </span>
-        {hasProcess ? (
-          <button
-            onClick={(e) => onKill(proc.pid, e)}
-            disabled={killingPids.has(proc.pid)}
-            className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity rounded p-0.5 hover:bg-red-500/20 text-muted-foreground hover:text-red-400 disabled:opacity-50"
-            title={`Kill PID ${proc.pid} (${proc.memMB} MB)`}
-            aria-label={`Kill process ${proc.pid}`}
-          >
-            <X className="size-3" />
-          </button>
-        ) : (
-          <span className="font-mono text-xs text-muted-foreground shrink-0">
-            #{s.sessionId.slice(0, 5)}
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          role="button"
+          tabIndex={0}
+          data-live-session
+          onClick={() => onSelectSession(s.dirName, s.fileName)}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelectSession(s.dirName, s.fileName) } }}
+          className={cn(
+            "group relative w-full flex items-center gap-1.5 rounded-md px-2 py-1 text-left transition-colors duration-100 cursor-pointer",
+            cardStyle(isActiveSession, hasProcess && s.agentStatus === "completed" && !!isNewlyCompleted),
+          )}
+        >
+          {/* Title */}
+          <span className="text-[11px] leading-tight truncate flex-1 text-foreground">
+            {title}
           </span>
-        )}
-      </div>
 
-      {/* Project path */}
-      <div className={cn(
-        "ml-5.5 text-[10px]",
-        isActiveSession ? "text-blue-400/70" : "text-muted-foreground"
-      )}>
-        {shortPath(s.cwd ?? dirNameToPath(s.dirName), 2)}
-      </div>
+          {/* Matched search snippet */}
+          {s.matchedMessage && (
+            <span className="text-[9px] text-amber-500/70 truncate max-w-[80px] italic shrink-0">
+              {s.matchedMessage}
+            </span>
+          )}
 
-      {/* Matched message snippet (search results) */}
-      {s.matchedMessage && (
-        <div className="ml-5.5 text-[10px] text-amber-500/70 truncate italic">
-          {s.matchedMessage}
+          {/* Turn count */}
+          {turnCount > 0 && (
+            <span className={cn(
+              "flex items-center gap-0.5 text-[10px] font-medium shrink-0",
+              turnCountColor(turnCount)
+            )}>
+              <MessageSquare className="size-2.5" />
+              {turnCount}
+            </span>
+          )}
+
+          {/* Relative time */}
+          <span className="text-[10px] text-muted-foreground shrink-0 tabular-nums">
+            {formatRelativeTime(s.lastActivityAt || s.lastModified)}
+          </span>
+
+          {/* Kill button — absolute badge, no layout space */}
+          {hasProcess && (
+            <button
+              onClick={(e) => onKill(proc.pid, e)}
+              disabled={killingPids.has(proc.pid)}
+              className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity rounded-bl rounded-tr-md p-0.5 hover:bg-red-500/20 text-muted-foreground hover:text-red-400 disabled:opacity-50 z-10"
+              title={`Kill PID ${proc.pid}`}
+              aria-label={`Kill process ${proc.pid}`}
+            >
+              <X className="size-2.5" />
+            </button>
+          )}
         </div>
-      )}
-
-      {/* Meta row */}
-      <div className="ml-5.5 flex items-center gap-2 text-[10px] flex-wrap text-muted-foreground">
-        {statusLabel && (
-          <span className={cn(
-            "flex items-center gap-0.5 font-medium",
-            getStatusColor(s.agentStatus)
-          )}>
-            {statusLabel}
-          </span>
-        )}
-        {turnCount > 0 && (
-          <span className={cn(
-            "flex items-center gap-0.5 text-[11px] font-semibold",
-            turnCountColor(turnCount)
-          )}>
-            <MessageSquare className="size-3" />
-            {turnCount}
-          </span>
-        )}
-        {s.gitBranch && (
-          <span className="flex items-center gap-0.5">
-            <GitBranch className="size-2.5" />
-            {s.gitBranch}
-          </span>
-        )}
-        <span>{formatFileSize(s.size)}</span>
-        <span>{formatRelativeTime(s.lastModified)}</span>
-        {hasProcess && (
-          <Tooltip>
-            <TooltipTrigger asChild>
+      </TooltipTrigger>
+      <TooltipContent side="right" className="max-w-[220px]">
+        <div className="flex flex-col gap-0.5 text-[11px]">
+          {statusLabel && (
+            <span className={cn("font-medium", getStatusColor(s.agentStatus))}>
+              {statusLabel}
+            </span>
+          )}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-muted-foreground">
+            {s.gitBranch && (
+              <span className="flex items-center gap-0.5">
+                <GitBranch className="size-2.5" />
+                {s.gitBranch}
+              </span>
+            )}
+            <span>{formatFileSize(s.size)}</span>
+            {hasProcess && (
               <span className="flex items-center gap-0.5 text-green-500">
                 <Cpu className="size-2.5" />
                 {proc.memMB} MB
               </span>
-            </TooltipTrigger>
-            <TooltipContent>RAM usage for this session</TooltipContent>
-          </Tooltip>
-        )}
-      </div>
-    </div>
+            )}
+          </div>
+        </div>
+      </TooltipContent>
+    </Tooltip>
   )
 
   if (onDuplicateSession || onDeleteSession || onRenameSession) {
@@ -184,12 +183,12 @@ export function SessionRow({
   return sessionRow
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────
+// -- Helpers --
 
 function cardStyle(isActive: boolean, isNewlyCompleted: boolean): string {
-  if (isActive) return "bg-blue-500/10 ring-1 ring-blue-500/30 shadow-[0_0_16px_-3px_rgba(59,130,246,0.15)]"
-  if (isNewlyCompleted) return "bg-green-500/8 ring-1 ring-green-500/20"
-  return "elevation-1 hover:bg-elevation-2"
+  if (isActive) return "border-l-2 border-l-blue-500 rounded-l-none"
+  if (isNewlyCompleted) return "border-l-2 border-l-green-500 rounded-l-none"
+  return "hover:bg-white/[0.03]"
 }
 
 function isIdleStatus(status?: SessionStatus): boolean {
@@ -202,20 +201,3 @@ function getStatusColor(status?: SessionStatus): string {
   return "text-blue-400"
 }
 
-function statusDotColor(hasProcess: boolean, agentStatus?: SessionStatus): string {
-  const idle = isIdleStatus(agentStatus)
-  if (hasProcess) return idle ? "bg-green-500" : "bg-amber-500"
-  if (agentStatus && !idle) return "bg-amber-500/60"
-  return "bg-muted-foreground"
-}
-
-function StatusDot({ hasProcess, agentStatus }: { hasProcess: boolean; agentStatus?: SessionStatus }) {
-  const isActive = hasProcess && !isIdleStatus(agentStatus)
-
-  return (
-    <span className="relative flex h-3.5 w-3.5 shrink-0 items-center justify-center">
-      {isActive && <span className="absolute inline-flex h-2.5 w-2.5 animate-ping rounded-full bg-amber-400 opacity-75" />}
-      <span className={cn("relative inline-flex h-2 w-2 rounded-full", statusDotColor(hasProcess, agentStatus))} />
-    </span>
-  )
-}

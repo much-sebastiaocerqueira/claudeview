@@ -85,7 +85,7 @@ export function SkeletonCards({ count = 3, includeMessagePlaceholder = false }: 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="rounded-lg border border-border/40 elevation-1 p-4">
+        <div key={i} className="rounded-lg elevation-1 p-4">
           <div className="skeleton h-4 w-3/4 rounded mb-3" />
           <div className="skeleton h-3 w-1/2 rounded mb-4" />
           {includeMessagePlaceholder && <div className="skeleton h-8 w-full rounded mb-3" />}

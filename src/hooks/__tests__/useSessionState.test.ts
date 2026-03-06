@@ -97,9 +97,9 @@ describe("useSessionState", () => {
       expect(getState(hook).mainView).toBe("sessions")
     })
 
-    it("starts with sidebarTab as browse", () => {
+    it("starts with sidebarTab as live", () => {
       const hook = renderState()
-      expect(getState(hook).sidebarTab).toBe("browse")
+      expect(getState(hook).sidebarTab).toBe("live")
     })
 
     it("starts with mobileTab as sessions", () => {
@@ -591,7 +591,7 @@ describe("useSessionState", () => {
     it("returns same state when unchanged", () => {
       const hook = renderState()
       const s = getState(hook)
-      dispatch(hook, { type: "SET_SIDEBAR_TAB", tab: "browse" })
+      dispatch(hook, { type: "SET_SIDEBAR_TAB", tab: "live" })
       expect(getState(hook)).toBe(s)
     })
   })
@@ -751,8 +751,8 @@ describe("useSessionState", () => {
     it("returns same reference for no-op SET_SIDEBAR_TAB", () => {
       const hook = renderState()
       const before = getState(hook)
-      // initial sidebarTab is "browse"
-      dispatch(hook, { type: "SET_SIDEBAR_TAB", tab: "browse" })
+      // initial sidebarTab is "live"
+      dispatch(hook, { type: "SET_SIDEBAR_TAB", tab: "live" })
       expect(getState(hook)).toBe(before)
     })
 

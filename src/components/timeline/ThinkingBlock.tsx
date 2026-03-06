@@ -13,34 +13,39 @@ export const ThinkingBlock = memo(function ThinkingBlock({ blocks, expandAll }: 
 
   if (blocks.length === 0) return null
 
-  return (
-    <div className="group">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 text-xs font-medium text-violet-400 hover:text-violet-300 transition-colors"
-      >
-        {isOpen ? (
-          <ChevronDown className="w-3.5 h-3.5" />
-        ) : (
-          <ChevronRight className="w-3.5 h-3.5" />
+  if (isOpen) {
+    return (
+      <div className="space-y-2">
+        {!expandAll && (
+          <button
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronDown className="size-3" />
+            <span>Thinking... ({blocks.length} block{blocks.length > 1 ? "s" : ""})</span>
+          </button>
         )}
-        Thinking...
-        <span className="text-muted-foreground font-normal">
-          ({blocks.length} block{blocks.length > 1 ? "s" : ""})
-        </span>
-      </button>
-      {isOpen && (
-        <div className="mt-2 space-y-2">
-          {blocks.map((block, i) => (
-            <pre
-              key={i}
-              className="text-xs text-muted-foreground font-mono whitespace-pre-wrap break-words bg-elevation-1 rounded-md p-3 border border-border/30 max-h-96 overflow-y-auto"
-            >
-              {block.thinking}
-            </pre>
-          ))}
-        </div>
-      )}
-    </div>
+        {blocks.map((block, i) => (
+          <pre
+            key={i}
+            className="text-xs text-muted-foreground/70 font-mono whitespace-pre-wrap break-words max-h-96 overflow-y-auto"
+          >
+            {block.thinking}
+          </pre>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={() => setOpen(true)}
+      className="flex items-center gap-2 w-full py-1 text-left transition-colors hover:opacity-80"
+    >
+      <ChevronRight className="size-3.5 text-muted-foreground shrink-0" />
+      <span className="text-xs text-muted-foreground shrink-0">
+        Thinking... ({blocks.length} block{blocks.length > 1 ? "s" : ""})
+      </span>
+    </button>
   )
 })

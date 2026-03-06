@@ -143,11 +143,9 @@ export function ProjectsView({
                     key={project.dirName}
                     onClick={() => onSelectProject?.(project.dirName)}
                     className={cn(
-                      "card-glow group relative rounded-lg border elevation-1 p-4 text-left transition-smooth",
+                      "card-glow group relative rounded-lg elevation-1 p-4 text-left transition-smooth",
                       "hover:bg-elevation-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/40",
-                      activeCount > 0
-                        ? "border-l-[3px] border-l-green-500 border-t-border/40 border-r-border/40 border-b-border/40"
-                        : "border-border/40"
+                      activeCount > 0 && "border-l-[3px] border-l-green-500"
                     )}
                   >
                     <div className="flex items-center gap-2.5 mb-2">
@@ -194,7 +192,7 @@ export function ProjectsView({
         </div>
 
         {/* Keyboard shortcuts */}
-        <div className="mt-6 rounded-lg border border-border/40 bg-elevation-1 px-5 py-4">
+        <div className="mt-6 rounded-lg bg-elevation-1 px-5 py-4">
           <div className="flex items-center gap-2 mb-3">
             <Keyboard className="size-3.5 text-muted-foreground" />
             <span className="text-xs font-medium text-muted-foreground">Keyboard Shortcuts</span>

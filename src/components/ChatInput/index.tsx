@@ -120,7 +120,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle>(function ChatInput(_pr
 
   return (
     <div
-      className={cn("border-t border-border/50 bg-elevation-1 px-3 py-2.5 relative", isDragOver && "ring-2 ring-blue-500/50 ring-inset")}
+      className={cn("border-border/50 bg-elevation-1 px-3 py-2.5 relative", isDragOver && "ring-2 ring-blue-500/50 ring-inset")}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -162,7 +162,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle>(function ChatInput(_pr
               onPaste={handlePaste}
               placeholder={getPlaceholder(isPlanApproval, isUserQuestion, isConnected)}
               rows={1}
-              className={cn("w-full resize-none rounded-xl border elevation-1 px-3.5 py-2.5 text-sm text-foreground", "placeholder:text-muted-foreground focus:outline-none focus:ring-2", getTextareaBorderClass(isPlanApproval, isUserQuestion), "transition-colors duration-200")}
+              className={cn("w-full resize-none rounded-xl elevation-2 px-3.5 py-2.5 text-sm text-foreground", "placeholder:text-muted-foreground focus:outline-none focus:ring-2", getTextareaBorderClass(isPlanApproval, isUserQuestion), "transition-colors duration-200")}
             />
             <InputToolbar isPlanApproval={isPlanApproval} isUserQuestion={isUserQuestion} elapsedSec={elapsedSec} />
           </div>

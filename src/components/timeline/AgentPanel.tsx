@@ -77,12 +77,15 @@ export const AgentPanel = memo(function AgentPanel({
   if (messages.length === 0) return null
 
   return (
-    <div className={cn("rounded-md border border-dashed bg-elevation-1 depth-low p-3", style.border)}>
+    <div>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full text-left"
+        className="flex items-center gap-2 w-full text-left py-1 hover:opacity-80 transition-opacity"
       >
-        <Users className={cn("w-4 h-4 shrink-0", style.icon)} />
+        {isOpen
+          ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+          : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+        <Users className={cn("w-3.5 h-3.5 shrink-0", style.icon)} />
         <span className={cn("text-xs font-medium", style.label)}>
           {label}
         </span>
@@ -104,7 +107,7 @@ export const AgentPanel = memo(function AgentPanel({
           )
         })}
         {summaryStats ? (
-          <span className="text-[10px] text-muted-foreground inline-flex items-center gap-2">
+          <span className="text-[10px] text-muted-foreground/50 inline-flex items-center gap-2">
             {summaryStats.allCompleted
               ? <CheckCircle2 className="w-3 h-3 text-green-400" />
               : <XCircle className="w-3 h-3 text-red-400" />}
@@ -120,17 +123,14 @@ export const AgentPanel = memo(function AgentPanel({
             )}
           </span>
         ) : (
-          <span className="text-[10px] text-muted-foreground">
+          <span className="text-[10px] text-muted-foreground/50">
             ({visibleMessageCount} message{visibleMessageCount !== 1 ? "s" : ""})
           </span>
         )}
-        {isOpen
-          ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground ml-auto" />
-          : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground ml-auto" />}
       </button>
 
       {isOpen && (
-        <div className="mt-3 space-y-2">
+        <div className="mt-2 space-y-2">
           {isLoading && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
               <Loader2 className="w-3 h-3 animate-spin" />

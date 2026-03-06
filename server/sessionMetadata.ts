@@ -3,6 +3,30 @@ import { deriveSessionStatus, type SessionStatusInfo } from "../src/lib/sessionS
 
 // ── Session metadata extraction ─────────────────────────────────────
 
+const SKIP_RE = /^(Tool loaded\.?|Continue|compact)$/i
+
+/** Extract meaningful user prompt text from a parsed user message object. */
+function extractUserText(obj: { message?: { content?: unknown } }): string {
+  const c = obj.message?.content
+  let extracted = ""
+  if (typeof c === "string") {
+    const cleaned = c.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, "").trim()
+    if (cleaned && cleaned.length > 5) extracted = cleaned.slice(0, 120)
+  } else if (Array.isArray(c)) {
+    for (const block of c) {
+      if (block.type === "text") {
+        const cleaned = block.text.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, "").trim()
+        if (cleaned && cleaned.length > 5) {
+          extracted = cleaned.slice(0, 120)
+          break
+        }
+      }
+    }
+  }
+  if (extracted && SKIP_RE.test(extracted)) return ""
+  return extracted
+}
+
 export async function getSessionMeta(filePath: string) {
   let lines: string[]
   let isPartialRead = false
@@ -11,11 +35,12 @@ export async function getSessionMeta(filePath: string) {
   if (fileStat.size > 65536) {
     const fh = await open(filePath, "r")
     try {
-      const buf = Buffer.alloc(32768)
-      const { bytesRead } = await fh.read(buf, 0, 32768, 0)
-      const text = buf.subarray(0, bytesRead).toString("utf-8")
-      const lastNewline = text.lastIndexOf("\n")
-      lines = (lastNewline > 0 ? text.slice(0, lastNewline) : text).split("\n").filter(Boolean)
+      // Read head for session metadata + firstUserMessage
+      const headBuf = Buffer.alloc(32768)
+      const { bytesRead: headRead } = await fh.read(headBuf, 0, 32768, 0)
+      const headText = headBuf.subarray(0, headRead).toString("utf-8")
+      const headLastNl = headText.lastIndexOf("\n")
+      lines = (headLastNl > 0 ? headText.slice(0, headLastNl) : headText).split("\n").filter(Boolean)
       isPartialRead = true
     } finally {
       await fh.close()
@@ -34,6 +59,7 @@ export async function getSessionMeta(filePath: string) {
   let firstUserMessage = ""
   let lastUserMessage = ""
   let timestamp = ""
+  let lastTimestamp = ""
   let turnCount = 0
   let branchedFrom: { sessionId: string; turnIndex?: number | null } | undefined
 
@@ -53,22 +79,8 @@ export async function getSessionMeta(filePath: string) {
         timestamp = obj.timestamp || ""
       }
       if (obj.type === "user" && !obj.isMeta) {
-        const c = obj.message?.content
-        let extracted = ""
-        if (typeof c === "string") {
-          const cleaned = c.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, "").trim()
-          if (cleaned && cleaned.length > 5) extracted = cleaned.slice(0, 120)
-        } else if (Array.isArray(c)) {
-          for (const block of c) {
-            if (block.type === "text") {
-              const cleaned = block.text.replace(/<[^>]+>[\s\S]*?<\/[^>]+>/g, "").trim()
-              if (cleaned && cleaned.length > 5) {
-                extracted = cleaned.slice(0, 120)
-                break
-              }
-            }
-          }
-        }
+        if (obj.timestamp) lastTimestamp = obj.timestamp
+        const extracted = extractUserText(obj)
         if (extracted) {
           if (!firstUserMessage) firstUserMessage = extracted
           lastUserMessage = extracted
@@ -80,6 +92,58 @@ export async function getSessionMeta(filePath: string) {
     }
   }
 
+  // For large files the head read misses recent messages (especially image
+  // messages whose JSONL lines are megabytes of base64). Scan backward
+  // through small chunks — unparseable image lines are skipped, and we pick
+  // the most recent parseable user prompt.
+  if (isPartialRead) {
+    const CHUNK = 4096
+    const MAX_CHUNKS = 128 // 512KB max scan
+    const fh = await open(filePath, "r")
+    try {
+      let cursor = fileStat.size
+      let leftover = ""
+      let foundMessage = false
+      let foundTimestamp = false
+      outer: for (let i = 0; i < MAX_CHUNKS && cursor > 0; i++) {
+        const readSize = Math.min(CHUNK, cursor)
+        cursor -= readSize
+        const buf = Buffer.alloc(readSize)
+        const { bytesRead } = await fh.read(buf, 0, readSize, cursor)
+        const text = buf.subarray(0, bytesRead).toString("utf-8") + leftover
+        const splitLines = text.split("\n")
+        leftover = cursor > 0 ? splitLines[0] : ""
+        const startIdx = cursor > 0 ? 1 : 0
+        for (let j = splitLines.length - 1; j >= startIdx; j--) {
+          const line = splitLines[j]
+          if (!line || !line.includes('"user"')) continue
+          try {
+            const obj = JSON.parse(line)
+            if (obj.type !== "user" || obj.isMeta) continue
+            // Capture the timestamp from the most recent user message
+            if (!foundTimestamp && obj.timestamp) {
+              lastTimestamp = obj.timestamp
+              foundTimestamp = true
+            }
+            if (!foundMessage) {
+              const extracted = extractUserText(obj)
+              if (extracted) {
+                lastUserMessage = extracted
+                foundMessage = true
+              }
+            }
+            if (foundMessage && foundTimestamp) break outer
+          } catch { continue }
+        }
+      }
+    } finally {
+      await fh.close()
+    }
+  }
+
+  // Also backfill lastUserMessage for small files that only had image prompts
+  if (!lastUserMessage && firstUserMessage) lastUserMessage = firstUserMessage
+
   return {
     sessionId,
     version,
@@ -90,6 +154,7 @@ export async function getSessionMeta(filePath: string) {
     firstUserMessage,
     lastUserMessage,
     timestamp,
+    lastTimestamp: lastTimestamp || timestamp,
     turnCount,
     lineCount: isPartialRead ? Math.round(fileStat.size / (32768 / lines.length)) : lines.length,
     branchedFrom,

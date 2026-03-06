@@ -201,7 +201,7 @@ export function BackgroundServers({
           return (
             <div
               key={task.id}
-              className="rounded border border-border elevation-2 depth-low px-2.5 py-2 transition-colors hover:bg-elevation-3"
+              className="rounded elevation-2 depth-low px-2.5 py-2 transition-colors hover:bg-elevation-3"
             >
               <button
                 className="w-full text-left"

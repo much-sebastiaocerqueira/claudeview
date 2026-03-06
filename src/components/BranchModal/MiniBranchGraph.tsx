@@ -26,7 +26,7 @@ export function MiniBranchGraph({
   const height = firstY + (numBranches - 1) * branchGap + 15
 
   return (
-    <div className="rounded-lg border border-border bg-elevation-1 px-3 py-2">
+    <div className="rounded-lg bg-elevation-1 px-3 py-2">
       <svg width="100%" height={height} viewBox={`0 0 340 ${height}`}>
         {/* Shared trunk */}
         <line x1={20} y1={firstY} x2={bpX} y2={firstY} stroke="#3b82f6" strokeWidth={2} />

@@ -45,6 +45,7 @@ import { useAppHandlers } from "@/hooks/useAppHandlers"
 import { detectPendingInteraction } from "@/lib/parser"
 import { dirNameToPath, shortPath, parseSubAgentPath } from "@/lib/format"
 import { OPEN_SUBAGENT_EVENT } from "@/components/FileChangesPanel/file-change-indicators"
+import { FOCUS_FILE_EVENT } from "@/components/FileChangesPanel"
 import type { ParsedSession } from "@/lib/types"
 import { authFetch } from "@/lib/auth"
 import { DEFAULT_EFFORT } from "@/lib/utils"
@@ -83,7 +84,7 @@ export default function App() {
 
   // Stable callbacks
   const handleSidebarTabChange = useCallback(
-    (tab: "browse" | "teams") => dispatch({ type: "SET_SIDEBAR_TAB", tab }),
+    (tab: "live" | "browse" | "teams") => dispatch({ type: "SET_SIDEBAR_TAB", tab }),
     [dispatch]
   )
   const handleToggleExpandAll = useCallback(() => dispatch({ type: "TOGGLE_EXPAND_ALL" }), [dispatch])
@@ -169,6 +170,17 @@ export default function App() {
 
   // Whether to actually show the file changes panel (toggle on + has changes)
   const showFileChangesPanel = hasFileChanges && panels.showFileChanges
+
+  // Force-show file changes panel when a file is clicked in TurnChangedFiles
+  const setShowFileChanges = panels.setShowFileChanges
+  useEffect(() => {
+    const handler = () => {
+      setShowFileChanges(true)
+      setFileChangesCollapsed(false)
+    }
+    window.addEventListener(FOCUS_FILE_EVENT, handler)
+    return () => window.removeEventListener(FOCUS_FILE_EVENT, handler)
+  }, [setShowFileChanges])
 
   // Detect pending interactive prompts (plan approval, user questions)
   const pendingInteractionRef = useRef<ReturnType<typeof detectPendingInteraction>>(null)
@@ -897,26 +909,29 @@ export default function App() {
               />
             </Suspense>
           ) : state.session ? (
-            <div className="flex flex-1 min-h-0 flex-col">
-              {teamMembersBar}
-              <SessionInfoBar
-                creatingSession={creatingSession}
-                onNewSession={handleNewSession}
-                onDuplicateSession={handlers.handleDuplicateSession}
-                onOpenTerminal={handleOpenTerminal}
-                onBackToMain={isSubAgentView ? handleBackToMain : undefined}
-              />
-
+            <div className="flex flex-1 min-h-0">
               <ResizablePanelGroup orientation="horizontal" className="flex-1 min-h-0">
-                <ResizablePanel defaultSize={showFileChangesPanel ? 50 : 100} minSize="500px">
-                  <ChatArea searchInputRef={searchInputRef} />
+                <ResizablePanel defaultSize={showFileChangesPanel ? 70 : 100} minSize="500px">
+                  <div className="flex flex-col h-full min-h-0">
+                    {teamMembersBar}
+                    <SessionInfoBar
+                      creatingSession={creatingSession}
+                      onNewSession={handleNewSession}
+                      onDuplicateSession={handlers.handleDuplicateSession}
+                      onOpenTerminal={handleOpenTerminal}
+                      onBackToMain={isSubAgentView ? handleBackToMain : undefined}
+                    />
+                    <ChatArea searchInputRef={searchInputRef} />
+                    {todoProgress && <TodoProgressPanel progress={todoProgress} />}
+                    {subAgentReadOnlyNode || chatInputNode}
+                  </div>
                 </ResizablePanel>
 
                 {showFileChangesPanel && (
                   <>
                     <ResizableHandle withHandle />
                     <ResizablePanel
-                      defaultSize={50}
+                      defaultSize={30}
                       minSize={0}
                       collapsible
                       onCollapse={handleFileChangesPanelCollapse}
@@ -929,9 +944,6 @@ export default function App() {
                   </>
                 )}
               </ResizablePanelGroup>
-
-              {todoProgress && <TodoProgressPanel progress={todoProgress} />}
-              {subAgentReadOnlyNode || chatInputNode}
             </div>
           ) : state.pendingDirName ? (
             <div className="flex flex-1 min-h-0">

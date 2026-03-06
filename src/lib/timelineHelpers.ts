@@ -81,7 +81,7 @@ export function collectActivity(
 /** Human-readable label for a mixed activity group. */
 export function activityCountLabel(toolCallCount: number, thinkingCount: number): string {
   if (thinkingCount === 0) return toolCallCountLabel(toolCallCount)
-  if (toolCallCount === 0) return `${thinkingCount} thinking block${thinkingCount !== 1 ? "s" : ""}`
+  if (toolCallCount === 0) return `${thinkingCount} thinking`
   const total = toolCallCount + thinkingCount
   return `${total} action${total !== 1 ? "s" : ""}`
 }

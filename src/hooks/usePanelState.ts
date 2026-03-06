@@ -26,6 +26,7 @@ interface PanelState {
 
   setShowSidebar: React.Dispatch<React.SetStateAction<boolean>>
   setShowWorktrees: React.Dispatch<React.SetStateAction<boolean>>
+  setShowFileChanges: React.Dispatch<React.SetStateAction<boolean>>
 }
 
 export function usePanelState(
@@ -33,7 +34,7 @@ export function usePanelState(
   dispatch: React.Dispatch<SessionAction>,
 ): PanelState {
   const [showSidebar, setShowSidebar] = useState(true)
-  const [showStats, setShowStats] = useState(true)
+  const [showStats, setShowStats] = useState(false)
   const [showWorktrees, setShowWorktrees] = useState(false)
   const [showFileChanges, setShowFileChanges] = useState(true)
   const [showProjectSwitcher, setShowProjectSwitcher] = useState(false)
@@ -77,5 +78,6 @@ export function usePanelState(
     handleCloseThemeSelector,
     setShowSidebar,
     setShowWorktrees,
+    setShowFileChanges,
   }
 }
