@@ -9,6 +9,7 @@ import { SessionRow } from "./SessionRow"
 import { ProcessList } from "./ProcessList"
 import type { ActiveSessionInfo, RunningProcess } from "./SessionRow"
 import type { PendingSessionInfo } from "@/components/session-browser/types"
+import { useSessionNames } from "@/hooks/useSessionNames"
 
 // Re-export extracted modules so external imports remain unchanged
 export { SessionRow } from "./SessionRow"
@@ -50,6 +51,7 @@ function partitionProcesses(processes: RunningProcess[]): {
 }
 
 export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSelectSession, onDuplicateSession, onDeleteSession, pendingSession, refreshRef }: LiveSessionsProps) {
+  const { names: sessionNames, rename: renameSession } = useSessionNames()
   const [sessions, setSessions] = useState<ActiveSessionInfo[]>([])
   const [processes, setProcesses] = useState<RunningProcess[]>([])
   const [loading, setLoading] = useState(false)
@@ -325,10 +327,12 @@ export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSel
               proc={procBySession.get(s.sessionId)}
               killingPids={killingPids}
               isNewlyCompleted={newlyCompleted.has(s.sessionId)}
+              customName={sessionNames[s.sessionId]}
               onSelectSession={handleSelectSession}
               onKill={handleKill}
               onDuplicateSession={onDuplicateSession}
               onDeleteSession={onDeleteSession ? handleDeleteSession : undefined}
+              onRenameSession={renameSession}
             />
           ))}
 

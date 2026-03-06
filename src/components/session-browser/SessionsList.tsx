@@ -16,6 +16,7 @@ import {
   truncate,
 } from "@/lib/format"
 import { resolveTurnCount, turnCountColor } from "@/lib/turnCountCache"
+import { useSessionNames } from "@/hooks/useSessionNames"
 import type { SessionInfo } from "./types"
 
 // ── Props ──────────────────────────────────────────────────────────────────
@@ -95,10 +96,12 @@ function SessionCard({
   session,
   onSelect,
   isMobile,
+  customName,
 }: {
   session: SessionInfo
   onSelect: () => void
   isMobile?: boolean
+  customName?: string
 }): React.ReactElement {
   return (
     <button
@@ -116,7 +119,7 @@ function SessionCard({
           <FileText className="size-3.5 shrink-0 text-muted-foreground group-hover:text-blue-400" />
         )}
         <span className="text-xs font-medium text-foreground truncate flex-1">
-          {session.slug || truncate(session.sessionId, 16)}
+          {customName || session.slug || truncate(session.sessionId, 16)}
         </span>
         {session.branchedFrom && (
           <Copy className="size-2.5 text-purple-400 shrink-0" title="Duplicated session" />
@@ -157,17 +160,20 @@ export const SessionsList = memo(function SessionsList({
   isLoading,
   onLoadMore,
 }: SessionsListProps): React.ReactElement {
+  const { names: sessionNames, rename: renameSession } = useSessionNames()
+
   const filtered = useMemo(() => {
     if (!filter) return sessions
     const q = filter.toLowerCase()
     return sessions.filter(
       (s) =>
+        sessionNames[s.sessionId]?.toLowerCase().includes(q) ||
         s.firstUserMessage?.toLowerCase().includes(q) ||
         s.slug?.toLowerCase().includes(q) ||
         s.model?.toLowerCase().includes(q) ||
         s.sessionId.toLowerCase().includes(q)
     )
-  }, [sessions, filter])
+  }, [sessions, filter, sessionNames])
 
   if (filtered.length === 0) {
     return (
@@ -177,35 +183,28 @@ export const SessionsList = memo(function SessionsList({
     )
   }
 
-  const hasContextMenu = Boolean(onDuplicateSession || onDeleteSession)
-
   return (
     <ScrollArea className="h-full">
       <div className="flex flex-col gap-1.5 px-2 pb-3">
         {filtered.map((s) => {
-          const card = (
-            <SessionCard
+          const name = sessionNames[s.sessionId]
+          return (
+            <SessionContextMenu
               key={s.fileName}
-              session={s}
-              onSelect={() => onSelectSession(s)}
-              isMobile={isMobile}
-            />
+              sessionLabel={s.slug || s.sessionId.slice(0, 12)}
+              customName={name}
+              onDuplicate={onDuplicateSession ? () => onDuplicateSession(s) : undefined}
+              onDelete={onDeleteSession ? () => onDeleteSession(s) : undefined}
+              onRename={(newName) => renameSession(s.sessionId, newName)}
+            >
+              <SessionCard
+                session={s}
+                onSelect={() => onSelectSession(s)}
+                isMobile={isMobile}
+                customName={name}
+              />
+            </SessionContextMenu>
           )
-
-          if (hasContextMenu) {
-            return (
-              <SessionContextMenu
-                key={s.fileName}
-                sessionLabel={s.slug || s.sessionId.slice(0, 12)}
-                onDuplicate={onDuplicateSession ? () => onDuplicateSession(s) : undefined}
-                onDelete={onDeleteSession ? () => onDeleteSession(s) : undefined}
-              >
-                {card}
-              </SessionContextMenu>
-            )
-          }
-
-          return card
         })}
         {hasMore && !filter && (
           <button

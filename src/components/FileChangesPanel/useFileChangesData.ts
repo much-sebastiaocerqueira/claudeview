@@ -25,16 +25,21 @@ export function useFileChangesData(session: ParsedSession) {
 
   const fileChanges = useMemo(() => {
     const changes: FileChange[] = []
-    const collectToolCall = (tc: ToolCall, turnIndex: number, agentId?: string) => {
-      if (tc.name !== "Edit" && tc.name !== "Write") return
-      changes.push({ turnIndex, toolCall: tc, agentId })
+    for (let turnIndex = 0; turnIndex < session.turns.length; turnIndex++) {
+      const turn = session.turns[turnIndex]
+      for (const tc of turn.toolCalls) {
+        if (tc.name === "Edit" || tc.name === "Write") {
+          changes.push({ turnIndex, toolCall: tc })
+        }
+      }
+      for (const msg of turn.subAgentActivity) {
+        for (const tc of msg.toolCalls) {
+          if (tc.name === "Edit" || tc.name === "Write") {
+            changes.push({ turnIndex, toolCall: tc, agentId: msg.agentId })
+          }
+        }
+      }
     }
-    session.turns.forEach((turn, turnIndex) => {
-      turn.toolCalls.forEach((tc) => collectToolCall(tc, turnIndex))
-      turn.subAgentActivity.forEach((msg) => {
-        msg.toolCalls.forEach((tc) => collectToolCall(tc, turnIndex, msg.agentId))
-      })
-    })
     return changes
     // eslint-disable-next-line react-hooks/exhaustive-deps -- totalToolCallCount is an intentional cache-busting key
   }, [totalToolCallCount, session.turns])
@@ -212,7 +217,7 @@ export function buildGroupedFiles(
         toolName: fc.toolCall.name as "Edit" | "Write",
         turnIndex: fc.turnIndex,
         agentId: fc.agentId,
-        startLine: fc.toolCall.name === "Write" ? 1 : findLineInFile(rawContent, op.oldString),
+        startLine: fc.toolCall.name === "Write" ? 1 : findLineInFile(rawContent, op.newString || op.oldString),
       })
     }
 
@@ -234,7 +239,9 @@ export function buildGroupedFiles(
       subAgentId: lastSubAgentId ?? null,
       edits,
       forcePerEdit: net.matchFailed,
-      netStartLine: edits.length > 0 ? edits[0].startLine : 1,
+      netStartLine: net.currentStr
+        ? findLineInFile(rawContent, net.currentStr)
+        : (edits.length > 0 ? edits[0].startLine : 1),
     })
   }
 

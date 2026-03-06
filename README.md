@@ -35,7 +35,7 @@ Browse all your Claude Code projects and sessions from a sidebar navigator. Sess
 - **Pagination** — "Load more" for large project histories
 - **MRU session switching** — Ctrl+Tab / Ctrl+Shift+Tab cycles through recently used sessions (Firefox-style)
 - **Jump to session** — Ctrl+Shift+1–9 jumps directly to the Nth live session
-- **Context menus** — right-click to duplicate or delete sessions (with confirmation)
+- **Context menus** — right-click to rename (with persistent custom names), duplicate, or delete sessions (with confirmation)
 
 ### Conversation Timeline
 Every session is rendered as a structured conversation with:

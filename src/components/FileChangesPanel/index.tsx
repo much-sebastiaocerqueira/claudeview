@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react"
-import { FileCode2, ChevronsDownUp, ChevronsUpDown, Layers, Clock, X, Sigma, List } from "lucide-react"
+import { FileCode2, ChevronsDownUp, ChevronsUpDown, Layers, Clock, X, Sigma, List, ChevronLeft, ChevronRight } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import type { ParsedSession } from "@/lib/types"
@@ -88,8 +88,6 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
     return groupedLastTurn
   }
   const activeGrouped = getActiveGrouped()
-
-  // Scroll to file cards via DOM query (avoids per-file closure allocation)
 
   // Listen for focus-file events from TurnChangedFiles
   useEffect(() => {
@@ -285,12 +283,41 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
         <span className="text-[10px] text-muted-foreground/70">
           Showing:
         </span>
+        {/* Turn navigation arrows */}
+        {scope !== "all" && lastTurnIndex > 0 && (
+          <button
+            onClick={() => {
+              const current = typeof scope === "number" ? scope : lastTurnIndex
+              if (current > 0) setScope(current - 1)
+            }}
+            disabled={(typeof scope === "number" ? scope : lastTurnIndex) <= 0}
+            className="p-0.5 text-muted-foreground/50 hover:text-foreground disabled:opacity-25 disabled:cursor-default transition-colors"
+            title="Previous turn"
+          >
+            <ChevronLeft className="size-3" />
+          </button>
+        )}
         <span className={cn(
           "text-[10px] font-medium",
           typeof scope === "number" ? "text-blue-400" : "text-muted-foreground",
         )}>
           {scopeLabel}
         </span>
+        {scope !== "all" && lastTurnIndex > 0 && (
+          <button
+            onClick={() => {
+              if (typeof scope === "number") {
+                if (scope + 1 >= lastTurnIndex) setScope("last")
+                else setScope(scope + 1)
+              }
+            }}
+            disabled={scope === "last"}
+            className="p-0.5 text-muted-foreground/50 hover:text-foreground disabled:opacity-25 disabled:cursor-default transition-colors"
+            title="Next turn"
+          >
+            <ChevronRight className="size-3" />
+          </button>
+        )}
         {typeof scope === "number" && (
           <button
             onClick={() => setScope("last")}

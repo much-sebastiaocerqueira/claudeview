@@ -50,8 +50,10 @@ interface SessionRowProps {
   onSelectSession: (dirName: string, fileName: string) => void
   onKill: (pid: number, e: React.MouseEvent) => void
   isNewlyCompleted?: boolean
+  customName?: string
   onDuplicateSession?: (dirName: string, fileName: string) => void
   onDeleteSession?: (session: ActiveSessionInfo) => void
+  onRenameSession?: (sessionId: string, name: string) => void
 }
 
 export function SessionRow({
@@ -60,10 +62,12 @@ export function SessionRow({
   proc,
   killingPids,
   isNewlyCompleted,
+  customName,
   onSelectSession,
   onKill,
   onDuplicateSession,
   onDeleteSession,
+  onRenameSession,
 }: SessionRowProps) {
   const hasProcess = proc !== undefined
   const statusLabel = hasProcess
@@ -87,7 +91,7 @@ export function SessionRow({
       <div className="flex items-center gap-2">
         <StatusDot hasProcess={hasProcess} agentStatus={s.agentStatus} />
         <span className="text-xs font-medium truncate flex-1 text-foreground">
-          {s.lastUserMessage || s.firstUserMessage || s.slug || truncate(s.sessionId, 16)}
+          {customName || s.lastUserMessage || s.firstUserMessage || s.slug || truncate(s.sessionId, 16)}
         </span>
         {hasProcess ? (
           <button
@@ -163,12 +167,14 @@ export function SessionRow({
     </div>
   )
 
-  if (onDuplicateSession || onDeleteSession) {
+  if (onDuplicateSession || onDeleteSession || onRenameSession) {
     return (
       <SessionContextMenu
         sessionLabel={s.slug || s.firstUserMessage?.slice(0, 30) || s.sessionId.slice(0, 12)}
+        customName={customName}
         onDuplicate={onDuplicateSession ? () => onDuplicateSession(s.dirName, s.fileName) : undefined}
         onDelete={onDeleteSession ? () => onDeleteSession(s) : undefined}
+        onRename={onRenameSession ? (name) => onRenameSession(s.sessionId, name) : undefined}
       >
         {sessionRow}
       </SessionContextMenu>

@@ -53,135 +53,140 @@ interface GroupedFileCardProps {
 }
 
 export const GroupedFileCard = memo(function GroupedFileCard({ file, defaultOpen, isHighlighted, diffMode }: GroupedFileCardProps) {
-    const { ref: nearRef, isNear } = useNearViewport()
-    const [open, setOpen] = useState(defaultOpen)
-    const prevDefaultRef = useRef(defaultOpen)
+  const { ref: nearRef, isNear } = useNearViewport()
+  const [open, setOpen] = useState(defaultOpen)
+  const prevDefaultRef = useRef(defaultOpen)
 
-    useEffect(() => {
-      if (prevDefaultRef.current !== defaultOpen) {
-        prevDefaultRef.current = defaultOpen
-        setOpen(defaultOpen)
-      }
-    }, [defaultOpen])
+  useEffect(() => {
+    if (prevDefaultRef.current !== defaultOpen) {
+      prevDefaultRef.current = defaultOpen
+      setOpen(defaultOpen)
+    }
+  }, [defaultOpen])
 
-    // If region matching failed, force per-edit view regardless of panel setting
-    const effectiveDiffMode = file.forcePerEdit ? "per-edit" : diffMode
+  // Open the card when highlighted (clicked from file changes list)
+  useEffect(() => {
+    if (isHighlighted) setOpen(true)
+  }, [isHighlighted])
 
-    const ext = file.filePath.split(".").pop()?.toLowerCase() ?? ""
-    const extColor = EXT_COLORS[ext] ?? "text-muted-foreground"
+  // If region matching failed, force per-edit view regardless of panel setting
+  const effectiveDiffMode = file.forcePerEdit ? "per-edit" : diffMode
 
-    const oldString = file.netOriginal
-    const newString = file.netCurrent
-    const hasNetDiff = Boolean(oldString || newString)
-    const hasPerEditDiff = file.edits.some((e) => Boolean(e.oldString || e.newString))
-    const hasDiff = effectiveDiffMode === "per-edit" ? hasPerEditDiff : hasNetDiff
+  const ext = file.filePath.split(".").pop()?.toLowerCase() ?? ""
+  const extColor = EXT_COLORS[ext] ?? "text-muted-foreground"
 
-    const showDiff = open && isNear && hasDiff
-    const diffRef = useRef<HTMLDivElement>(null)
-    const lastDiffHeightRef = useRef(0)
+  const oldString = file.netOriginal
+  const newString = file.netCurrent
+  const hasNetDiff = Boolean(oldString || newString)
+  const hasPerEditDiff = file.edits.some((e) => Boolean(e.oldString || e.newString))
+  const hasDiff = effectiveDiffMode === "per-edit" ? hasPerEditDiff : hasNetDiff
 
-    useLayoutEffect(() => {
-      if (showDiff && diffRef.current) {
-        lastDiffHeightRef.current = diffRef.current.offsetHeight
-      }
-    }, [showDiff, effectiveDiffMode])
+  const showDiff = open && isNear && hasDiff
+  const diffRef = useRef<HTMLDivElement>(null)
+  const lastDiffHeightRef = useRef(0)
 
-    const turnLabel = file.turnRange[0] === file.turnRange[1]
-      ? `T${file.turnRange[0] + 1}`
-      : `T${file.turnRange[0] + 1}–T${file.turnRange[1] + 1}`
+  useLayoutEffect(() => {
+    if (showDiff && diffRef.current) {
+      lastDiffHeightRef.current = diffRef.current.offsetHeight
+    }
+  }, [showDiff, effectiveDiffMode])
 
-    return (
-      <div
-        ref={nearRef}
-        data-file-path={file.filePath}
-        className={cn(
-          "rounded-md border elevation-2 depth-low transition-colors",
-          isHighlighted
-            ? "border-blue-500/40 ring-1 ring-blue-500/20"
-            : "border-border",
-        )}
-      >
-        <div className="sticky top-0 z-10 flex items-center w-full bg-elevation-2 rounded-t-md hover:bg-elevation-3 transition-colors group">
-          <button
-            onClick={() => setOpen(!open)}
-            className="flex items-center gap-2 flex-1 min-w-0 px-2.5 py-1.5"
-          >
-            {open ? (
-              <ChevronDown className="size-3 text-muted-foreground shrink-0" />
-            ) : (
-              <ChevronRight className="size-3 text-muted-foreground shrink-0" />
-            )}
-            <span className={cn("text-[10px] font-mono font-bold shrink-0", extColor)}>
-              {ext}
-            </span>
-            <OpIndicator hasEdit={file.opTypes.includes("Edit")} hasWrite={file.opTypes.includes("Write")} />
-            {file.subAgentId && <SubAgentIndicator agentId={file.subAgentId} />}
-            <span className="text-[10px] text-muted-foreground font-mono truncate">
-              {file.shortPath}
-            </span>
-            <span className="text-[10px] text-muted-foreground/50 shrink-0">
-              {turnLabel}
-            </span>
-            {file.editCount > 1 && (
-              <Badge
-                variant="outline"
-                className="text-[9px] px-1 py-0 h-3.5 font-mono shrink-0 border-border/50 text-muted-foreground/60"
-              >
-                {file.editCount}x
-              </Badge>
-            )}
-          </button>
-          <div className="flex items-center gap-1.5 pr-2 shrink-0">
-            {file.addCount > 0 && (
-              <span className="text-[10px] font-mono tabular-nums text-green-500/80">+{file.addCount}</span>
-            )}
-            {file.delCount > 0 && (
-              <span className="text-[10px] font-mono tabular-nums text-red-400/80">-{file.delCount}</span>
-            )}
-            <ChangeBar add={file.addCount} del={file.delCount} />
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => openInEditor(file.filePath, "file")}
-                    className="p-1 text-muted-foreground hover:text-blue-400 transition-colors"
-                    aria-label="Open file in editor"
-                  >
-                    <Code2 className="size-3" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>Open in editor</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => openInEditor(file.filePath, "diff")}
-                    className="p-1 text-muted-foreground hover:text-amber-400 transition-colors"
-                    aria-label="View git diff"
-                  >
-                    <GitCompareArrows className="size-3" />
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>View git diff</TooltipContent>
-              </Tooltip>
-            </div>
+  const turnLabel = file.turnRange[0] === file.turnRange[1]
+    ? `T${file.turnRange[0] + 1}`
+    : `T${file.turnRange[0] + 1}–T${file.turnRange[1] + 1}`
+
+  return (
+    <div
+      ref={nearRef}
+      data-file-path={file.filePath}
+      className={cn(
+        "rounded-md border elevation-2 depth-low transition-colors",
+        isHighlighted
+          ? "border-blue-500/40 ring-1 ring-blue-500/20"
+          : "border-border",
+      )}
+    >
+      <div className="sticky top-0 z-10 flex items-center w-full bg-elevation-2 rounded-t-md hover:bg-elevation-3 transition-colors group">
+        <button
+          onClick={() => setOpen(!open)}
+          className="flex items-center gap-2 flex-1 min-w-0 px-2.5 py-1.5"
+        >
+          {open ? (
+            <ChevronDown className="size-3 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronRight className="size-3 text-muted-foreground shrink-0" />
+          )}
+          <span className={cn("text-[10px] font-mono font-bold shrink-0", extColor)}>
+            {ext}
+          </span>
+          <OpIndicator hasEdit={file.opTypes.includes("Edit")} hasWrite={file.opTypes.includes("Write")} />
+          {file.subAgentId && <SubAgentIndicator agentId={file.subAgentId} />}
+          <span className="text-[10px] text-muted-foreground font-mono truncate">
+            {file.shortPath}
+          </span>
+          <span className="text-[10px] text-muted-foreground/50 shrink-0">
+            {turnLabel}
+          </span>
+          {file.editCount > 1 && (
+            <Badge
+              variant="outline"
+              className="text-[9px] px-1 py-0 h-3.5 font-mono shrink-0 border-border/50 text-muted-foreground/60"
+            >
+              {file.editCount}x
+            </Badge>
+          )}
+        </button>
+        <div className="flex items-center gap-1.5 pr-2 shrink-0">
+          {file.addCount > 0 && (
+            <span className="text-[10px] font-mono tabular-nums text-green-500/80">+{file.addCount}</span>
+          )}
+          {file.delCount > 0 && (
+            <span className="text-[10px] font-mono tabular-nums text-red-400/80">-{file.delCount}</span>
+          )}
+          <ChangeBar add={file.addCount} del={file.delCount} />
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => openInEditor(file.filePath, "file")}
+                  className="p-1 text-muted-foreground hover:text-blue-400 transition-colors"
+                  aria-label="Open file in editor"
+                >
+                  <Code2 className="size-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Open in editor</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => openInEditor(file.filePath, "diff")}
+                  className="p-1 text-muted-foreground hover:text-amber-400 transition-colors"
+                  aria-label="View git diff"
+                >
+                  <GitCompareArrows className="size-3" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>View git diff</TooltipContent>
+            </Tooltip>
           </div>
         </div>
-        <DiffContent
-          showDiff={showDiff}
-          open={open}
-          hasDiff={hasDiff}
-          diffRef={diffRef}
-          lastDiffHeight={lastDiffHeightRef.current}
-          oldString={oldString}
-          newString={newString}
-          filePath={file.filePath}
-          diffMode={effectiveDiffMode}
-          edits={file.edits}
-          netStartLine={file.netStartLine}
-        />
       </div>
-    )
+      <DiffContent
+        showDiff={showDiff}
+        open={open}
+        hasDiff={hasDiff}
+        diffRef={diffRef}
+        lastDiffHeight={lastDiffHeightRef.current}
+        oldString={oldString}
+        newString={newString}
+        filePath={file.filePath}
+        diffMode={effectiveDiffMode}
+        edits={file.edits}
+        netStartLine={file.netStartLine}
+      />
+    </div>
+  )
 })
 
 const DiffContent = memo(function DiffContent({

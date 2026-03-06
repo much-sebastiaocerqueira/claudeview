@@ -139,6 +139,16 @@ export function computeNetDiff(ops: EditOp[]): NetDiffResult {
   const changed = regions.filter((r) => r.original !== r.current)
 
   if (changed.length === 0) {
+    // If Write ops exist, the file was created/overwritten and regions were
+    // reset with original===current. Show the final content as "all new".
+    const hasWrite = ops.some((op) => op.isWrite)
+    if (hasWrite && regions.length > 0) {
+      const content = regions.map((r) => r.current).join("\n")
+      if (content) {
+        const counts = diffLineCount("", content)
+        return { originalStr: "", currentStr: content, addCount: counts.add, delCount: counts.del, matchFailed }
+      }
+    }
     return { originalStr: "", currentStr: "", addCount: 0, delCount: 0, matchFailed }
   }
 
