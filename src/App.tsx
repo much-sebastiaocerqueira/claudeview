@@ -419,6 +419,21 @@ export default function App() {
     handleDashboardSelect: actions.handleDashboardSelect,
   })
 
+  // Auto-apply MCP settings when they first load for a running session.
+  // Without this, the session would start with no restrictions (disallowedMcpTools=[])
+  // because the MCP fetch is async, then never auto-restart when data arrives.
+  // Gated on mcpHasRestrictions so model/effort-only changes don't trigger this.
+  const { hasSettingsChanges, handleApplySettings } = handlers
+  const mcpHasRestrictions = mcpData.disallowedMcpTools.length > 0
+  const mcpAutoAppliedForRef = useRef<string | null>(null)
+  useEffect(() => {
+    const sessionId = state.session?.sessionId
+    if (mcpData.loaded && sessionId && mcpHasRestrictions && hasSettingsChanges && mcpAutoAppliedForRef.current !== sessionId) {
+      mcpAutoAppliedForRef.current = sessionId
+      handleApplySettings()
+    }
+  }, [mcpData.loaded, mcpHasRestrictions, hasSettingsChanges, handleApplySettings, state.session?.sessionId])
+
   // Undo/redo system
   const undoRedo = useUndoRedo(state.session, state.sessionSource, handlers.reloadSession)
 

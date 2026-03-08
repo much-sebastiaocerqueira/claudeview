@@ -26,6 +26,7 @@ export function useMcpServers(cwd: string | undefined, dirName: string | undefin
   const [servers, setServers] = useState<McpServer[]>([])
   const [selectedServers, setSelectedServers] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
+  const [loaded, setLoaded] = useState(false)
   const dirNameRef = useRef(dirName)
   dirNameRef.current = dirName
 
@@ -33,6 +34,7 @@ export function useMcpServers(cwd: string | undefined, dirName: string | undefin
   useEffect(() => {
     if (!cwd) return
     setLoading(true)
+    setLoaded(false)
 
     authFetch(`/api/mcp-servers?cwd=${encodeURIComponent(cwd)}`)
       .then(async (res) => {
@@ -52,7 +54,7 @@ export function useMcpServers(cwd: string | undefined, dirName: string | undefin
         }
       })
       .catch(() => { /* ignore */ })
-      .finally(() => setLoading(false))
+      .finally(() => { setLoading(false); setLoaded(true) })
   }, [cwd])
 
   const toggleServer = useCallback((name: string) => {
@@ -104,6 +106,7 @@ export function useMcpServers(cwd: string | undefined, dirName: string | undefin
     selectedServers,
     disallowedMcpTools,
     loading,
+    loaded,
     toggleServer,
     refresh,
   }
