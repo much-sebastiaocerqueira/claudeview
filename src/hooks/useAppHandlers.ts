@@ -213,7 +213,7 @@ export function useAppHandlers(deps: AppHandlersDeps): AppHandlersResult {
   }, [currentSessionId, setSelectedModel, setSelectedEffort])
 
   const applied = currentSessionId ? appliedSettings[currentSessionId] : undefined
-  const mcpChanged = JSON.stringify(disallowedMcpTools) !== JSON.stringify(applied?.disallowedMcpTools ?? [])
+  const mcpChanged = JSON.stringify([...disallowedMcpTools].sort()) !== JSON.stringify([...(applied?.disallowedMcpTools ?? [])].sort())
   const hasSettingsChanges = applied != null &&
     (selectedModel !== applied.model ||
      selectedEffort !== applied.effort ||

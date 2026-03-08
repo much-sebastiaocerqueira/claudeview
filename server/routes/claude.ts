@@ -8,6 +8,7 @@ import {
   createInterface,
   homedir,
   buildPermArgs,
+  buildMcpArgs,
 } from "../helpers"
 import type { PersistentSession, UseFn } from "../helpers"
 
@@ -35,15 +36,7 @@ export function registerClaudeRoutes(use: UseFn) {
 
         const modelArgs = model ? ["--model", model] : []
         const effortArgs = effort ? ["--effort", effort] : []
-        const MCP_TOOL_RE = /^mcp__[\w.-]+__\*$/
-        const mcpArgs: string[] = []
-        if (Array.isArray(disallowedMcpTools)) {
-          for (const tool of disallowedMcpTools) {
-            if (typeof tool === "string" && MCP_TOOL_RE.test(tool)) {
-              mcpArgs.push("--disallowedTools", tool)
-            }
-          }
-        }
+        const mcpArgs = buildMcpArgs(disallowedMcpTools)
 
         const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"])
         const contentBlocks: unknown[] = []

@@ -15,6 +15,7 @@ import {
   randomUUID,
   stat,
   buildPermArgs,
+  buildMcpArgs,
 } from "../../helpers"
 import type { PersistentSession, UseFn } from "../../helpers"
 
@@ -230,15 +231,7 @@ export function registerCreateAndSendRoute(use: UseFn) {
         const modelArgs = model ? ["--model", model] : []
         const effortArgs = effort ? ["--effort", effort] : []
         const worktreeArgs = worktreeName ? ["--worktree", worktreeName] : []
-        const MCP_TOOL_RE = /^mcp__[\w.-]+__\*$/
-        const mcpArgs: string[] = []
-        if (Array.isArray(disallowedMcpTools)) {
-          for (const tool of disallowedMcpTools) {
-            if (typeof tool === "string" && MCP_TOOL_RE.test(tool)) {
-              mcpArgs.push("--disallowedTools", tool)
-            }
-          }
-        }
+        const mcpArgs = buildMcpArgs(disallowedMcpTools)
         const sessionId = randomUUID()
         const fileName = `${sessionId}.jsonl`
 

@@ -227,11 +227,20 @@ export function registerEditorRoutes(use: UseFn) {
 
         const os = platform()
         try {
-          // If a command is provided on macOS, use osascript to open Terminal with the command
+          // If a command is provided on macOS, use osascript with the user's terminal
           if (command && os === "darwin") {
             const escapedPath = path.replace(/'/g, "'\\''")
             const escapedCmd = command.replace(/'/g, "'\\''")
-            const script = `tell application "Terminal"
+            const configuredTerminal = getConfig()?.terminalApp
+            const tp = process.env.TERM_PROGRAM?.toLowerCase()
+            const termApp = configuredTerminal
+              || (tp === "ghostty" ? "Ghostty"
+                : tp === "iterm.app" ? "iTerm"
+                : tp === "warpterminal" ? "Warp"
+                : tp === "alacritty" ? "Alacritty"
+                : tp === "kitty" ? "kitty"
+                : "Terminal")
+            const script = `tell application "${termApp}"
   activate
   do script "cd '${escapedPath}' && ${escapedCmd}"
 end tell`

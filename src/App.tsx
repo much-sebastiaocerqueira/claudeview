@@ -172,7 +172,7 @@ export default function App() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ path: projectPath, dirName, command: "claude /mcp" }),
-    }).catch(() => {})
+    }).catch((err) => console.error("[mcp-auth] open-terminal failed:", err))
   }, [state.session?.cwd, pendingPath, state.sessionSource?.dirName, state.pendingDirName, state.dashboardProject])
 
   // Server panel state

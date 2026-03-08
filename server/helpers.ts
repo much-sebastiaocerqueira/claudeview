@@ -23,6 +23,22 @@ export function friendlySpawnError(err: NodeJS.ErrnoException): string {
   return err.message
 }
 
+// ── MCP disallowed tools args builder ────────────────────────────────────
+
+const MCP_TOOL_RE = /^mcp__[\w.-]+__\*$/
+
+export function buildMcpArgs(disallowedMcpTools: unknown): string[] {
+  const args: string[] = []
+  if (Array.isArray(disallowedMcpTools)) {
+    for (const tool of disallowedMcpTools) {
+      if (typeof tool === "string" && MCP_TOOL_RE.test(tool)) {
+        args.push("--disallowedTools", tool)
+      }
+    }
+  }
+  return args
+}
+
 // ── Permission args builder ─────────────────────────────────────────────
 
 /**
