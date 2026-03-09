@@ -52,9 +52,9 @@ export function useLiveSession(
     const es = new EventSource(authUrl(url))
     let staleTimer: ReturnType<typeof setTimeout> | null = null
 
-    const resetStaleTimer = () => {
+    const resetStaleTimer = (ms = 30_000) => {
       if (staleTimer) clearTimeout(staleTimer)
-      staleTimer = setTimeout(() => setIsLive(false), 30000)
+      staleTimer = setTimeout(() => setIsLive(false), ms)
     }
 
     // Throttle React updates: parse every SSE message eagerly (data stays fresh)
@@ -87,8 +87,12 @@ export function useLiveSession(
         if (data.type === "init") {
           if (data.recentlyActive) {
             setIsLive(true)
+            // Short confirmation timer: if no lines arrive within 5s,
+            // the session is likely dead despite the recent file mtime.
+            resetStaleTimer(5_000)
+          } else {
+            resetStaleTimer()
           }
-          resetStaleTimer()
         } else if (data.type === "compacting_in_progress") {
           setIsLive(true)
           setIsCompacting(true)

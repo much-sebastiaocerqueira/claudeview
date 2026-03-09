@@ -181,15 +181,23 @@ function McpDropdown({ servers, selected, onToggle, onRefresh, loading, onAuth }
 
             if (!isConnected) {
               return (
-                <button
-                  key={server.name}
-                  onClick={() => { onAuth(server.name); setOpen(false) }}
-                  className="flex w-full items-center gap-2 px-3 py-1.5 text-[11px] text-muted-foreground/50 hover:bg-white/5 transition-colors"
-                >
-                  <span className="size-2 rounded-full bg-amber-500/60 shrink-0" />
-                  <span className="truncate">{server.name}</span>
-                  <span className="ml-auto text-[9px] text-amber-500/70">Needs auth</span>
-                </button>
+                <div key={server.name} className="flex w-full items-center gap-2 px-3 py-1.5 text-[11px] text-muted-foreground/50">
+                  <button
+                    onClick={() => { onAuth(server.name); setOpen(false) }}
+                    className="flex items-center gap-2 flex-1 min-w-0 hover:bg-white/5 transition-colors rounded-sm -mx-1 px-1 py-0.5"
+                  >
+                    <span className="size-2 rounded-full bg-amber-500/60 shrink-0" />
+                    <span className="truncate">{server.name}</span>
+                    <span className="ml-auto text-[9px] text-amber-500/70 shrink-0">Needs auth</span>
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onRefresh() }}
+                    className="text-muted-foreground/50 hover:text-foreground transition-colors shrink-0 p-0.5 rounded-sm hover:bg-white/5"
+                    title="Refresh status"
+                  >
+                    <RefreshCw className={cn("size-3", loading && "animate-spin")} />
+                  </button>
+                </div>
               )
             }
 

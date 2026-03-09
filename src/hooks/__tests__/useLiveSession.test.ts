@@ -625,4 +625,68 @@ describe("useLiveSession", () => {
     expect(result.current.isLive).toBe(false)
     vi.useRealTimers()
   })
+
+  it("recentlyActive uses 5s confirmation timer — goes false if no lines arrive", () => {
+    vi.useFakeTimers()
+    const source: SessionSource = {
+      dirName: "dir",
+      fileName: "f.jsonl",
+      rawText: "{}",
+    }
+
+    const { result } = renderHook(() => useLiveSession(source, onUpdate))
+
+    act(() => {
+      getLastEventSource().simulateMessage({ type: "init", recentlyActive: true })
+    })
+    expect(result.current.isLive).toBe(true)
+
+    // After 5s with no lines, isLive should go false
+    act(() => {
+      vi.advanceTimersByTime(5000)
+    })
+    expect(result.current.isLive).toBe(false)
+
+    vi.useRealTimers()
+  })
+
+  it("recentlyActive confirmation timer is replaced by 30s timer when lines arrive", () => {
+    vi.useFakeTimers()
+    const source: SessionSource = {
+      dirName: "dir",
+      fileName: "f.jsonl",
+      rawText: "{}",
+    }
+
+    const { result } = renderHook(() => useLiveSession(source, onUpdate))
+
+    act(() => {
+      getLastEventSource().simulateMessage({ type: "init", recentlyActive: true })
+    })
+    expect(result.current.isLive).toBe(true)
+
+    // Lines arrive within 5s — confirms session is alive, resets to 30s timer
+    act(() => {
+      vi.advanceTimersByTime(2000)
+      getLastEventSource().simulateMessage({
+        type: "lines",
+        lines: ['{"type":"user"}'],
+      })
+    })
+    expect(result.current.isLive).toBe(true)
+
+    // After another 5s (7s total), still live because lines reset to 30s timer
+    act(() => {
+      vi.advanceTimersByTime(5000)
+    })
+    expect(result.current.isLive).toBe(true)
+
+    // After 30s from the lines message, goes false
+    act(() => {
+      vi.advanceTimersByTime(25000)
+    })
+    expect(result.current.isLive).toBe(false)
+
+    vi.useRealTimers()
+  })
 })

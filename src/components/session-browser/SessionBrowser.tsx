@@ -21,12 +21,11 @@ function SidebarTabBar({
   isMobile?: boolean
   onTabChange: (tab: SidebarTab) => void
 }): React.ReactElement {
-  const paddingClass = isMobile ? "py-3" : "py-2"
+  const heightClass = isMobile ? "h-10" : "h-8"
 
   function tabClassName(isActive: boolean, extraClasses?: string): string {
     return cn(
-      "flex-1 text-xs font-medium transition-colors border-b-2",
-      paddingClass,
+      "flex-1 h-full text-xs font-medium transition-colors border-b-2",
       isActive
         ? "border-blue-500 text-foreground"
         : "border-transparent text-muted-foreground hover:text-muted-foreground",
@@ -35,7 +34,7 @@ function SidebarTabBar({
   }
 
   return (
-    <div className="flex shrink-0 border-b border-border/50" role="tablist">
+    <div className={cn("flex shrink-0 border-b border-border/50", heightClass)} role="tablist">
       <button
         role="tab"
         aria-selected={activeTab === "live"}
