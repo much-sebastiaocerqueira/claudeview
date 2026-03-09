@@ -4,6 +4,34 @@ Chronological record of all documentation audits for the agent-window project.
 
 ## Recent Audits
 
+### 2026-03-09 03:15 — MCP Configuration Transition (--strict-mcp-config)
+- **File:** `audit-history/audit-20260309T031500Z-mcp-config-transition.md`
+- **Status:** DOCUMENTATION UPDATES REQUIRED
+- **Changes:** 9 files modified, 0 new files, ~120 net lines added
+- **Key updates:**
+  - Replaced `--disallowedTools` with `--strict-mcp-config --mcp-config <tempfile>` for MCP server loading
+  - Changed MCP selection scope from project-level to per-session (storage key: sessionFileName, fallback: dirName)
+  - Refactored `useMcpServers` hook to accept sessionFileName parameter and return `mcpConfigJson` instead of `disallowedMcpTools`
+  - Updated `/api/mcp-servers` route to return both servers and configs (supports new config-based approach)
+  - Added auto-apply effect that restarts session when MCP config loads (prevents race condition)
+  - Updated both `/api/send-message` and `/api/create-and-send` routes to accept `mcpConfig` parameter
+- **Risk:** LOW (backward-compatible API additions, transparent to users)
+- **Doc updates needed:** YES
+  - README.md: 2 changes (1 line correction + 1 API table row)
+  - ARCHITECTURE.md: 3 changes (1 API table row + 1 config section + optional hooks section)
+
+### 2026-03-08 05:30 — MCP Selector Race Condition Fix
+- **File:** `audit-history/audit-20260308T053000Z-mcp-race-condition-fix.md`
+- **Status:** PASS
+- **Changes:** 3 files modified, 0 new files
+- **Key updates:**
+  - Added `loaded` flag to `useMcpServers` hook to signal async data completion
+  - Added auto-apply effect in `App.tsx` that triggers `handleApplySettings()` when MCP data loads
+  - Added tests verifying `loaded` flag behavior (success and error paths)
+  - Fixes race condition where sessions would spawn before saved MCP selections loaded
+- **Risk:** LOW (internal fix, no API changes, backward-compatible)
+- **Doc updates needed:** NONE (transparent fix, no user-facing features affected)
+
 ### 2026-03-06 17:32 — Cogpit-Memory CLI Integration & File Content API
 - **File:** `audit-history/audit-20260306T173214Z-8b6d782.md`
 - **Status:** PASS WITH MINOR DOC UPDATES

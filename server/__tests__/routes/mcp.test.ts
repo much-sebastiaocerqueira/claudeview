@@ -6,6 +6,11 @@ vi.mock("node:child_process", () => ({
   execFile: vi.fn(),
 }))
 
+// Mock fs/promises so readMcpConfigs doesn't hit the real filesystem
+vi.mock("node:fs/promises", () => ({
+  readFile: vi.fn().mockRejectedValue(new Error("ENOENT")),
+}))
+
 import { parseMcpListOutput, getMcpServers, clearMcpCache } from "../../routes/mcp"
 
 describe("parseMcpListOutput", () => {
@@ -81,7 +86,7 @@ describe("getMcpServers", () => {
     expect(callCount).toBe(1) // Only called once due to cache
   })
 
-  it("returns empty array on exec error when no cache", async () => {
+  it("returns empty servers on exec error when no cache", async () => {
     const { execFile } = await import("node:child_process")
     const mockExec = execFile as unknown as ReturnType<typeof vi.fn>
     mockExec.mockImplementation((_cmd: string, _args: string[], _opts: Record<string, unknown>, cb: (err: Error | null, stdout: string) => void) => {
@@ -89,7 +94,8 @@ describe("getMcpServers", () => {
     })
 
     const result = await getMcpServers("/some/path")
-    expect(result).toEqual([])
+    expect(result.servers).toEqual([])
+    expect(result.configs).toEqual({})
   })
 
   it("uses different cache keys for different cwds", async () => {

@@ -1,9 +1,10 @@
 import type { ChildProcess } from "node:child_process"
 import { readdir, open } from "node:fs/promises"
+import { writeFileSync } from "node:fs"
 import { join, resolve } from "node:path"
-import { homedir } from "node:os"
+import { homedir, tmpdir } from "node:os"
 import { spawn } from "node:child_process"
-import { randomUUID } from "node:crypto"
+import { randomUUID, createHash } from "node:crypto"
 import { getConfig, getDirs } from "./config"
 
 // ── Shared types ────────────────────────────────────────────────────────
@@ -23,20 +24,28 @@ export function friendlySpawnError(err: NodeJS.ErrnoException): string {
   return err.message
 }
 
-// ── MCP disallowed tools args builder ────────────────────────────────────
+// ── MCP config args builder ──────────────────────────────────────────────
 
-const MCP_TOOL_RE = /^mcp__[\w.-]+__\*$/
+/**
+ * Build CLI args to control which MCP servers are loaded.
+ * Writes the config to a temp file and passes the file path,
+ * because --mcp-config is variadic and inline JSON causes parsing issues.
+ *
+ * @param mcpConfig - JSON string of `{"mcpServers":{...}}` with only selected servers, or null/undefined to use defaults
+ */
+export function buildMcpArgs(mcpConfig: unknown): string[] {
+  if (typeof mcpConfig !== "string" || !mcpConfig) return []
 
-export function buildMcpArgs(disallowedMcpTools: unknown): string[] {
-  const args: string[] = []
-  if (Array.isArray(disallowedMcpTools)) {
-    for (const tool of disallowedMcpTools) {
-      if (typeof tool === "string" && MCP_TOOL_RE.test(tool)) {
-        args.push("--disallowedTools", tool)
-      }
-    }
+  try {
+    JSON.parse(mcpConfig)
+  } catch {
+    return []
   }
-  return args
+
+  const hash = createHash("md5").update(mcpConfig).digest("hex").slice(0, 8)
+  const tmpPath = join(tmpdir(), `cogpit-mcp-${hash}.json`)
+  writeFileSync(tmpPath, mcpConfig, "utf-8")
+  return ["--strict-mcp-config", "--mcp-config", tmpPath]
 }
 
 // ── Permission args builder ─────────────────────────────────────────────

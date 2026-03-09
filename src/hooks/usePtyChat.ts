@@ -14,7 +14,7 @@ interface UsePtyChatOpts {
   onPermissionsApplied?: () => void
   model?: string
   effort?: string
-  disallowedMcpTools?: string[]
+  mcpConfig?: string | null
   /** Called when there's no session yet (pending). Should create one and return the new sessionId. */
   onCreateSession?: (
     message: string,
@@ -22,7 +22,7 @@ interface UsePtyChatOpts {
   ) => Promise<string | null>
 }
 
-export function usePtyChat({ sessionSource, parsedSessionId, cwd, permissions, onPermissionsApplied, model, effort, disallowedMcpTools, onCreateSession }: UsePtyChatOpts) {
+export function usePtyChat({ sessionSource, parsedSessionId, cwd, permissions, onPermissionsApplied, model, effort, mcpConfig, onCreateSession }: UsePtyChatOpts) {
   const [status, setStatus] = useState<PtyChatStatus>("idle")
   const [error, setError] = useState<string | undefined>()
   const [pendingMessages, setPendingMessages] = useState<string[]>([])
@@ -131,7 +131,7 @@ export function usePtyChat({ sessionSource, parsedSessionId, cwd, permissions, o
             permissions: permsConfig,
             model: model || undefined,
             effort: effort || undefined,
-            disallowedMcpTools: disallowedMcpTools || undefined,
+            mcpConfig: mcpConfig || undefined,
           }),
           signal: abortController.signal,
         })
@@ -160,7 +160,7 @@ export function usePtyChat({ sessionSource, parsedSessionId, cwd, permissions, o
         }
       }
     },
-    [sessionId, cwd, permissions, onPermissionsApplied, model, effort, disallowedMcpTools, onCreateSession]
+    [sessionId, cwd, permissions, onPermissionsApplied, model, effort, mcpConfig, onCreateSession]
   )
 
   /** Abort the in-flight HTTP request without stopping the server-side agent.

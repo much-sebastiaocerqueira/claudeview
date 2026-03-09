@@ -1,5 +1,5 @@
 import type { UseFn } from "../helpers"
-import { sendJson } from "../helpers"
+import { sendJson, persistentSessions } from "../helpers"
 import { execFile } from "node:child_process"
 import { basename, dirname } from "node:path"
 
@@ -18,6 +18,19 @@ export function registerNotifyRoutes(use: UseFn): void {
       try {
         const data = JSON.parse(body)
 
+        const sessionId: string | null = data.session_id || null
+        const transcriptPath: string | null = data.transcript_path || null
+
+        // Skip subagents (Agent tool spawns) — their transcripts live in /subagents/
+        if (transcriptPath && transcriptPath.includes("/subagents/")) {
+          return sendJson(res, 200, { success: true, skipped: "subagent" })
+        }
+
+        // Skip Cogpit-managed sessions (spawned via /api/create-and-send)
+        if (sessionId && persistentSessions.has(sessionId)) {
+          return sendJson(res, 200, { success: true, skipped: "cogpit-session" })
+        }
+
         // Throttle: check cooldown before doing any work
         const now = Date.now()
         if (now - lastNotificationTime < NOTIFICATION_COOLDOWN_MS) {
@@ -26,18 +39,19 @@ export function registerNotifyRoutes(use: UseFn): void {
         lastNotificationTime = now
 
         const cwd: string | null = data.cwd || null
-        const transcriptPath: string | null = data.transcript_path || null
         const hookEvent: string | null = data.hook_event_name || data.event || null
 
         const projectName = cwd ? basename(cwd) : null
-        const sessionId: string | null = data.session_id || null
         const dirName = transcriptPath ? basename(dirname(transcriptPath)) : null
 
         const title = data.title || (projectName ? `Claude Code — ${projectName}` : "Claude Code")
+
+        // Use last_assistant_message snippet for richer notification body
+        const lastMsg: string | null = data.last_assistant_message || null
         const message =
           data.body ||
           data.message ||
-          (hookEvent === "Stop" ? "Waiting for your input" : "Needs your attention")
+          (lastMsg ? truncate(lastMsg, 120) : (hookEvent === "Stop" ? "Waiting for your input" : "Needs your attention"))
 
         showNotification(title, message, { sessionId, dirName })
         sendJson(res, 200, { success: true })
@@ -84,4 +98,10 @@ function showNotification(title: string, body: string, nav: NavigationInfo): voi
       execFile("osascript", ["-e", `display notification "${sanitize(body)}" with title "${sanitize(title)}"`])
     }
   }
+}
+
+function truncate(text: string, max: number): string {
+  // Strip markdown-style formatting for cleaner notification text
+  const clean = text.replace(/[*_`#]/g, "").replace(/\n+/g, " ").trim()
+  return clean.length <= max ? clean : clean.slice(0, max - 1) + "…"
 }

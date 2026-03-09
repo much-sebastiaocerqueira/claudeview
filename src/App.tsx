@@ -248,7 +248,7 @@ export default function App() {
 
   // MCP server selection
   const currentCwd = state.session?.cwd ?? pendingPath ?? undefined
-  const mcpData = useMcpServers(currentCwd, currentDirName ?? undefined)
+  const mcpData = useMcpServers(currentCwd, currentDirName ?? undefined, state.sessionSource?.fileName ?? undefined)
 
   // New session creation (lazy — no backend call until first message)
   // Declared before usePtyChat because it provides the onCreateSession callback.
@@ -280,7 +280,7 @@ export default function App() {
     onCreateStarted: setPendingFirstMessage,
     model: selectedModel,
     effort: selectedEffort,
-    disallowedMcpTools: mcpData.disallowedMcpTools,
+    mcpConfig: mcpData.mcpConfigJson,
   })
 
   // Build the pending session info for the Live & Recent placeholder
@@ -309,7 +309,7 @@ export default function App() {
     onPermissionsApplied: perms.markApplied,
     model: selectedModel,
     effort: selectedEffort,
-    disallowedMcpTools: mcpData.disallowedMcpTools,
+    mcpConfig: mcpData.mcpConfigJson,
     onCreateSession: state.pendingDirName ? createAndSend : undefined,
   })
 
@@ -414,22 +414,24 @@ export default function App() {
     setSelectedModel,
     selectedEffort,
     setSelectedEffort,
-    disallowedMcpTools: mcpData.disallowedMcpTools,
+    mcpConfig: mcpData.mcpConfigJson,
     scrollRequestScrollToTop: scroll.requestScrollToTop,
     handleDashboardSelect: actions.handleDashboardSelect,
   })
 
-  // Auto-apply MCP settings when they first load for a running session.
-  // Without this, the session would start with no restrictions (disallowedMcpTools=[])
-  // because the MCP fetch is async, then never auto-restart when data arrives.
-  // Gated on mcpHasRestrictions so model/effort-only changes don't trigger this.
+  // Auto-apply MCP settings ONLY when data first loads (loaded: false→true).
+  // This handles the race condition where a session starts before MCP data is
+  // available, so it launches without restrictions. Once data arrives, we restart.
+  // We intentionally do NOT auto-apply when switching between sessions or when
+  // the user changes MCP selection — those require explicit "Apply Settings".
   const { hasSettingsChanges, handleApplySettings } = handlers
-  const mcpHasRestrictions = mcpData.disallowedMcpTools.length > 0
-  const mcpAutoAppliedForRef = useRef<string | null>(null)
+  const mcpHasRestrictions = mcpData.mcpConfigJson !== null
+  const mcpPrevLoadedRef = useRef(false)
   useEffect(() => {
+    const justLoaded = mcpData.loaded && !mcpPrevLoadedRef.current
+    mcpPrevLoadedRef.current = mcpData.loaded
     const sessionId = state.session?.sessionId
-    if (mcpData.loaded && sessionId && mcpHasRestrictions && hasSettingsChanges && mcpAutoAppliedForRef.current !== sessionId) {
-      mcpAutoAppliedForRef.current = sessionId
+    if (justLoaded && sessionId && mcpHasRestrictions && hasSettingsChanges) {
       handleApplySettings()
     }
   }, [mcpData.loaded, mcpHasRestrictions, hasSettingsChanges, handleApplySettings, state.session?.sessionId])
