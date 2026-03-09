@@ -24,6 +24,8 @@
     "electron:preview": "electron-vite build && electron .",
     "electron:package": "start=$(date +%s) && electron-vite build && electron-builder --publish never && echo \"\\n✅ electron:package completed in $(($(date +%s) - start))s\"",
     "postinstall": "electron-builder install-app-deps",
+    "serve": "bun run build && bun server/standalone.ts",
+    "serve:start": "bun server/standalone.ts",
     "sync-cogpit-memory": "bun scripts/sync-cogpit-memory.ts"
   },
   "dependencies": {
