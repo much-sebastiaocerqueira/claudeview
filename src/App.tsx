@@ -228,11 +228,13 @@ export default function App() {
 
   // Live session streaming — wrapped in startTransition so React can
   // interrupt these low-priority renders to process user interactions (clicks).
+  // On reconnect after disconnect, reload the full session to catch missed messages.
+  const reconnectHandlerRef = useRef<(() => void) | null>(null)
   const { isLive, sseState, isCompacting } = useLiveSession(state.sessionSource, (updated) => {
     startTransition(() => {
       dispatch({ type: "UPDATE_SESSION", session: updated })
     })
-  })
+  }, () => reconnectHandlerRef.current?.())
 
   // Background agents (shared between notifications + StatsPanel)
   const backgroundAgents = useBackgroundAgents(state.session?.cwd ?? null)
@@ -435,6 +437,9 @@ export default function App() {
       handleApplySettings()
     }
   }, [mcpData.loaded, mcpHasRestrictions, hasSettingsChanges, handleApplySettings, state.session?.sessionId])
+
+  // Wire reconnect handler now that reloadSession is available
+  reconnectHandlerRef.current = handlers.reloadSession
 
   // Undo/redo system
   const undoRedo = useUndoRedo(state.session, state.sessionSource, handlers.reloadSession)
@@ -651,10 +656,8 @@ export default function App() {
 
   // SSE connection indicator (shows when session loaded but SSE disconnected)
   const sseIndicator = state.session && state.sessionSource && sseState === "disconnected" && (
-    <div role="status" className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-lg border border-amber-900/50 bg-elevation-3 px-3 py-2 depth-high toast-enter">
-      <WifiOff className="size-3.5 text-amber-400" />
-      <span className="text-xs text-amber-400">Live connection lost</span>
-      <span className="text-[10px] text-muted-foreground">Reconnecting automatically...</span>
+    <div role="status" title="Connection lost — reconnecting..." className="fixed bottom-3 left-1/2 -translate-x-1/2 z-50 rounded-full border border-amber-900/50 bg-elevation-3 p-1.5 depth-high toast-enter">
+      <WifiOff className="size-3 text-amber-400" />
     </div>
   )
 

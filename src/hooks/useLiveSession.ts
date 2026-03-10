@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { parseSession, parseSessionAppend } from "@/lib/parser"
 import { authUrl } from "@/lib/auth"
 import type { ParsedSession } from "@/lib/types"
@@ -13,7 +13,8 @@ export type SseConnectionState = "connecting" | "connected" | "disconnected"
 
 export function useLiveSession(
   source: SessionSource | null,
-  onUpdate: (session: ParsedSession) => void
+  onUpdate: (session: ParsedSession) => void,
+  onReconnect?: () => void
 ) {
   const [isLive, setIsLive] = useState(false)
   const [sseState, setSseState] = useState<SseConnectionState>("disconnected")
@@ -23,6 +24,9 @@ export function useLiveSession(
   const sseStateRef = useRef<SseConnectionState>("disconnected")
   const onUpdateRef = useRef(onUpdate)
   onUpdateRef.current = onUpdate
+  const onReconnectRef = useRef(onReconnect)
+  onReconnectRef.current = onReconnect
+  const wasDisconnectedRef = useRef(false)
 
   const dirName = source?.dirName ?? null
   const fileName = source?.fileName ?? null
@@ -72,8 +76,13 @@ export function useLiveSession(
 
     es.onopen = () => {
       if (sseStateRef.current !== "connected") {
+        const wasDisconnected = wasDisconnectedRef.current
+        wasDisconnectedRef.current = false
         sseStateRef.current = "connected"
         setSseState("connected")
+        if (wasDisconnected) {
+          onReconnectRef.current?.()
+        }
       }
     }
 
@@ -123,6 +132,7 @@ export function useLiveSession(
 
     es.onerror = () => {
       setIsLive(false)
+      wasDisconnectedRef.current = sseStateRef.current === "connected"
       sseStateRef.current = "disconnected"
       setSseState("disconnected")
     }
