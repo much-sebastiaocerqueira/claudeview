@@ -113,21 +113,20 @@ export const ChatArea = memo(function ChatArea({
           </div>
         </div>
 
-        {/* Scroll-to-bottom FAB (mobile only) */}
-        {isMobile && (
-          <button
-            className={cn(
-              "fixed right-4 bottom-20 z-40 size-10 rounded-full flex items-center justify-center",
-              "elevation-3 border border-border/50 text-muted-foreground",
-              "transition-[opacity,transform] duration-200 ease-out active:scale-90",
-              canScrollDown ? "opacity-100 scale-100" : "opacity-0 scale-75 pointer-events-none",
-            )}
-            onClick={scrollToBottomInstant}
-            aria-label="Scroll to bottom"
-          >
-            <ArrowDown className="size-4" />
-          </button>
-        )}
+        {/* Scroll-to-bottom FAB */}
+        <button
+          className={cn(
+            "z-40 size-10 rounded-full flex items-center justify-center",
+            "bg-blue-600 text-white border border-blue-500/50 depth-high",
+            "transition-[opacity,transform] duration-200 ease-out active:scale-90",
+            canScrollDown ? "opacity-100 scale-100" : "opacity-0 scale-75 pointer-events-none",
+            isMobile ? "fixed right-4 bottom-40" : "absolute right-4 bottom-4",
+          )}
+          onClick={scrollToBottomInstant}
+          aria-label="Scroll to bottom"
+        >
+          <ArrowDown className="size-4" />
+        </button>
       </div>
     </div>
   )
