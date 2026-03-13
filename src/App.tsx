@@ -9,7 +9,7 @@ import { TeamMembersBar } from "@/components/TeamMembersBar"
 import { Dashboard } from "@/components/Dashboard"
 import { MobileNav } from "@/components/MobileNav"
 import { ChatInput, type ChatInputHandle } from "@/components/ChatInput"
-import { ServerPanel } from "@/components/ServerPanel"
+import { ProcessPanel } from "@/components/ProcessPanel"
 import { BackgroundServers } from "@/components/stats/BackgroundServers"
 import { UndoConfirmDialog } from "@/components/UndoConfirmDialog"
 import { SetupScreen } from "@/components/SetupScreen"
@@ -33,7 +33,7 @@ import { useSessionHistory } from "@/hooks/useSessionHistory"
 import { usePermissions } from "@/hooks/usePermissions"
 import { useUndoRedo } from "@/hooks/useUndoRedo"
 import { useAppConfig } from "@/hooks/useAppConfig"
-import { useServerPanel } from "@/hooks/useServerPanel"
+import { useProcessPanel } from "@/hooks/useProcessPanel"
 import { useNewSession } from "@/hooks/useNewSession"
 import { useWorktrees } from "@/hooks/useWorktrees"
 import { useKillAll } from "@/hooks/useKillAll"
@@ -180,8 +180,8 @@ export default function App() {
     }).catch((err) => console.error("[mcp-auth] open-terminal failed:", err))
   }, [state.session?.cwd, pendingPath, state.sessionSource?.dirName, state.pendingDirName, state.dashboardProject])
 
-  // Server panel state
-  const serverPanel = useServerPanel(state.session?.sessionId)
+  // Process panel state (unified: scripts + tasks + terminals)
+  const processPanel = useProcessPanel(state.session?.sessionId)
 
   // TODO progress from session's TodoWrite tool calls
   const todoProgress = useTodoProgress(state.session ?? null)
@@ -739,13 +739,14 @@ export default function App() {
     </Suspense>
   )
 
-  const serverPanelNode = serverPanel.serverMap.size > 0 && (
-    <ServerPanel
-      servers={serverPanel.serverMap}
-      visibleIds={serverPanel.visibleServerIds}
-      collapsed={serverPanel.serverPanelCollapsed}
-      onToggleServer={serverPanel.handleToggleServer}
-      onToggleCollapse={serverPanel.handleToggleServerCollapse}
+  const processPanelNode = processPanel.processes.size > 0 && (
+    <ProcessPanel
+      processes={processPanel.processes}
+      activeProcessId={processPanel.activeProcessId}
+      collapsed={processPanel.collapsed}
+      onSetActive={processPanel.setActive}
+      onRemove={processPanel.removeProcess}
+      onToggleCollapse={processPanel.toggleCollapse}
     />
   )
 
@@ -800,7 +801,7 @@ export default function App() {
       <BackgroundServers
         cwd={state.session.cwd}
         turns={state.session.turns}
-        onServersChanged={serverPanel.handleServersChanged}
+        onServersChanged={processPanel.handleServersChanged}
       />
     </div>
   )
@@ -898,8 +899,8 @@ export default function App() {
           {state.mobileTab === "stats" && state.session && (
             <StatsPanel
               onJumpToTurn={handlers.handleMobileJumpToTurn}
-              onToggleServer={serverPanel.handleToggleServer}
-              onServersChanged={serverPanel.handleServersChanged}
+              onToggleServer={processPanel.handleToggleServer}
+              onServersChanged={processPanel.handleServersChanged}
               onLoadSession={handlers.handleLoadSessionScrollAware}
               backgroundAgents={backgroundAgents}
             />
@@ -932,7 +933,7 @@ export default function App() {
           )}
         </main>
 
-        {serverPanelNode}
+        {processPanelNode}
         {state.mobileTab === "chat" && (state.session || state.pendingDirName) && state.mainView !== "teams" && (
           <>
             {todoProgress && <TodoProgressPanel progress={todoProgress} />}
@@ -1012,6 +1013,8 @@ export default function App() {
             onDeleteSession={handlers.handleDeleteSession}
             onBeforeSessionSwitch={handlePreSessionSwitch}
             liveSessionsRefreshRef={liveSessionsRefreshRef}
+            projectDir={state.session?.cwd ?? state.pendingCwd ?? null}
+            onScriptStarted={processPanel.addProcess}
           />
         </HoverRevealPanel>
 
@@ -1140,8 +1143,8 @@ export default function App() {
         >
           <StatsPanel
             onJumpToTurn={actions.handleJumpToTurn}
-            onToggleServer={serverPanel.handleToggleServer}
-            onServersChanged={serverPanel.handleServersChanged}
+            onToggleServer={processPanel.handleToggleServer}
+            onServersChanged={processPanel.handleServersChanged}
             searchInputRef={searchInputRef}
             onLoadSession={handlers.handleLoadSessionScrollAware}
             backgroundAgents={backgroundAgents}
@@ -1168,7 +1171,7 @@ export default function App() {
         />
       </Suspense>
 
-      {serverPanelNode}
+      {processPanelNode}
       {undoConfirmDialog}
       {branchModal}
 

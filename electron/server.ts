@@ -35,6 +35,7 @@ import { registerSearchIndexRoutes } from "../server/routes/search-index-stats"
 import { registerCogpitSearchRoutes } from "../server/routes/cogpit-search"
 import { registerMcpRoutes } from "../server/routes/mcp"
 import { registerNotifyRoutes } from "../server/routes/notify"
+import { registerScriptRoutes, processManager as scriptProcessManager } from "../server/routes/scripts"
 import { SearchIndex } from "../server/search-index"
 
 // ── PTY types ───────────────────────────────────────────────────────
@@ -136,6 +137,7 @@ export async function createAppServer(staticDir: string, userDataDir: string) {
   registerCogpitSearchRoutes(use)
   registerMcpRoutes(use)
   registerNotifyRoutes(use)
+  registerScriptRoutes(use)
 
   // ── Static files / dev proxy ────────────────────────────────────
   const viteDevUrl = process.env.ELECTRON_RENDERER_URL
@@ -327,6 +329,7 @@ export async function createAppServer(staticDir: string, userDataDir: string) {
     }
     ptySessions.clear()
     cleanupProcesses()
+    scriptProcessManager.cleanup()
     const index = getSearchIndex()
     if (index) {
       index.stopWatching()

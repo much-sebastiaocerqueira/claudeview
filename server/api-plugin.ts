@@ -28,6 +28,7 @@ import { registerSearchIndexRoutes } from "./routes/search-index-stats"
 import { registerCogpitSearchRoutes } from "./routes/cogpit-search"
 import { registerMcpRoutes } from "./routes/mcp"
 import { registerNotifyRoutes } from "./routes/notify"
+import { registerScriptRoutes, processManager as scriptProcessManager } from "./routes/scripts"
 import { SearchIndex } from "./search-index"
 
 export function sessionApiPlugin(): Plugin {
@@ -37,6 +38,7 @@ export function sessionApiPlugin(): Plugin {
       // Kill all active child processes when the server shuts down
       server.httpServer?.on("close", () => {
         cleanupProcesses()
+        scriptProcessManager.cleanup()
         const index = getSearchIndex()
         if (index) {
           index.stopWatching()
@@ -111,6 +113,7 @@ export function sessionApiPlugin(): Plugin {
       registerCogpitSearchRoutes(use)
       registerMcpRoutes(use)
       registerNotifyRoutes(use)
+      registerScriptRoutes(use)
     },
   }
 }
