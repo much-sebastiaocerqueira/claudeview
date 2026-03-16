@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/dialog"
 import { authFetch } from "@/lib/auth"
 import { shortPath } from "@/lib/format"
+import { useProjectNames } from "@/hooks/useProjectNames"
 
 interface ProjectInfo {
   dirName: string
@@ -69,6 +70,8 @@ export function ProjectSwitcherModal({
     return () => window.removeEventListener("keydown", handleShortcut)
   }, [open, currentProjectDirName, currentProjectCwd, onNewSession, onClose])
 
+  const { names: projectNames } = useProjectNames()
+
   const filtered = useMemo(() => {
     if (!filter) return projects
     const q = filter.toLowerCase()
@@ -76,9 +79,10 @@ export function ProjectSwitcherModal({
       (p) =>
         p.path.toLowerCase().includes(q) ||
         p.shortName.toLowerCase().includes(q) ||
-        p.dirName.toLowerCase().includes(q)
+        p.dirName.toLowerCase().includes(q) ||
+        (projectNames[p.dirName]?.toLowerCase().includes(q))
     )
-  }, [projects, filter])
+  }, [projects, filter, projectNames])
 
   // Reset selection when filter changes
   useEffect(() => {
@@ -165,9 +169,12 @@ export function ProjectSwitcherModal({
                 <FolderOpen className="size-4 shrink-0 text-muted-foreground" />
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">
-                    {shortPath(project.path)}
+                    {projectNames[project.dirName] || shortPath(project.path)}
                   </div>
                   <div className="text-[11px] text-muted-foreground">
+                    {projectNames[project.dirName] && (
+                      <span className="mr-1.5">{shortPath(project.path)}</span>
+                    )}
                     {project.sessionCount} session{project.sessionCount !== 1 ? "s" : ""}
                     {project.lastModified && (
                       <> &middot; {new Date(project.lastModified).toLocaleDateString()}</>

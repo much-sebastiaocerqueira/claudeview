@@ -31,6 +31,7 @@ async function createWindow(port: number) {
       preload: join(__dirname, "../preload/preload.js"),
       sandbox: true,
       contextIsolation: true,
+      backgroundThrottling: false,
     },
   })
 

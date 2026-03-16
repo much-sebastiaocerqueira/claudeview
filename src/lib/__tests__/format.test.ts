@@ -10,6 +10,7 @@ import {
   formatCost,
   getContextLimit,
   getContextUsage,
+  parseWorktreePath,
 } from "@/lib/format"
 import { assistantMsg, resetFixtureCounter } from "@/__tests__/fixtures"
 import type { RawMessage } from "@/lib/types"
@@ -388,6 +389,14 @@ describe("getContextLimit", () => {
   it("returns 200k for unknown models (default)", () => {
     expect(getContextLimit("gpt-4")).toBe(200_000)
   })
+
+  it("returns 1M for opus[1m] models", () => {
+    expect(getContextLimit("claude-opus-4-6[1m]")).toBe(1_000_000)
+  })
+
+  it("returns 1M for sonnet[1m] models", () => {
+    expect(getContextLimit("claude-sonnet-4-6[1m]")).toBe(1_000_000)
+  })
 })
 
 // ── getContextUsage ───────────────────────────────────────────────────────
@@ -542,5 +551,37 @@ describe("getContextUsage", () => {
     const result = getContextUsage([assistantRaw, userRaw, systemRaw])
     // Should find the assistant message
     expect(result!.used).toBe(40_000)
+  })
+})
+
+// ── parseWorktreePath ────────────────────────────────────────────────────
+
+describe("parseWorktreePath", () => {
+  it("returns null for a regular project path", () => {
+    expect(parseWorktreePath("/Users/user/code/my-project")).toBeNull()
+  })
+
+  it("parses a worktree path and extracts parent + name", () => {
+    const result = parseWorktreePath("/Users/user/code/my-project/.worktrees/feature-branch")
+    expect(result).toEqual({
+      parentPath: "/Users/user/code/my-project",
+      worktreeName: "feature-branch",
+    })
+  })
+
+  it("handles worktree paths with trailing segments", () => {
+    const result = parseWorktreePath("/Users/user/code/project/.worktrees/fix-bug/src/index.ts")
+    expect(result).toEqual({
+      parentPath: "/Users/user/code/project",
+      worktreeName: "fix-bug",
+    })
+  })
+
+  it("returns null when .worktrees is not preceded by /", () => {
+    expect(parseWorktreePath("/Users/user/.worktrees-backup/foo")).toBeNull()
+  })
+
+  it("returns null for path ending at /.worktrees/ with no name", () => {
+    expect(parseWorktreePath("/Users/user/project/.worktrees/")).toBeNull()
   })
 })

@@ -8,7 +8,9 @@ export function cn(...inputs: ClassValue[]) {
 export const MODEL_OPTIONS = [
   { value: "", label: "Default" },
   { value: "opus", label: "Opus" },
+  { value: "opus[1m]", label: "Opus 1M" },
   { value: "sonnet", label: "Sonnet" },
+  { value: "sonnet[1m]", label: "Sonnet 1M" },
   { value: "haiku", label: "Haiku" },
 ]
 
