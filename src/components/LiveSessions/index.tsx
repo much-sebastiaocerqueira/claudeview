@@ -438,8 +438,9 @@ function ProjectGroup({
   const totalCount = sessions.length + (hasPending ? 1 : 0)
   const needsScroll = totalCount > VISIBLE_COUNT
 
-  // Resolve custom name from the first session's dirName
-  const dirName = sessions[0]?.dirName ?? pendingSession?.dirName
+  // Resolve dirName — prefer a non-worktree session so custom name lookup works
+  const dirName = (sessions.find(s => !parseWorktreePath(s.cwd ?? dirNameToPath(s.dirName)))?.dirName
+    ?? sessions[0]?.dirName ?? pendingSession?.dirName)
   const customProjectName = dirName ? projectNames[dirName] : undefined
 
   return (
