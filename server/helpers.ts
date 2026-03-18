@@ -123,8 +123,6 @@ export const dirs = {
   UNDO_DIR: "",
 }
 
-/** @deprecated Use CODEX_PREFIX from src/lib/providers/codex */
-export const CODEX_PROJECT_PREFIX = CODEX_PREFIX
 export const CODEX_SESSIONS_DIR = join(homedir(), ".codex", "sessions")
 
 /** Delegates to providers/codex.isCodexDirName */
@@ -132,12 +130,9 @@ export function isCodexDirName(dirName: string): boolean {
   return _isCodexDirName(dirName)
 }
 
-/**
- * Encode a cwd path as a Codex dirName.
- * Server-side uses Buffer for Node.js native base64url encoding.
- */
+/** Delegates to providers/codex.encodeCodexDirName */
 export function encodeCodexDirName(cwd: string): string {
-  return `${CODEX_PREFIX}${Buffer.from(cwd).toString("base64url")}`
+  return _encodeCodexDirName(cwd)
 }
 
 /** Delegates to providers/codex.decodeCodexDirName */

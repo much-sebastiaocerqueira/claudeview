@@ -32,8 +32,6 @@ vi.mock("node:fs/promises", () => ({
 
 import {
   isWithinDir,
-  isCodexDirName,
-  resolveSessionFilePath,
   readFile,
   writeFile,
   mkdir,
@@ -42,8 +40,6 @@ import {
 import { appendFile } from "node:fs/promises"
 
 const mockedIsWithinDir = vi.mocked(isWithinDir)
-const _mockedIsCodexDirName = vi.mocked(isCodexDirName)
-const _mockedResolveSessionFilePath = vi.mocked(resolveSessionFilePath)
 const mockedReadFile = vi.mocked(readFile)
 const mockedWriteFile = vi.mocked(writeFile)
 const mockedMkdir = vi.mocked(mkdir)

@@ -50,5 +50,5 @@ export const claudeProvider: SessionProvider = {
   resumeCommand: getClaudeResumeCommand,
   buildPermArgs: buildClaudePermArgs,
   buildModelArgs: buildClaudeModelArgs,
-  buildEffortArgs: () => [], // Claude CLI has no effort argument
+  buildEffortArgs: (effort) => effort ? ["--effort", effort] : [],
 }

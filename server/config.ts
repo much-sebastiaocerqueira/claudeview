@@ -39,7 +39,7 @@ export async function loadConfig(): Promise<AppConfig | null> {
         networkAccess: !!parsed.networkAccess,
         networkPassword: parsed.networkPassword || undefined,
         terminalApp: parsed.terminalApp || undefined,
-            editorApp: parsed.editorApp || undefined,
+        editorApp: parsed.editorApp || undefined,
       }
       return cachedConfig
     }

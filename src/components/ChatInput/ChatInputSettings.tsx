@@ -313,7 +313,6 @@ export const ChatInputSettings = memo(function ChatInputSettings({
       ? { value: "", label: resolvedDefaultName, menuLabel: `${resolvedDefaultName} (default)` }
       : opt
   )
-  const showEffort = true
   const showWorktree = agentKind === "claude"
 
   return (
@@ -327,17 +326,13 @@ export const ChatInputSettings = memo(function ChatInputSettings({
           onChange={handleModelChange}
         />
 
-        {showEffort && (
-          <>
-            <span className="text-border/60 text-[10px] select-none">/</span>
-            <MiniDropdown
-              value={selectedEffort || DEFAULT_EFFORT}
-              fallbackLabel="Effort"
-              options={EFFORT_OPTIONS}
-              onChange={handleEffortChange}
-            />
-          </>
-        )}
+        <span className="text-border/60 text-[10px] select-none">/</span>
+        <MiniDropdown
+          value={selectedEffort || DEFAULT_EFFORT}
+          fallbackLabel="Effort"
+          options={EFFORT_OPTIONS}
+          onChange={handleEffortChange}
+        />
 
         {/* Worktree toggle — new session only */}
         {showWorktree && isNewSession && onWorktreeEnabledChange && (
