@@ -173,6 +173,54 @@ describe("useNewSession", () => {
     expect(result.current.creatingSession).toBe(false)
   })
 
+  it("retries Codex session creation without a rejected model override", async () => {
+    const onCodexModelRejected = vi.fn()
+    const { result } = renderHook(() =>
+      useNewSession({
+        ...defaultOpts,
+        model: "gpt-5.4-mini",
+        onCodexModelRejected,
+      })
+    )
+
+    act(() => {
+      result.current.handleNewSession("codex__test")
+    })
+
+    mockedAuthFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () => Promise.resolve({
+          error: "There's an issue with the selected model (gpt-5.4-mini). It may not exist or you may not have access to it. Run --model to pick a different model.",
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({
+          dirName: "codex__test",
+          fileName: "session.jsonl",
+          sessionId: "session-123",
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve('{"type":"user","message":{"role":"user","content":"hello"}}'),
+      } as Response)
+
+    await act(async () => {
+      await result.current.createAndSend("hello")
+    })
+
+    expect(onCodexModelRejected).toHaveBeenCalledWith("gpt-5.4-mini")
+
+    const firstBody = JSON.parse((mockedAuthFetch.mock.calls[0][1] as RequestInit).body as string)
+    const secondBody = JSON.parse((mockedAuthFetch.mock.calls[1][1] as RequestInit).body as string)
+    expect(firstBody.model).toBe("gpt-5.4-mini")
+    expect(secondBody.model).toBeUndefined()
+    expect(result.current.createError).toBeNull()
+  })
+
   it("createAndSend handles non-JSON error responses", async () => {
     const { result } = renderHook(() => useNewSession(defaultOpts))
 
@@ -224,16 +272,18 @@ describe("useNewSession", () => {
       })
 
       let done = false
-      const promise = act(async () => {
-        await result.current.createAndSend("hello")
-        done = true
-      })
+      await act(async () => {
+        const promise = result.current.createAndSend("hello").then(() => {
+          done = true
+        })
 
-      // Fast-forward through all polling delays until the promise resolves
-      while (!done) {
-        await vi.advanceTimersByTimeAsync(200)
-      }
-      await promise
+        // Fast-forward through all polling delays until the promise resolves
+        while (!done) {
+          await vi.advanceTimersByTimeAsync(200)
+        }
+
+        await promise
+      })
 
       // Should finalize with a minimal session instead of erroring,
       // so the user transitions to ChatArea and SSE picks up real content

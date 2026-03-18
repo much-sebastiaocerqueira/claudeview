@@ -7,6 +7,7 @@ import { parseSession } from "@/lib/parser"
 import { authFetch } from "@/lib/auth"
 import { slugifyWorktreeName } from "@/lib/utils"
 import { agentKindFromDirName } from "@/lib/sessionSource"
+import { fetchWithCodexModelFallback } from "@/lib/codexModelFallback"
 
 interface UseNewSessionOpts {
   permissionsConfig: PermissionsConfig
@@ -15,6 +16,7 @@ interface UseNewSessionOpts {
   onSessionFinalized: (parsed: ParsedSession, source: SessionSource) => void
   /** Called when the user sends the first message and session creation begins */
   onCreateStarted?: (message: string) => void
+  onCodexModelRejected?: (model: string) => void
   model: string
   effort: string
   mcpConfig?: string | null
@@ -181,6 +183,7 @@ export function useNewSession({
   isMobile,
   onSessionFinalized,
   onCreateStarted,
+  onCodexModelRejected,
   model,
   effort,
   mcpConfig,
@@ -228,31 +231,39 @@ export function useNewSession({
       const startedAt = Date.now()
 
       try {
-        const res = await authFetch("/api/create-and-send", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            dirName,
-            message,
-            images,
-            permissions: permissionsConfig,
-            model: model || undefined,
-            effort: effort || undefined,
-            worktreeName: agentKind === "claude" && worktreeEnabled ? (worktreeName || slugifyWorktreeName(message)) : undefined,
-            mcpConfig: agentKind === "claude" ? (mcpConfig || undefined) : undefined,
+        const requestBody = {
+          dirName,
+          message,
+          images,
+          permissions: permissionsConfig,
+          effort: effort || undefined,
+          worktreeName: agentKind === "claude" && worktreeEnabled ? (worktreeName || slugifyWorktreeName(message)) : undefined,
+          mcpConfig: agentKind === "claude" ? (mcpConfig || undefined) : undefined,
+        }
+
+        const { res, errorMessage } = await fetchWithCodexModelFallback(
+          (modelOverride) => authFetch("/api/create-and-send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...requestBody, model: modelOverride }),
+            signal: controller.signal,
           }),
-          signal: controller.signal,
-        })
+          {
+            model,
+            agentKind,
+            errorFallback: "Unknown error",
+            onModelRejected: onCodexModelRejected,
+          },
+        )
 
         if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: "Unknown error" }))
           if (agentKind === "codex") {
             const recovered = await recoverCodexSession(dirName, message, startedAt, controller)
             if (recovered) {
               return await finalizeDiscoveredSession(recovered, controller, dispatch, isMobile, onSessionFinalized)
             }
           }
-          setCreateError(err.error || `Failed to create session (${res.status})`)
+          setCreateError(errorMessage || `Failed to create session (${res.status})`)
           return null
         }
 
@@ -269,7 +280,7 @@ export function useNewSession({
         }
       }
     },
-    [permissionsConfig, model, effort, mcpConfig, worktreeEnabled, worktreeName, dispatch, isMobile, onSessionFinalized, onCreateStarted]
+    [permissionsConfig, model, effort, mcpConfig, worktreeEnabled, worktreeName, dispatch, isMobile, onSessionFinalized, onCreateStarted, onCodexModelRejected]
   )
 
   const clearCreateError = useCallback(() => setCreateError(null), [])

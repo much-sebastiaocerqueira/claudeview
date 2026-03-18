@@ -2,6 +2,8 @@ import { useState, useCallback, useRef, useEffect } from "react"
 import type { SessionSource } from "@/hooks/useLiveSession"
 import { type PermissionsConfig, DEFAULT_PERMISSIONS } from "@/lib/permissions"
 import { authFetch } from "@/lib/auth"
+import { agentKindFromDirName } from "@/lib/sessionSource"
+import { fetchWithCodexModelFallback } from "@/lib/codexModelFallback"
 
 export type PtyChatStatus = "idle" | "connected" | "error"
 
@@ -15,6 +17,7 @@ interface UsePtyChatOpts {
   model?: string
   effort?: string
   mcpConfig?: string | null
+  onCodexModelRejected?: (model: string) => void
   /** Called when there's no session yet (pending). Should create one and return the new sessionId. */
   onCreateSession?: (
     message: string,
@@ -22,7 +25,7 @@ interface UsePtyChatOpts {
   ) => Promise<string | null>
 }
 
-export function usePtyChat({ sessionSource, parsedSessionId, cwd, permissions, onPermissionsApplied, model, effort, mcpConfig, onCreateSession }: UsePtyChatOpts) {
+export function usePtyChat({ sessionSource, parsedSessionId, cwd, permissions, onPermissionsApplied, model, effort, mcpConfig, onCodexModelRejected, onCreateSession }: UsePtyChatOpts) {
   const [status, setStatus] = useState<PtyChatStatus>("idle")
   const [error, setError] = useState<string | undefined>()
   const [pendingMessages, setPendingMessages] = useState<string[]>([])
@@ -36,6 +39,7 @@ export function usePtyChat({ sessionSource, parsedSessionId, cwd, permissions, o
   // Use parsed session ID (actual UUID from JSONL) if available, else derive from fileName
   const fileBasedId = sessionSource?.fileName?.replace(".jsonl", "") ?? null
   const sessionId = parsedSessionId || fileBasedId
+  const agentKind = sessionSource ? agentKindFromDirName(sessionSource.dirName) : null
 
   /** Reset all in-flight state -- shared by disconnect() and the sessionId-change effect. */
   const resetState = useCallback(() => {
@@ -120,28 +124,35 @@ export function usePtyChat({ sessionSource, parsedSessionId, cwd, permissions, o
       activeAbortRef.current = abortController
 
       try {
-        const res = await authFetch("/api/send-message", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            sessionId,
-            message: text,
-            images: images || undefined,
-            cwd: cwd || undefined,
-            permissions: permsConfig,
-            model: model || undefined,
-            effort: effort || undefined,
-            mcpConfig: mcpConfig || undefined,
-          }),
-          signal: abortController.signal,
-        })
+        const requestBody = {
+          sessionId,
+          message: text,
+          images: images || undefined,
+          cwd: cwd || undefined,
+          permissions: permsConfig,
+          effort: effort || undefined,
+          mcpConfig: mcpConfig || undefined,
+        }
 
-        const data = await res.json()
+        const { res, errorMessage } = await fetchWithCodexModelFallback(
+          (modelOverride) => authFetch("/api/send-message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ...requestBody, model: modelOverride }),
+            signal: abortController.signal,
+          }),
+          {
+            model,
+            agentKind,
+            errorFallback: "Request failed",
+            onModelRejected: onCodexModelRejected,
+          },
+        )
 
         // Only update state if this is still the active request for this session
         if (activeAbortRef.current === abortController) {
           if (!res.ok) {
-            setError(data.error || `Request failed (${res.status})`)
+            setError(errorMessage || `Request failed (${res.status})`)
             setStatus("error")
             setPendingMessages(prev => prev.slice(0, -1))
           } else {
@@ -160,7 +171,7 @@ export function usePtyChat({ sessionSource, parsedSessionId, cwd, permissions, o
         }
       }
     },
-    [sessionId, cwd, permissions, onPermissionsApplied, model, effort, mcpConfig, onCreateSession]
+    [sessionId, agentKind, cwd, permissions, onPermissionsApplied, model, effort, mcpConfig, onCodexModelRejected, onCreateSession]
   )
 
   /** Abort the in-flight HTTP request without stopping the server-side agent.

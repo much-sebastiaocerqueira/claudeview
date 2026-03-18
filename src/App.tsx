@@ -16,6 +16,7 @@ import { SetupScreen } from "@/components/SetupScreen"
 import { DesktopHeader } from "@/components/DesktopHeader"
 import { SessionInfoBar } from "@/components/SessionInfoBar"
 import { ChatArea } from "@/components/ChatArea"
+import { NewSessionAgentDialog } from "@/components/NewSessionAgentDialog"
 import { PendingTurnPreview } from "@/components/PendingTurnPreview"
 import { TodoProgressPanel } from "@/components/TodoProgressPanel"
 import { UpdateBanner } from "@/components/UpdateBanner"
@@ -263,12 +264,8 @@ export default function App() {
   // Model override (empty = use session default)
   const [selectedModel, setSelectedModel] = useState("")
 
-  // Pending agent kind for new sessions (before session is created)
-  const [pendingAgentKind, setRawPendingAgentKind] = useState<AgentKind>("claude")
-
-  const handlePendingAgentKindChange = useCallback((kind: AgentKind) => {
-    setRawPendingAgentKind(kind)
-    setSelectedModel("")
+  const handleCodexModelRejected = useCallback((rejectedModel: string) => {
+    setSelectedModel((current) => current === rejectedModel ? "" : current)
   }, [])
 
   // Thinking effort level
@@ -316,10 +313,16 @@ export default function App() {
       setTimeout(() => liveSessionsRefreshRef.current?.(), 2000)
     },
     onCreateStarted: setPendingFirstMessage,
+    onCodexModelRejected: handleCodexModelRejected,
     model: selectedModel,
     effort: selectedEffort,
     mcpConfig: supportsMcp ? mcpData.mcpConfigJson : null,
   })
+
+  const [newSessionChoice, setNewSessionChoice] = useState<{
+    dirName: string
+    cwd: string | null
+  } | null>(null)
 
   const handleStartNewSession = useCallback((dirName: string, cwd?: string) => {
     const normalizedCwd = cwd ?? null
@@ -327,11 +330,19 @@ export default function App() {
       handleNewSession(dirName, normalizedCwd ?? undefined)
       return
     }
-    const nextDirName = pendingAgentKind === "codex"
-      ? encodeCodexDirName(normalizedCwd)
-      : dirName
-    handleNewSession(nextDirName, normalizedCwd ?? undefined)
-  }, [handleNewSession, pendingAgentKind])
+    setNewSessionChoice({ dirName, cwd: normalizedCwd })
+  }, [handleNewSession])
+
+  const handleSelectNewSessionAgent = useCallback((agentKind: AgentKind) => {
+    const pending = newSessionChoice
+    if (!pending) return
+    const nextDirName = agentKind === "codex"
+      ? encodeCodexDirName(pending.cwd ?? "")
+      : pending.dirName
+    setSelectedModel("")
+    handleNewSession(nextDirName, pending.cwd ?? undefined)
+    setNewSessionChoice(null)
+  }, [newSessionChoice, handleNewSession])
 
   // Build the pending session info for the Live & Recent placeholder
   const pendingSessionInfo = useMemo(() => {
@@ -360,6 +371,7 @@ export default function App() {
     model: selectedModel,
     effort: selectedEffort,
     mcpConfig: supportsMcp ? mcpData.mcpConfigJson : null,
+    onCodexModelRejected: handleCodexModelRejected,
     onCreateSession: state.pendingDirName ? createAndSend : undefined,
   })
 
@@ -804,7 +816,7 @@ export default function App() {
     <div className="shrink-0 bg-elevation-1">
       <ChatInput ref={chatInputRef} />
       <ChatInputSettings
-        agentKind={isNewSession ? pendingAgentKind : (currentAgentKind ?? "claude")}
+        agentKind={currentAgentKind ?? "claude"}
         selectedModel={selectedModel}
         onModelChange={setSelectedModel}
         selectedEffort={selectedEffort}
@@ -820,7 +832,6 @@ export default function App() {
         onRefreshMcpServers={supportsMcp ? mcpData.refresh : undefined}
         mcpLoading={supportsMcp ? mcpData.loading : undefined}
         onMcpAuth={supportsMcp ? handleMcpAuth : undefined}
-        onAgentKindChange={isNewSession ? handlePendingAgentKindChange : undefined}
       />
     </div>
   )
@@ -1235,6 +1246,13 @@ export default function App() {
           currentProjectCwd={state.session?.cwd ?? state.pendingCwd ?? null}
         />
       </Suspense>
+
+      <NewSessionAgentDialog
+        open={newSessionChoice !== null}
+        cwd={newSessionChoice?.cwd ?? null}
+        onClose={() => setNewSessionChoice(null)}
+        onSelect={handleSelectNewSessionAgent}
+      />
 
       <Suspense fallback={null}>
         <ThemeSelectorModal
