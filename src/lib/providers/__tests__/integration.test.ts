@@ -210,6 +210,16 @@ describe("provider.buildModelArgs", () => {
   })
 })
 
+describe("provider.buildEffortArgs", () => {
+  it("claude: returns --effort arg for given effort", () => {
+    expect(getProvider("claude").buildEffortArgs("high")).toEqual(["--effort", "high"])
+  })
+
+  it("codex: returns model_reasoning_effort config for xhigh", () => {
+    expect(getProvider("codex").buildEffortArgs("xhigh")).toEqual(["-c", "model_reasoning_effort=\"xhigh\""])
+  })
+})
+
 describe("provider.resumeCommand", () => {
   it("claude: returns claude --resume command", () => {
     expect(getProvider("claude").resumeCommand("abc-123")).toBe("claude --resume abc-123")

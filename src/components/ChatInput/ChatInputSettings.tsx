@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, memo } from "react"
 import { createPortal } from "react-dom"
 import { ChevronDown, GitBranch, Plug, RefreshCw, Check } from "lucide-react"
-import { cn, EFFORT_OPTIONS, DEFAULT_EFFORT, getModelOptions } from "@/lib/utils"
+import { cn, DEFAULT_EFFORT, getEffortOptions, getModelOptions, normalizeEffortForAgent } from "@/lib/utils"
 import type { AgentKind } from "@/lib/sessionSource"
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -316,6 +316,7 @@ export const ChatInputSettings = memo(function ChatInputSettings({
       ? { value: "", label: resolvedDefaultName, menuLabel: `${resolvedDefaultName} (default)` }
       : opt
   )
+  const effortOptions = getEffortOptions(agentKind)
   const showWorktree = agentKind === "claude"
 
   return (
@@ -331,9 +332,9 @@ export const ChatInputSettings = memo(function ChatInputSettings({
 
         <span className="text-border/60 text-[10px] select-none">/</span>
         <MiniDropdown
-          value={selectedEffort || DEFAULT_EFFORT}
+          value={normalizeEffortForAgent(agentKind, selectedEffort || DEFAULT_EFFORT)}
           fallbackLabel="Effort"
-          options={EFFORT_OPTIONS}
+          options={effortOptions}
           onChange={handleEffortChange}
         />
 

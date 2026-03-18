@@ -2,6 +2,8 @@ import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { AgentKind } from "./sessionSource"
 
+type EffortOption = { value: string; label: string }
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
@@ -25,14 +27,30 @@ export const CODEX_MODEL_OPTIONS = [
 
 export const DEFAULT_EFFORT = "high"
 
-export const EFFORT_OPTIONS = [
+const BASE_EFFORT_OPTIONS: readonly EffortOption[] = [
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
 ]
 
+const CODEX_EFFORT_OPTIONS: readonly EffortOption[] = [
+  ...BASE_EFFORT_OPTIONS,
+  { value: "xhigh", label: "XHigh" },
+]
+
 export function getModelOptions(agentKind: AgentKind) {
   return agentKind === "codex" ? CODEX_MODEL_OPTIONS : CLAUDE_MODEL_OPTIONS
+}
+
+export function getEffortOptions(agentKind: AgentKind): readonly EffortOption[] {
+  return agentKind === "codex" ? CODEX_EFFORT_OPTIONS : BASE_EFFORT_OPTIONS
+}
+
+export function normalizeEffortForAgent(agentKind: AgentKind, effort?: string | null): string {
+  const normalized = effort || DEFAULT_EFFORT
+  return getEffortOptions(agentKind).some((option) => option.value === normalized)
+    ? normalized
+    : DEFAULT_EFFORT
 }
 
 /** Convert a user message into a valid worktree/branch name. */

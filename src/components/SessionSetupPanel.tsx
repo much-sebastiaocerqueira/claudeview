@@ -1,5 +1,5 @@
 import { Cpu, GitBranch, Gauge } from "lucide-react"
-import { EFFORT_OPTIONS, DEFAULT_EFFORT, getModelOptions } from "@/lib/utils"
+import { DEFAULT_EFFORT, getEffortOptions, getModelOptions, normalizeEffortForAgent } from "@/lib/utils"
 import { OptionGrid } from "@/components/OptionGrid"
 import type { AgentKind } from "@/lib/sessionSource"
 
@@ -30,6 +30,7 @@ export function SessionSetupPanel({
 }: SessionSetupPanelProps) {
   const showEffort = !!onEffortChange
   const showWorktree = agentKind === "claude" && !!onWorktreeEnabledChange
+  const effortOptions = getEffortOptions(agentKind)
 
   return (
     <aside className="shrink-0 w-[300px] border-l border-border bg-elevation-0 overflow-y-auto h-full panel-enter-right">
@@ -70,10 +71,10 @@ export function SessionSetupPanel({
                 Thinking Effort
               </h3>
               <OptionGrid
-                options={EFFORT_OPTIONS}
-                selected={selectedEffort || DEFAULT_EFFORT}
+                options={effortOptions}
+                selected={normalizeEffortForAgent(agentKind, selectedEffort || DEFAULT_EFFORT)}
                 onChange={onEffortChange}
-                columns={3}
+                columns={effortOptions.length}
                 accentColor="orange"
               />
             </section>

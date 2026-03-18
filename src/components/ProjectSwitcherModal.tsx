@@ -7,6 +7,7 @@ import {
 import { authFetch } from "@/lib/auth"
 import { shortPath } from "@/lib/format"
 import { useProjectNames } from "@/hooks/useProjectNames"
+import { isCodexDirName } from "@/lib/sessionSource"
 
 interface ProjectInfo {
   dirName: string
@@ -62,13 +63,20 @@ export function ProjectSwitcherModal({
     function handleShortcut(e: KeyboardEvent) {
       if (e.ctrlKey && (e.metaKey || e.altKey) && e.key === "n" && currentProjectDirName) {
         e.preventDefault()
-        onNewSession(currentProjectDirName, currentProjectCwd ?? undefined)
+        const resolvedDirName = currentProjectCwd
+          ? (
+            projects.find((project) => project.path === currentProjectCwd && !isCodexDirName(project.dirName))?.dirName
+            ?? projects.find((project) => project.path === currentProjectCwd)?.dirName
+            ?? currentProjectDirName
+          )
+          : currentProjectDirName
+        onNewSession(resolvedDirName, currentProjectCwd ?? undefined)
         onClose()
       }
     }
     window.addEventListener("keydown", handleShortcut)
     return () => window.removeEventListener("keydown", handleShortcut)
-  }, [open, currentProjectDirName, currentProjectCwd, onNewSession, onClose])
+  }, [open, projects, currentProjectDirName, currentProjectCwd, onNewSession, onClose])
 
   const { names: projectNames } = useProjectNames()
 

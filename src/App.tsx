@@ -52,7 +52,7 @@ import { OPEN_SUBAGENT_EVENT } from "@/components/FileChangesPanel/file-change-i
 import { FOCUS_FILE_EVENT } from "@/components/FileChangesPanel"
 import type { ParsedSession } from "@/lib/types"
 import { authFetch } from "@/lib/auth"
-import { DEFAULT_EFFORT } from "@/lib/utils"
+import { DEFAULT_EFFORT, normalizeEffortForAgent } from "@/lib/utils"
 import { agentKindFromDirName, encodeCodexDirName, isCodexDirName } from "@/lib/sessionSource"
 import { LoginScreen } from "@/components/LoginScreen"
 import { useNetworkAuth } from "@/hooks/useNetworkAuth"
@@ -270,6 +270,7 @@ export default function App() {
 
   // Thinking effort level
   const [selectedEffort, setSelectedEffort] = useState(DEFAULT_EFFORT)
+  const effectiveEffort = normalizeEffortForAgent(currentAgentKind ?? "claude", selectedEffort)
 
   // MCP server selection
   const currentCwd = state.session?.cwd ?? pendingPath ?? undefined
@@ -315,7 +316,7 @@ export default function App() {
     onCreateStarted: setPendingFirstMessage,
     onCodexModelRejected: handleCodexModelRejected,
     model: selectedModel,
-    effort: selectedEffort,
+    effort: effectiveEffort,
     mcpConfig: supportsMcp ? mcpData.mcpConfigJson : null,
   })
 
@@ -369,7 +370,7 @@ export default function App() {
     permissions: perms.config,
     onPermissionsApplied: perms.markApplied,
     model: selectedModel,
-    effort: selectedEffort,
+    effort: effectiveEffort,
     mcpConfig: supportsMcp ? mcpData.mcpConfigJson : null,
     onCodexModelRejected: handleCodexModelRejected,
     onCreateSession: state.pendingDirName ? createAndSend : undefined,
@@ -474,7 +475,7 @@ export default function App() {
     hasPermsPendingChanges: perms.hasPendingChanges,
     selectedModel,
     setSelectedModel,
-    selectedEffort,
+    selectedEffort: effectiveEffort,
     setSelectedEffort,
     mcpConfig: supportsMcp ? mcpData.mcpConfigJson : null,
     scrollRequestScrollToTop: scroll.requestScrollToTop,
@@ -819,7 +820,7 @@ export default function App() {
         agentKind={currentAgentKind ?? "claude"}
         selectedModel={selectedModel}
         onModelChange={setSelectedModel}
-        selectedEffort={selectedEffort}
+        selectedEffort={effectiveEffort}
         onEffortChange={setSelectedEffort}
         isNewSession={isNewSession}
         worktreeEnabled={worktreeEnabled}
