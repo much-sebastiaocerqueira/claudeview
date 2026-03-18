@@ -144,7 +144,7 @@ export function usePtyChat({ sessionSource, parsedSessionId, cwd, permissions, o
           {
             model,
             agentKind,
-            errorFallback: "Request failed",
+            errorFallback: (r) => `Request failed (${r.status})`,
             onModelRejected: onCodexModelRejected,
           },
         )
@@ -198,13 +198,9 @@ export function usePtyChat({ sessionSource, parsedSessionId, cwd, permissions, o
     setPendingMessages([])
   }, [sendStopRequest])
 
-  const stopAgent = useCallback(() => {
-    activeAbortRef.current?.abort()
-    activeAbortRef.current = null
-    sendStopRequest()
-    setStatus("idle")
-    setPendingMessages([])
-  }, [sendStopRequest])
+  // stopAgent is semantically identical to interrupt — kept as a separate
+  // export so callers can choose the name that best fits their context.
+  const stopAgent = interrupt
 
   /** Remove the oldest pending message (consumed by a new turn) */
   const consumePending = useCallback((count = 1) => {
