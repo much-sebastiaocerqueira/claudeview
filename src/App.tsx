@@ -1136,9 +1136,9 @@ export default function App() {
               />
             </Suspense>
           ) : state.session ? (
-            <div className="flex flex-1 min-h-0">
-              <ResizablePanelGroup orientation="horizontal" className="flex-1 min-h-0">
-                <ResizablePanel defaultSize={showFileChangesPanel ? 70 : 100} minSize="500px">
+            <div className="flex flex-col flex-1 min-h-0">
+              <ResizablePanelGroup orientation="vertical" className="flex-1 min-h-0">
+                <ResizablePanel defaultSize={showFileChangesPanel ? 60 : 100} minSize={30}>
                   <div className="relative h-full min-h-0 flex flex-col">
                     {teamMembersBar}
                     <SessionInfoBar
@@ -1160,7 +1160,7 @@ export default function App() {
                   <>
                     <ResizableHandle withHandle />
                     <ResizablePanel
-                      defaultSize={30}
+                      defaultSize={40}
                       minSize={0}
                       collapsible
                       onCollapse={handleFileChangesPanelCollapse}

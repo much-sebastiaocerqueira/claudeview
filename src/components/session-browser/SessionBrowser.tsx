@@ -3,13 +3,14 @@ import { cn } from "@/lib/utils"
 import { LiveSessions } from "@/components/LiveSessions"
 import { TeamsList } from "@/components/TeamsList"
 import { ScriptsDock } from "@/components/ScriptsDock"
+import { SessionTimeline } from "@/components/SessionTimeline"
 import type { SessionBrowserProps } from "./types"
 import { BrowseTab } from "./BrowseTab"
 import { useSessionBrowser } from "./useSessionBrowser"
 
 // ── Tab type ───────────────────────────────────────────────────────────────
 
-type SidebarTab = "live" | "browse" | "teams"
+type SidebarTab = "live" | "browse" | "teams" | "timeline"
 
 // ── Tab Bar ────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,14 @@ function SidebarTabBar({
         className={tabClassName(activeTab === "teams", "flex items-center justify-center")}
       >
         Teams
+      </button>
+      <button
+        role="tab"
+        aria-selected={activeTab === "timeline"}
+        onClick={() => onTabChange("timeline")}
+        className={tabClassName(activeTab === "timeline", "flex items-center justify-center")}
+      >
+        Timeline
       </button>
     </div>
   )
@@ -172,6 +181,12 @@ export const SessionBrowser = memo(function SessionBrowser({
         {sidebarTab === "teams" && (
           <div className="flex-1 min-h-0">
             <TeamsList onSelectTeam={(teamName) => onSelectTeam?.(teamName)} />
+          </div>
+        )}
+
+        {sidebarTab === "timeline" && (
+          <div className="flex-1 min-h-0">
+            <SessionTimeline />
           </div>
         )}
       </div>
