@@ -24,13 +24,30 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip"
-import { TokenUsageIndicator } from "@/components/TokenUsageWidget"
 import { LiveIndicator, HeaderIconButton } from "@/components/header-shared"
 import { useCopyWithFeedback } from "@/hooks/useCopyWithFeedback"
 import { useAppContext } from "@/contexts/AppContext"
 import { useSessionContext } from "@/contexts/SessionContext"
 import { agentKindFromDirName, getResumeCommand } from "@/lib/sessionSource"
 import packageJson from "../../package.json"
+
+function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M tok`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}K tok`
+  return `${n} tok`
+}
+
+function formatDurationMs(ms: number): string {
+  if (ms < 1000) return `${ms}ms`
+  const secs = Math.round(ms / 1000)
+  if (secs < 60) return `${secs}s`
+  const mins = Math.floor(secs / 60)
+  const remSecs = secs % 60
+  if (mins < 60) return `${mins}m ${remSecs}s`
+  const hrs = Math.floor(mins / 60)
+  const remMins = mins % 60
+  return `${hrs}h ${remMins}m`
+}
 
 interface DesktopHeaderProps {
   showSidebar: boolean
@@ -152,7 +169,43 @@ export const DesktopHeader = memo(function DesktopHeader({
 
       <div className="flex-1" />
 
-      <TokenUsageIndicator />
+      {/* Session stats */}
+      {session && (
+        <Tooltip>
+          <TooltipTrigger render={<div className="flex items-center gap-2 px-2 py-0.5 text-[10px] font-mono text-muted-foreground/60 tabular-nums cursor-default" />}>
+              <span>{session.turns.length} turns</span>
+              <span className="text-muted-foreground/30">|</span>
+              <span>{formatTokens(session.stats.totalInputTokens + session.stats.totalOutputTokens)}</span>
+              {session.stats.totalCostUSD > 0 && (
+                <>
+                  <span className="text-muted-foreground/30">|</span>
+                  <span>${session.stats.totalCostUSD.toFixed(2)}</span>
+                </>
+              )}
+          </TooltipTrigger>
+          <TooltipContent side="bottom" className="p-3 space-y-1.5 min-w-[200px]">
+            <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Session Stats</div>
+            <div className="text-xs space-y-1">
+              <div className="flex justify-between"><span className="text-muted-foreground">Turns</span><span>{session.turns.length}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Input tokens</span><span>{session.stats.totalInputTokens.toLocaleString()}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Output tokens</span><span>{session.stats.totalOutputTokens.toLocaleString()}</span></div>
+              {(session.stats.totalCacheReadTokens > 0 || session.stats.totalCacheCreationTokens > 0) && (
+                <div className="flex justify-between"><span className="text-muted-foreground">Cache read</span><span>{session.stats.totalCacheReadTokens.toLocaleString()}</span></div>
+              )}
+              {session.stats.totalCostUSD > 0 && (
+                <div className="flex justify-between"><span className="text-muted-foreground">Cost</span><span>${session.stats.totalCostUSD.toFixed(3)}</span></div>
+              )}
+              <div className="flex justify-between"><span className="text-muted-foreground">Duration</span><span>{formatDurationMs(session.stats.totalDurationMs)}</span></div>
+              {session.stats.errorCount > 0 && (
+                <div className="flex justify-between"><span className="text-muted-foreground">Errors</span><span className="text-red-400">{session.stats.errorCount}</span></div>
+              )}
+              {session.model && (
+                <div className="flex justify-between"><span className="text-muted-foreground">Model</span><span>{session.model}</span></div>
+              )}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      )}
 
       <NetworkStatus
         networkUrl={networkUrl}
