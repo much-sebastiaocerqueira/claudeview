@@ -20,7 +20,7 @@ export function buildClaudeModelArgs(model?: string): string[] {
 
 // ── Resume command ────────────────────────────────────────────────────────────
 
-export function getClaudeResumeCommand(sessionId: string): string {
+export function getClaudeResumeCommand(sessionId: string, _cwd?: string): string {
   return `claude --resume ${sessionId}`
 }
 

@@ -228,6 +228,12 @@ describe("provider.resumeCommand", () => {
   it("codex: returns codex resume command", () => {
     expect(getProvider("codex").resumeCommand("abc-123")).toBe("codex resume abc-123")
   })
+
+  it("codex: includes cwd when provided", () => {
+    expect(getProvider("codex").resumeCommand("abc-123", "/tmp/project dir/it's-here")).toBe(
+      "codex -C '/tmp/project dir/it'\\''s-here' resume abc-123"
+    )
+  })
 })
 
 // ── End-to-end: parse + detect ────────────────────────────────────────────────

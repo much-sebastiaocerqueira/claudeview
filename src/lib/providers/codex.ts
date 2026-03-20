@@ -54,8 +54,14 @@ export function buildCodexModelArgs(model?: string): string[] {
 
 // ── Resume command ────────────────────────────────────────────────────────────
 
-export function getCodexResumeCommand(sessionId: string): string {
-  return `codex resume ${sessionId}`
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`
+}
+
+export function getCodexResumeCommand(sessionId: string, cwd?: string): string {
+  return cwd
+    ? `codex -C ${shellQuote(cwd)} resume ${sessionId}`
+    : `codex resume ${sessionId}`
 }
 
 // ── Provider object ───────────────────────────────────────────────────────────

@@ -16,7 +16,6 @@ import { SetupScreen } from "@/components/SetupScreen"
 import { DesktopHeader } from "@/components/DesktopHeader"
 import { SessionInfoBar } from "@/components/SessionInfoBar"
 import { ChatArea } from "@/components/ChatArea"
-import { NewSessionAgentDialog } from "@/components/NewSessionAgentDialog"
 import { PendingTurnPreview } from "@/components/PendingTurnPreview"
 import { TodoProgressPanel } from "@/components/TodoProgressPanel"
 import { UpdateBanner } from "@/components/UpdateBanner"
@@ -52,8 +51,14 @@ import { OPEN_SUBAGENT_EVENT } from "@/components/FileChangesPanel/file-change-i
 import { FOCUS_FILE_EVENT } from "@/components/FileChangesPanel"
 import type { ParsedSession } from "@/lib/types"
 import { authFetch } from "@/lib/auth"
-import { DEFAULT_EFFORT, normalizeEffortForAgent } from "@/lib/utils"
-import { agentKindFromDirName, encodeCodexDirName, isCodexDirName } from "@/lib/sessionSource"
+import { DEFAULT_EFFORT, getModelOptions, normalizeEffortForAgent } from "@/lib/utils"
+import {
+  agentKindFromDirName,
+  findClaudeProjectDirNameForCwd,
+  isCodexDirName,
+  projectDirNameForAgent,
+} from "@/lib/sessionSource"
+import type { AgentKind } from "@/lib/sessionSource"
 import { LoginScreen } from "@/components/LoginScreen"
 import { useNetworkAuth } from "@/hooks/useNetworkAuth"
 import {
@@ -320,30 +325,56 @@ export default function App() {
     mcpConfig: supportsMcp ? mcpData.mcpConfigJson : null,
   })
 
-  const [newSessionChoice, setNewSessionChoice] = useState<{
-    dirName: string
+  const [pendingAgentSource, setPendingAgentSource] = useState<{
+    claudeDirName: string
     cwd: string | null
   } | null>(null)
+  const claudeProjectDirCacheRef = useRef(new Map<string, string | null>())
 
-  const handleStartNewSession = useCallback((dirName: string, cwd?: string) => {
+  const resolveClaudeProjectDirName = useCallback(async (cwd: string): Promise<string | null> => {
+    const cache = claudeProjectDirCacheRef.current
+    if (cache.has(cwd)) {
+      return cache.get(cwd) ?? null
+    }
+
+    try {
+      const res = await authFetch("/api/projects")
+      if (!res.ok) {
+        cache.set(cwd, null)
+        return null
+      }
+      const projects = await res.json() as Array<{ dirName: string; path: string }>
+      const match = findClaudeProjectDirNameForCwd(projects, cwd)
+      cache.set(cwd, match)
+      return match
+    } catch {
+      cache.set(cwd, null)
+      return null
+    }
+  }, [])
+
+  const handleStartNewSession = useCallback(async (dirName: string, cwd?: string) => {
     const normalizedCwd = cwd ?? null
-    if (!normalizedCwd || isCodexDirName(dirName)) {
-      handleNewSession(dirName, normalizedCwd ?? undefined)
+    if (!normalizedCwd) {
+      setPendingAgentSource(null)
+      handleNewSession(dirName)
       return
     }
-    setNewSessionChoice({ dirName, cwd: normalizedCwd })
-  }, [handleNewSession])
 
-  const handleSelectNewSessionAgent = useCallback((agentKind: AgentKind) => {
-    const pending = newSessionChoice
-    if (!pending) return
-    const nextDirName = agentKind === "codex"
-      ? encodeCodexDirName(pending.cwd ?? "")
-      : pending.dirName
-    setSelectedModel("")
-    handleNewSession(nextDirName, pending.cwd ?? undefined)
-    setNewSessionChoice(null)
-  }, [newSessionChoice, handleNewSession])
+    const claudeDirName = isCodexDirName(dirName)
+      ? await resolveClaudeProjectDirName(normalizedCwd)
+      : dirName
+
+    setPendingAgentSource(claudeDirName ? { claudeDirName, cwd: normalizedCwd } : null)
+    handleNewSession(dirName, normalizedCwd)
+  }, [handleNewSession, resolveClaudeProjectDirName])
+
+  const handlePendingSessionAgentChange = useCallback((agentKind: AgentKind) => {
+    const pending = pendingAgentSource
+    if (!pending?.cwd) return
+    const nextDirName = projectDirNameForAgent(pending.claudeDirName, pending.cwd, agentKind)
+    handleNewSession(nextDirName, pending.cwd)
+  }, [pendingAgentSource, handleNewSession])
 
   // Build the pending session info for the Live & Recent placeholder
   const pendingSessionInfo = useMemo(() => {
@@ -359,8 +390,18 @@ export default function App() {
   useEffect(() => {
     if (!state.pendingDirName) {
       setPendingFirstMessage(null)
+      setPendingAgentSource(null)
     }
   }, [state.pendingDirName])
+
+  useEffect(() => {
+    if (!selectedModel) return
+    if (!state.sessionSource && !state.pendingDirName) return
+    const options = getModelOptions(currentAgentKind ?? "claude")
+    if (!options.some((option) => option.value === selectedModel)) {
+      setSelectedModel("")
+    }
+  }, [currentAgentKind, selectedModel, state.sessionSource, state.pendingDirName])
 
   // Active agent chat
   const claudeChat = usePtyChat({
@@ -818,6 +859,7 @@ export default function App() {
       <ChatInput ref={chatInputRef} />
       <ChatInputSettings
         agentKind={currentAgentKind ?? "claude"}
+        onAgentKindChange={isNewSession && pendingAgentSource?.cwd ? handlePendingSessionAgentChange : undefined}
         selectedModel={selectedModel}
         onModelChange={setSelectedModel}
         selectedEffort={effectiveEffort}
@@ -1247,13 +1289,6 @@ export default function App() {
           currentProjectCwd={state.session?.cwd ?? state.pendingCwd ?? null}
         />
       </Suspense>
-
-      <NewSessionAgentDialog
-        open={newSessionChoice !== null}
-        cwd={newSessionChoice?.cwd ?? null}
-        onClose={() => setNewSessionChoice(null)}
-        onSelect={handleSelectNewSessionAgent}
-      />
 
       <Suspense fallback={null}>
         <ThemeSelectorModal

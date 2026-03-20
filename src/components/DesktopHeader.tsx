@@ -26,7 +26,7 @@ import { LiveIndicator, HeaderIconButton } from "@/components/header-shared"
 import { useCopyWithFeedback } from "@/hooks/useCopyWithFeedback"
 import { useAppContext } from "@/contexts/AppContext"
 import { useSessionContext } from "@/contexts/SessionContext"
-import { getResumeCommand } from "@/lib/sessionSource"
+import { agentKindFromDirName, getResumeCommand } from "@/lib/sessionSource"
 import packageJson from "../../package.json"
 
 interface DesktopHeaderProps {
@@ -71,7 +71,8 @@ export const DesktopHeader = memo(function DesktopHeader({
 
   function handleCopyResumeCmd(): void {
     if (!session) return
-    copyCmd(getResumeCommand(sessionSource?.agentKind ?? "claude", session.sessionId))
+    const agentKind = sessionSource?.agentKind ?? agentKindFromDirName(sessionSource?.dirName ?? null)
+    copyCmd(getResumeCommand(agentKind, session.sessionId, session.cwd))
   }
 
   function handleCopyNetworkUrl(): void {

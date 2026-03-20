@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, memo } from "react"
 import { createPortal } from "react-dom"
-import { ChevronDown, GitBranch, Plug, RefreshCw, Check } from "lucide-react"
+import { Bot, Check, ChevronDown, Code2, GitBranch, Plug, RefreshCw } from "lucide-react"
 import { cn, DEFAULT_EFFORT, getEffortOptions, getModelOptions, normalizeEffortForAgent } from "@/lib/utils"
 import type { AgentKind } from "@/lib/sessionSource"
 
@@ -126,6 +126,105 @@ function MiniDropdown({ value, fallbackLabel, options, onChange }: MiniDropdownP
 
 // ── Provider + Model combined dropdown (new sessions only) ─────────────────────
 
+const AGENT_OPTIONS: Array<{ value: AgentKind; label: string; Icon: typeof Bot }> = [
+  { value: "claude", label: "Claude", Icon: Bot },
+  { value: "codex", label: "Codex", Icon: Code2 },
+]
+
+interface AgentModelDropdownProps {
+  agentKind: AgentKind
+  onAgentKindChange: (agentKind: AgentKind) => void
+  value: string
+  fallbackLabel: string
+  options: readonly DropdownOption[]
+  onChange: (value: string) => void
+}
+
+function AgentModelDropdown({
+  agentKind,
+  onAgentKindChange,
+  value,
+  fallbackLabel,
+  options,
+  onChange,
+}: AgentModelDropdownProps) {
+  const { open, setOpen, triggerRef, menuRef, menuPos } = useDropdownState()
+
+  const agentLabel = agentKind === "codex" ? "Codex" : "Claude"
+  const selectedLabel = options.find((o) => o.value === value)?.label ?? fallbackLabel
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        onClick={() => setOpen(!open)}
+        className={cn(
+          "flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors",
+          "text-muted-foreground hover:text-foreground hover:bg-white/5",
+        )}
+      >
+        <span className="truncate">{`${agentLabel} / ${selectedLabel}`}</span>
+        <ChevronDown className={cn("size-3 opacity-50 transition-transform", open && "rotate-180")} />
+      </button>
+
+      {open && menuPos && createPortal(
+        <div
+          ref={menuRef}
+          className="fixed z-[9999] min-w-[220px] rounded-lg border border-border/50 bg-elevation-3 py-1 depth-high animate-in fade-in-0 zoom-in-95 duration-100"
+          style={{ top: menuPos.top, left: menuPos.left, ...MENU_OFFSET_STYLE }}
+        >
+          <div className="px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Agent
+          </div>
+          {AGENT_OPTIONS.map((option) => {
+            const Icon = option.Icon
+            const isActive = option.value === agentKind
+            return (
+              <button
+                key={option.value}
+                onClick={() => onAgentKindChange(option.value)}
+                className={cn(
+                  "flex w-full items-center gap-2 px-3 py-1.5 text-[11px] transition-colors",
+                  isActive
+                    ? "bg-white/5 text-foreground"
+                    : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+                )}
+              >
+                <Icon className="size-3.5 shrink-0" />
+                <span>{option.label}</span>
+                {isActive && <Check className="ml-auto size-3 text-emerald-500" />}
+              </button>
+            )
+          })}
+
+          <div className="my-1 border-t border-border/30" />
+          <div className="px-3 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Model
+          </div>
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className={cn(
+                "flex w-full items-center justify-between gap-3 px-3 py-1.5 text-[11px] transition-colors",
+                opt.value === value
+                  ? "bg-white/5 text-foreground"
+                  : "text-muted-foreground hover:bg-white/5 hover:text-foreground",
+              )}
+            >
+              <span>{opt.menuLabel ?? opt.label}</span>
+              {opt.value === value && (
+                <span className="text-[9px] text-muted-foreground">active</span>
+              )}
+            </button>
+          ))}
+        </div>,
+        document.body,
+      )}
+    </>
+  )
+}
+
 // ── MCP multi-select dropdown ─────────────────────────────────────────────────
 
 interface McpDropdownProps {
@@ -242,6 +341,7 @@ function McpDropdown({ servers, selected, onToggle, onRefresh, loading, onAuth }
 
 export interface ChatInputSettingsProps {
   agentKind?: AgentKind
+  onAgentKindChange?: (agentKind: AgentKind) => void
   selectedModel: string
   onModelChange: (model: string) => void
   selectedEffort: string
@@ -268,6 +368,7 @@ export interface ChatInputSettingsProps {
 
 export const ChatInputSettings = memo(function ChatInputSettings({
   agentKind = "claude",
+  onAgentKindChange,
   selectedModel,
   onModelChange,
   selectedEffort,
@@ -323,12 +424,25 @@ export const ChatInputSettings = memo(function ChatInputSettings({
     <div className="flex items-center pb-2">
       <div className="w-full flex items-center gap-0.5 flex-wrap">
         {/* Model */}
-        <MiniDropdown
-          value={selectedModel}
-          fallbackLabel="Model"
-          options={modelOptions}
-          onChange={handleModelChange}
-        />
+        {onAgentKindChange
+          ? (
+            <AgentModelDropdown
+              agentKind={agentKind}
+              onAgentKindChange={onAgentKindChange}
+              value={selectedModel}
+              fallbackLabel={resolvedDefaultName}
+              options={modelOptions}
+              onChange={handleModelChange}
+            />
+          )
+          : (
+            <MiniDropdown
+              value={selectedModel}
+              fallbackLabel="Model"
+              options={modelOptions}
+              onChange={handleModelChange}
+            />
+          )}
 
         <span className="text-border/60 text-[10px] select-none">/</span>
         <MiniDropdown

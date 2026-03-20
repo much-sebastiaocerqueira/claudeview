@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest"
 import {
   agentKindFromDirName,
   encodeCodexDirName,
+  findClaudeProjectDirNameForCwd,
   getResumeCommand,
   inferSessionSourceKind,
   isCodexDirName,
+  projectDirNameForAgent,
 } from "@/lib/sessionSource"
 
 describe("sessionSource", () => {
@@ -21,10 +23,28 @@ describe("sessionSource", () => {
   it("builds the right resume command for each agent", () => {
     expect(getResumeCommand("claude", "1234")).toBe("claude --resume 1234")
     expect(getResumeCommand("codex", "1234")).toBe("codex resume 1234")
+    expect(getResumeCommand("codex", "1234", "/tmp/project dir/it's-here")).toBe(
+      "codex -C '/tmp/project dir/it'\\''s-here' resume 1234"
+    )
   })
 
   it("encodes cwd values into codex dir names", () => {
     expect(encodeCodexDirName("/tmp/project")).toMatch(/^codex__/)
     expect(isCodexDirName(encodeCodexDirName("/tmp/project"))).toBe(true)
+  })
+
+  it("maps a Claude project dir to the selected agent kind", () => {
+    expect(projectDirNameForAgent("my-project", "/tmp/project", "claude")).toBe("my-project")
+    expect(projectDirNameForAgent("my-project", "/tmp/project", "codex")).toBe(encodeCodexDirName("/tmp/project"))
+  })
+
+  it("finds the Claude project dir for a cwd even when the current dir is codex", () => {
+    const cwd = "/tmp/project/"
+    const projects = [
+      { dirName: encodeCodexDirName("/tmp/project"), path: "/tmp/project" },
+      { dirName: "tmp-project", path: "/tmp/project" },
+    ]
+
+    expect(findClaudeProjectDirNameForCwd(projects, cwd)).toBe("tmp-project")
   })
 })

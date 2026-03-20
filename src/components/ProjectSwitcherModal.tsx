@@ -7,7 +7,7 @@ import {
 import { authFetch } from "@/lib/auth"
 import { shortPath } from "@/lib/format"
 import { useProjectNames } from "@/hooks/useProjectNames"
-import { isCodexDirName } from "@/lib/sessionSource"
+import { findClaudeProjectDirNameForCwd } from "@/lib/sessionSource"
 
 interface ProjectInfo {
   dirName: string
@@ -65,7 +65,7 @@ export function ProjectSwitcherModal({
         e.preventDefault()
         const resolvedDirName = currentProjectCwd
           ? (
-            projects.find((project) => project.path === currentProjectCwd && !isCodexDirName(project.dirName))?.dirName
+            findClaudeProjectDirNameForCwd(projects, currentProjectCwd)
             ?? projects.find((project) => project.path === currentProjectCwd)?.dirName
             ?? currentProjectDirName
           )

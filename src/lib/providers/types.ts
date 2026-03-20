@@ -20,7 +20,7 @@ export interface SessionProvider {
   /** Returns true when the JSONL text was produced by this provider */
   isSessionText(jsonlText: string): boolean
   /** CLI command to resume a session by ID */
-  resumeCommand(sessionId: string): string
+  resumeCommand(sessionId: string, cwd?: string): string
   /** Build CLI permission arguments */
   buildPermArgs(permissions?: PermissionsConfig): string[]
   /** Build CLI model selection arguments */
