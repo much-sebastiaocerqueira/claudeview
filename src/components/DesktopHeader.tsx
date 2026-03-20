@@ -14,6 +14,9 @@ import {
   GitBranch,
   SlidersHorizontal,
   FileCode2,
+  Rows2,
+  Columns2,
+  Maximize2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -45,6 +48,8 @@ interface DesktopHeaderProps {
   onOpenSettings: () => void
   showConfig?: boolean
   onToggleConfig?: () => void
+  layoutMode?: "stacked" | "side-by-side" | "focused"
+  onSetLayoutMode?: (mode: "stacked" | "side-by-side" | "focused") => void
 }
 
 export const DesktopHeader = memo(function DesktopHeader({
@@ -63,6 +68,8 @@ export const DesktopHeader = memo(function DesktopHeader({
   onOpenSettings,
   showConfig,
   onToggleConfig,
+  layoutMode,
+  onSetLayoutMode,
 }: DesktopHeaderProps) {
   const { config: { networkUrl, networkAccessDisabled } } = useAppContext()
   const { session, sessionSource, isLive } = useSessionContext()
@@ -194,6 +201,28 @@ export const DesktopHeader = memo(function DesktopHeader({
             className={showFileChanges ? "text-amber-400" : "text-muted-foreground hover:text-foreground"}
             iconClassName={showFileChanges ? "text-amber-400" : undefined}
           />
+        )}
+        {onSetLayoutMode && (
+          <>
+            <HeaderIconButton
+              icon={Rows2}
+              label="Stacked layout"
+              onClick={() => onSetLayoutMode("stacked")}
+              className={layoutMode === "stacked" ? "text-blue-400" : "text-muted-foreground hover:text-foreground"}
+            />
+            <HeaderIconButton
+              icon={Columns2}
+              label="Side-by-side layout"
+              onClick={() => onSetLayoutMode("side-by-side")}
+              className={layoutMode === "side-by-side" ? "text-blue-400" : "text-muted-foreground hover:text-foreground"}
+            />
+            <HeaderIconButton
+              icon={Maximize2}
+              label="Focused layout (hide file changes)"
+              onClick={() => onSetLayoutMode("focused")}
+              className={layoutMode === "focused" ? "text-blue-400" : "text-muted-foreground hover:text-foreground"}
+            />
+          </>
         )}
         <HeaderIconButton
           icon={showSidebar ? PanelLeftClose : ChevronRight}

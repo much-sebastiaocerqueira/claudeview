@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef, memo } from "react"
-import { Loader2, RefreshCw, Activity, X, Search, AlertTriangle, FolderOpen, ChevronRight, Plus } from "lucide-react"
+import { Loader2, RefreshCw, Activity, X, Search, AlertTriangle, FolderOpen, ChevronRight, Plus, ChevronsDownUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
@@ -78,6 +78,7 @@ export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSel
   const [loading, setLoading] = useState(false)
   const [killingPids, setKillingPids] = useState<Set<number>>(new Set())
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const [collapseSignal, setCollapseSignal] = useState(0)
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [searching, setSearching] = useState(false)
@@ -281,6 +282,15 @@ export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSel
           variant="ghost"
           size="sm"
           className={cn("p-0 shrink-0", isMobile ? "h-8 w-8" : "h-6 w-6")}
+          onClick={() => setCollapseSignal((c) => c + 1)}
+          aria-label="Collapse all projects"
+        >
+          <ChevronsDownUp className={cn(isMobile ? "size-4" : "size-3")} />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className={cn("p-0 shrink-0", isMobile ? "h-8 w-8" : "h-6 w-6")}
           onClick={() => { hapticMedium(); fetchData(debouncedSearch || undefined) }}
           aria-label="Refresh live sessions"
         >
@@ -337,6 +347,7 @@ export const LiveSessions = memo(function LiveSessions({ activeSessionKey, onSel
               sessions={projectSessions}
               defaultCollapsed={idx >= 3}
               forceExpand={!!debouncedSearch}
+              collapseSignal={collapseSignal}
               activeSessionKey={activeSessionKey}
               procBySession={procBySession}
               killingPids={killingPids}
@@ -407,6 +418,7 @@ function ProjectGroup({
   onNewSession,
   creatingSession,
   pendingSession,
+  collapseSignal = 0,
 }: {
   projectPath: string
   sessions: ActiveSessionInfo[]
@@ -427,9 +439,16 @@ function ProjectGroup({
   onNewSession?: (dirName: string, cwd?: string) => void
   creatingSession?: boolean
   pendingSession?: PendingSessionInfo | null
+  collapseSignal?: number
 }) {
   const hasPending = !!pendingSession
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
+
+  // Respond to parent "collapse all" signal
+  useEffect(() => {
+    if (collapseSignal > 0) setCollapsed(true)
+  }, [collapseSignal])
+
   const isCollapsed = (forceExpand || hasPending) ? false : collapsed
 
   // Each row is ~32px; show 5 visible, rest scrollable

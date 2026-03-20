@@ -224,6 +224,16 @@ export default function App() {
   // Whether to actually show the file changes panel (toggle on + has changes)
   const showFileChangesPanel = hasFileChanges && panels.showFileChanges
 
+  // Layout mode: stacked (vertical), side-by-side (horizontal), or focused (no file changes)
+  type LayoutMode = "stacked" | "side-by-side" | "focused"
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => {
+    try { return (localStorage.getItem("claudeview:layout-mode") as LayoutMode) || "stacked" } catch { return "stacked" }
+  })
+  const handleSetLayoutMode = useCallback((mode: LayoutMode) => {
+    setLayoutMode(mode)
+    try { localStorage.setItem("claudeview:layout-mode", mode) } catch { /* ignore */ }
+  }, [])
+
   // Force-show file changes panel when a file is clicked in TurnChangedFiles
   const setShowFileChanges = panels.setShowFileChanges
   useEffect(() => {
@@ -1087,6 +1097,8 @@ export default function App() {
         onToggleConfig={panels.handleToggleConfig}
         onKillAll={handleKillAll}
         onOpenSettings={config.openConfigDialog}
+        layoutMode={layoutMode}
+        onSetLayoutMode={handleSetLayoutMode}
       />
 
       <div className="relative flex flex-1 min-h-0 overflow-hidden">
@@ -1137,8 +1149,14 @@ export default function App() {
             </Suspense>
           ) : state.session ? (
             <div className="flex flex-col flex-1 min-h-0">
-              <ResizablePanelGroup orientation="vertical" className="flex-1 min-h-0">
-                <ResizablePanel defaultSize={showFileChangesPanel ? 60 : 100} minSize={30}>
+              <ResizablePanelGroup
+                orientation={layoutMode === "side-by-side" ? "horizontal" : "vertical"}
+                className="flex-1 min-h-0"
+              >
+                <ResizablePanel
+                  defaultSize={showFileChangesPanel && layoutMode !== "focused" ? (layoutMode === "side-by-side" ? 55 : 60) : 100}
+                  minSize={layoutMode === "side-by-side" ? 30 : 25}
+                >
                   <div className="relative h-full min-h-0 flex flex-col">
                     {teamMembersBar}
                     <SessionInfoBar
@@ -1149,18 +1167,19 @@ export default function App() {
                       onBackToMain={isSubAgentView ? handleBackToMain : undefined}
                     />
                     <ChatArea searchInputRef={searchInputRef} hasTodos={!!todoProgress && todosExpanded} />
-                    <SessionInputFooter floating>
-                      {todoProgress && <TodoProgressPanel progress={todoProgress} expanded={todosExpanded} onExpandedChange={handleTodosExpandedChange} />}
-                      {subAgentReadOnlyNode || chatInputNode}
-                    </SessionInputFooter>
+                    {todoProgress && (
+                      <div className="shrink-0 border-t border-border/30">
+                        <TodoProgressPanel progress={todoProgress} expanded={todosExpanded} onExpandedChange={handleTodosExpandedChange} />
+                      </div>
+                    )}
                   </div>
                 </ResizablePanel>
 
-                {showFileChangesPanel && (
+                {showFileChangesPanel && layoutMode !== "focused" && (
                   <>
                     <ResizableHandle withHandle />
                     <ResizablePanel
-                      defaultSize={40}
+                      defaultSize={layoutMode === "side-by-side" ? 45 : 40}
                       minSize={0}
                       collapsible
                       onCollapse={handleFileChangesPanelCollapse}

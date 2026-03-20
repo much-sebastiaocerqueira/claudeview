@@ -1,7 +1,6 @@
 import { useCallback, memo } from "react"
 import { cn } from "@/lib/utils"
 import { LiveSessions } from "@/components/LiveSessions"
-import { TeamsList } from "@/components/TeamsList"
 import { ScriptsDock } from "@/components/ScriptsDock"
 import { SessionTimeline } from "@/components/SessionTimeline"
 import { CrossSessionSearch } from "@/components/search/CrossSessionSearch"
@@ -53,14 +52,6 @@ function SidebarTabBar({
         className={tabClassName(activeTab === "browse", "flex items-center justify-center")}
       >
         Browse
-      </button>
-      <button
-        role="tab"
-        aria-selected={activeTab === "teams"}
-        onClick={() => onTabChange("teams")}
-        className={tabClassName(activeTab === "teams", "flex items-center justify-center")}
-      >
-        Teams
       </button>
       <button
         role="tab"
@@ -185,12 +176,6 @@ export const SessionBrowser = memo(function SessionBrowser({
             onRetry={handleRetry}
             onClearError={handleClearError}
           />
-        )}
-
-        {sidebarTab === "teams" && (
-          <div className="flex-1 min-h-0">
-            <TeamsList onSelectTeam={(teamName) => onSelectTeam?.(teamName)} />
-          </div>
         )}
 
         {sidebarTab === "timeline" && (
