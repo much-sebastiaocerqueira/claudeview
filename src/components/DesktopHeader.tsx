@@ -94,14 +94,14 @@ export const DesktopHeader = memo(function DesktopHeader({
           <TooltipTrigger render={<button
               onClick={onGoHome}
               className="shrink-0 transition-opacity hover:opacity-70"
-              aria-label={session ? "Back to Dashboard" : "Cogpit"}
+              aria-label={session ? "Back to Dashboard" : "ClaudeView"}
             />}>
               <Eye className="size-4 text-blue-400" />
           </TooltipTrigger>
-          <TooltipContent>{session ? "Back to Dashboard" : "Cogpit"}</TooltipContent>
+          <TooltipContent>{session ? "Back to Dashboard" : "ClaudeView"}</TooltipContent>
         </Tooltip>
 
-        <span className="text-[10px] font-mono text-muted-foreground/50 select-none">v{packageJson.version}</span>
+        <span className="text-[11px] font-medium text-muted-foreground/60 select-none">ClaudeView</span>
 
         {session ? (
           <>
