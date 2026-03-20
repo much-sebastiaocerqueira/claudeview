@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/tooltip"
 import { parseSubAgentPath, projectName } from "@/lib/format"
 import { formatAgentLabel } from "@/components/timeline/agent-utils"
-import { ContextBadge, HeaderIconButton } from "@/components/header-shared"
+import { HeaderIconButton } from "@/components/header-shared"
 import { authFetch } from "@/lib/auth"
 import { useAppContext } from "@/contexts/AppContext"
 import { useSessionContext } from "@/contexts/SessionContext"
@@ -84,12 +84,6 @@ export const SessionInfoBar = memo(function SessionInfoBar({
           </TooltipContent>
         </Tooltip>
       )}
-
-      <ContextBadge
-        rawMessages={session.rawMessages}
-        showRemaining
-        showTooltip={!isMobile}
-      />
 
       <div className="flex-1" />
 
