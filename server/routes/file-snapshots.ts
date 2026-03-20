@@ -8,13 +8,20 @@ export interface FileSnapshotInfo {
   latestVersion: number
 }
 
+export interface ParsedSnapshots {
+  snapshots: Map<string, FileSnapshotInfo>
+  cwd: string
+}
+
 /**
  * Parse JSONL content and extract file-history-snapshot entries.
  * Returns a map of filePath → { earliestBackup, latestBackup, earliestVersion, latestVersion }
+ * and the session cwd (needed to resolve absolute↔relative path mismatches).
  */
-export function parseFileSnapshots(jsonlContent: string): Map<string, FileSnapshotInfo> {
+export function parseFileSnapshots(jsonlContent: string): ParsedSnapshots {
   const result = new Map<string, FileSnapshotInfo>()
-  if (!jsonlContent) return result
+  let cwd = ""
+  if (!jsonlContent) return { snapshots: result, cwd }
 
   const lines = jsonlContent.split("\n").filter(Boolean)
 
@@ -25,6 +32,9 @@ export function parseFileSnapshots(jsonlContent: string): Map<string, FileSnapsh
     } catch {
       continue
     }
+
+    // Extract cwd from assistant messages or system records
+    if (!cwd && typeof obj.cwd === "string") cwd = obj.cwd
 
     if (obj.type !== "file-history-snapshot") continue
 
@@ -56,7 +66,35 @@ export function parseFileSnapshots(jsonlContent: string): Map<string, FileSnapsh
     }
   }
 
-  return result
+  return { snapshots: result, cwd }
+}
+
+/**
+ * Look up a file in the snapshots map, trying both the exact path
+ * and a relative version (absolute path with cwd prefix stripped).
+ * Claude Code tool calls use absolute paths, but trackedFileBackups
+ * uses relative paths from the session cwd.
+ */
+function findSnapshot(snapshots: Map<string, FileSnapshotInfo>, filePath: string, cwd: string): FileSnapshotInfo | undefined {
+  // Try exact match first
+  const exact = snapshots.get(filePath)
+  if (exact) return exact
+
+  // Try stripping cwd prefix to get relative path
+  if (cwd && filePath.startsWith(cwd)) {
+    const relative = filePath.slice(cwd.length).replace(/^\//, "")
+    const rel = snapshots.get(relative)
+    if (rel) return rel
+  }
+
+  // Try prepending cwd to see if the lookup path is relative
+  if (cwd && !filePath.startsWith("/")) {
+    const absolute = cwd.endsWith("/") ? cwd + filePath : cwd + "/" + filePath
+    const abs = snapshots.get(absolute)
+    if (abs) return abs
+  }
+
+  return undefined
 }
 
 const FILE_SIZE_LIMIT = 2 * 1024 * 1024 // 2MB
@@ -77,7 +115,7 @@ export function registerFileSnapshotRoutes(use: UseFn) {
       if (!jsonlPath) return sendJson(res, 404, { error: "Session not found" })
 
       const jsonlContent = await readFile(jsonlPath, "utf-8")
-      const snapshots = parseFileSnapshots(jsonlContent as string)
+      const { snapshots, cwd } = parseFileSnapshots(jsonlContent as string)
 
       // GET /api/file-snapshots/:sessionId — list all tracked files
       if (parts.length === 1) {
@@ -91,7 +129,7 @@ export function registerFileSnapshotRoutes(use: UseFn) {
 
       // GET /api/file-snapshots/:sessionId/:filePath
       const filePath = decodeURIComponent(parts.slice(1).join("/"))
-      const info = snapshots.get(filePath)
+      const info = findSnapshot(snapshots, filePath, cwd)
 
       if (!info) return sendJson(res, 200, null)
 

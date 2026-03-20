@@ -58,8 +58,8 @@ describe("parseFileSnapshots", () => {
   beforeEach(() => vi.clearAllMocks())
 
   it("returns empty map for JSONL with no snapshots", () => {
-    const result = parseFileSnapshots("")
-    expect(result.size).toBe(0)
+    const { snapshots } = parseFileSnapshots("")
+    expect(snapshots.size).toBe(0)
   })
 
   it("extracts file with backup versions", () => {
@@ -71,9 +71,9 @@ describe("parseFileSnapshots", () => {
         "src/app.ts": { backupFileName: "abc123@v3", version: 3 },
       }),
     )
-    const result = parseFileSnapshots(jsonl)
-    expect(result.size).toBe(1)
-    const info = result.get("src/app.ts")!
+    const { snapshots } = parseFileSnapshots(jsonl)
+    expect(snapshots.size).toBe(1)
+    const info = snapshots.get("src/app.ts")!
     expect(info.earliestBackup).toBe("abc123@v1")
     expect(info.latestBackup).toBe("abc123@v3")
     expect(info.earliestVersion).toBe(1)
@@ -89,8 +89,8 @@ describe("parseFileSnapshots", () => {
         "new-file.ts": { backupFileName: null, version: 3 },
       }),
     )
-    const result = parseFileSnapshots(jsonl)
-    const info = result.get("new-file.ts")!
+    const { snapshots } = parseFileSnapshots(jsonl)
+    const info = snapshots.get("new-file.ts")!
     expect(info.earliestBackup).toBeNull()
     expect(info.latestBackup).toBeNull()
   })
@@ -106,10 +106,10 @@ describe("parseFileSnapshots", () => {
         "b.ts": { backupFileName: "hash2@v1", version: 1 },
       }),
     )
-    const result = parseFileSnapshots(jsonl)
-    expect(result.size).toBe(2)
-    expect(result.get("a.ts")!.latestBackup).toBe("hash1@v2")
-    expect(result.get("b.ts")!.latestBackup).toBe("hash2@v1")
+    const { snapshots } = parseFileSnapshots(jsonl)
+    expect(snapshots.size).toBe(2)
+    expect(snapshots.get("a.ts")!.latestBackup).toBe("hash1@v2")
+    expect(snapshots.get("b.ts")!.latestBackup).toBe("hash2@v1")
   })
 
   it("handles non-snapshot lines gracefully", () => {
@@ -120,9 +120,38 @@ describe("parseFileSnapshots", () => {
       }),
       JSON.stringify({ type: "assistant", message: { content: [] } }),
     )
-    const result = parseFileSnapshots(jsonl)
-    expect(result.size).toBe(1)
-    expect(result.get("x.ts")).toBeDefined()
+    const { snapshots } = parseFileSnapshots(jsonl)
+    expect(snapshots.size).toBe(1)
+    expect(snapshots.get("x.ts")).toBeDefined()
+  })
+
+  it("extracts cwd from JSONL", () => {
+    const jsonl = makeJsonl(
+      JSON.stringify({ type: "assistant", message: { content: [] }, cwd: "/home/user/project" }),
+      snapshotLine("msg1", {
+        "src/app.ts": { backupFileName: "h@v1", version: 1 },
+      }),
+    )
+    const { cwd } = parseFileSnapshots(jsonl)
+    expect(cwd).toBe("/home/user/project")
+  })
+
+  it("resolves absolute path to relative snapshot via cwd", () => {
+    const jsonl = makeJsonl(
+      JSON.stringify({ type: "assistant", message: { content: [] }, cwd: "/home/user/project" }),
+      snapshotLine("msg1", {
+        "src/app.ts": { backupFileName: "abc@v1", version: 1 },
+      }),
+      snapshotLine("msg2", {
+        "src/app.ts": { backupFileName: "abc@v2", version: 2 },
+      }),
+    )
+
+    const { snapshots, cwd } = parseFileSnapshots(jsonl)
+    expect(cwd).toBe("/home/user/project")
+    expect(snapshots.get("src/app.ts")).toBeDefined()
+    // Absolute path won't match directly in the map
+    expect(snapshots.get("/home/user/project/src/app.ts")).toBeUndefined()
   })
 })
 
@@ -282,6 +311,38 @@ describe("registerFileSnapshotRoutes", () => {
     const data = JSON.parse(res._getData())
     expect(data.files).toHaveLength(2)
     expect(data.files.map((f: { filePath: string }) => f.filePath).sort()).toEqual(["a.ts", "b.ts"])
+  })
+
+  it("resolves absolute path to relative snapshot via cwd", async () => {
+    mockedFindJsonlPath.mockResolvedValueOnce("/path/to/session.jsonl")
+
+    const jsonl = makeJsonl(
+      JSON.stringify({ type: "assistant", message: { content: [] }, cwd: "/home/user/project" }),
+      snapshotLine("msg1", {
+        "src/app.ts": { backupFileName: "abc@v1", version: 1 },
+      }),
+      snapshotLine("msg2", {
+        "src/app.ts": { backupFileName: "abc@v2", version: 2 },
+      }),
+    )
+
+    mockedReadFile.mockImplementation(async (path: string) => {
+      const p = path as string
+      if (p.endsWith(".jsonl")) return jsonl as never
+      if (p.includes("abc@v1")) return "old content\n" as never
+      if (p.includes("abc@v2")) return "new content\n" as never
+      throw new Error(`Unexpected: ${p}`)
+    })
+
+    const handler = handlers.get("/api/file-snapshots/")!
+    // Request with absolute path (as tool calls send it)
+    const encodedPath = encodeURIComponent("/home/user/project/src/app.ts")
+    const { req, res, next } = createMockReqRes("GET", `/session-abc/${encodedPath}`)
+    await handler(req as never, res as never, next)
+    expect(res._getStatus()).toBe(200)
+    const data = JSON.parse(res._getData())
+    expect(data.before).toBe("old content\n")
+    expect(data.after).toBe("new content\n")
   })
 
   it("calls next for unknown path shapes", async () => {
