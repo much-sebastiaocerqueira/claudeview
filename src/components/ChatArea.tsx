@@ -50,7 +50,7 @@ export const ChatArea = memo(function ChatArea({
 
   // session is guaranteed non-null when ChatArea renders
   const currentSession = session!
-  const showTimeline = currentSession.turns.length > 0 || pendingMessages.length === 0
+  const showConversation = currentSession.turns.length > 0 || pendingMessages.length === 0
 
   return (
     <div className={cn("relative", isMobile ? "flex flex-col flex-1 min-h-0" : "flex-1 min-h-0")}>
@@ -97,7 +97,7 @@ export const ChatArea = memo(function ChatArea({
         >
           <div className={isMobile ? "py-3 px-1 pb-24" : cn("mx-auto max-w-3xl pt-4", hasTodos ? "pb-48" : "pb-32")}>
             <ErrorBoundary fallbackMessage="Failed to render conversation timeline">
-              {showTimeline && (
+              {showConversation && (
                 <ConversationTimeline chatScrollRef={chatScrollRef} />
               )}
               {pendingMessages.map((msg, i) => (

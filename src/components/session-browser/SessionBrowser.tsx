@@ -1,15 +1,16 @@
 import { useCallback, memo } from "react"
 import { cn } from "@/lib/utils"
 import { LiveSessions } from "@/components/LiveSessions"
-import { TeamsList } from "@/components/TeamsList"
 import { ScriptsDock } from "@/components/ScriptsDock"
+import { SessionTimeline } from "@/components/SessionTimeline"
+import { CrossSessionSearch } from "@/components/search/CrossSessionSearch"
 import type { SessionBrowserProps } from "./types"
 import { BrowseTab } from "./BrowseTab"
 import { useSessionBrowser } from "./useSessionBrowser"
 
 // ── Tab type ───────────────────────────────────────────────────────────────
 
-type SidebarTab = "live" | "browse" | "teams"
+type SidebarTab = "live" | "browse" | "teams" | "timeline" | "search"
 
 // ── Tab Bar ────────────────────────────────────────────────────────────────
 
@@ -54,11 +55,19 @@ function SidebarTabBar({
       </button>
       <button
         role="tab"
-        aria-selected={activeTab === "teams"}
-        onClick={() => onTabChange("teams")}
-        className={tabClassName(activeTab === "teams", "flex items-center justify-center")}
+        aria-selected={activeTab === "timeline"}
+        onClick={() => onTabChange("timeline")}
+        className={tabClassName(activeTab === "timeline", "flex items-center justify-center")}
       >
-        Teams
+        Timeline
+      </button>
+      <button
+        role="tab"
+        aria-selected={activeTab === "search"}
+        onClick={() => onTabChange("search")}
+        className={tabClassName(activeTab === "search", "flex items-center justify-center")}
+      >
+        Search
       </button>
     </div>
   )
@@ -169,9 +178,19 @@ export const SessionBrowser = memo(function SessionBrowser({
           />
         )}
 
-        {sidebarTab === "teams" && (
+        {sidebarTab === "timeline" && (
           <div className="flex-1 min-h-0">
-            <TeamsList onSelectTeam={(teamName) => onSelectTeam?.(teamName)} />
+            <SessionTimeline />
+          </div>
+        )}
+
+        {sidebarTab === "search" && (
+          <div className="flex-1 min-h-0">
+            <CrossSessionSearch
+              onOpenSession={(dirName, sessionId) => {
+                browser.loadLiveSession(dirName, `${sessionId}.jsonl`)
+              }}
+            />
           </div>
         )}
       </div>
