@@ -29,6 +29,7 @@ import { useCopyWithFeedback } from "@/hooks/useCopyWithFeedback"
 import { useAppContext } from "@/contexts/AppContext"
 import { useSessionContext } from "@/contexts/SessionContext"
 import { agentKindFromDirName, getResumeCommand } from "@/lib/sessionSource"
+import { getContextUsage } from "@/lib/format"
 import packageJson from "../../package.json"
 
 function formatTokens(n: number): string {
@@ -170,7 +171,14 @@ export const DesktopHeader = memo(function DesktopHeader({
       <div className="flex-1" />
 
       {/* Session stats */}
-      {session && (
+      {session && (() => {
+        const ctx = getContextUsage(session.rawMessages)
+        // If used > limit, the context limit detection is wrong (model string mismatch) — skip showing
+        const ctxPct = ctx && ctx.used <= ctx.limit ? ctx.percentAbsolute : null
+        const ctxColor = ctxPct !== null
+          ? ctxPct >= 90 ? "text-red-400" : ctxPct >= 70 ? "text-amber-400" : "text-green-400"
+          : ""
+        return (
         <Tooltip>
           <TooltipTrigger render={<div className="flex items-center gap-2 px-2 py-0.5 text-[10px] font-mono text-muted-foreground/60 tabular-nums cursor-default" />}>
               <span>{session.turns.length} turns</span>
@@ -182,6 +190,12 @@ export const DesktopHeader = memo(function DesktopHeader({
                   <span>${session.stats.totalCostUSD.toFixed(2)}</span>
                 </>
               )}
+              {ctxPct !== null && (
+                <>
+                  <span className="text-muted-foreground/30">|</span>
+                  <span className={ctxColor}>{ctxPct.toFixed(0)}% ctx</span>
+                </>
+              )}
           </TooltipTrigger>
           <TooltipContent side="bottom" className="p-3 space-y-1.5 min-w-[200px]">
             <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Session Stats</div>
@@ -191,6 +205,12 @@ export const DesktopHeader = memo(function DesktopHeader({
               <div className="flex justify-between"><span className="text-muted-foreground">Output tokens</span><span>{session.stats.totalOutputTokens.toLocaleString()}</span></div>
               {(session.stats.totalCacheReadTokens > 0 || session.stats.totalCacheCreationTokens > 0) && (
                 <div className="flex justify-between"><span className="text-muted-foreground">Cache read</span><span>{session.stats.totalCacheReadTokens.toLocaleString()}</span></div>
+              )}
+              {ctx && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Context used</span>
+                  <span className={ctxColor}>{ctx.used.toLocaleString()} / {ctx.limit.toLocaleString()} ({ctxPct!.toFixed(1)}%)</span>
+                </div>
               )}
               {session.stats.totalCostUSD > 0 && (
                 <div className="flex justify-between"><span className="text-muted-foreground">Cost</span><span>${session.stats.totalCostUSD.toFixed(3)}</span></div>
@@ -205,7 +225,8 @@ export const DesktopHeader = memo(function DesktopHeader({
             </div>
           </TooltipContent>
         </Tooltip>
-      )}
+        )
+      })()}
 
       <NetworkStatus
         networkUrl={networkUrl}
