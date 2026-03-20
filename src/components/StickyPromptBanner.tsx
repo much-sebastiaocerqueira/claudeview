@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useMemo, useCallback, memo } from "react"
-import { ChevronUp } from "lucide-react"
+import { ChevronUp, ChevronLeft, ChevronRight } from "lucide-react"
 import type { ParsedSession } from "@/lib/types"
 import { getUserMessageText } from "@/lib/parser"
+import { useAppContext } from "@/contexts/AppContext"
 import { cn } from "@/lib/utils"
 
 const SYSTEM_TAG_RE =
@@ -128,6 +129,9 @@ export const StickyPromptBanner = memo(function StickyPromptBanner({
     return firstLine.length > 150 ? firstLine.slice(0, 150) + "..." : firstLine
   }, [stickyTurn, session.turns])
 
+  const { dispatch } = useAppContext()
+  const totalTurns = session.turns.length
+
   const scrollToPrompt = () => {
     const container = scrollContainerRef.current
     if (!container || !stickyTurn) return
@@ -139,29 +143,61 @@ export const StickyPromptBanner = memo(function StickyPromptBanner({
     }
   }
 
+  const goToPrev = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!stickyTurn || stickyTurn.index <= 0) return
+    dispatch({ type: "JUMP_TO_TURN", index: stickyTurn.index - 1 })
+  }, [stickyTurn, dispatch])
+
+  const goToNext = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!stickyTurn || stickyTurn.index >= totalTurns - 1) return
+    dispatch({ type: "JUMP_TO_TURN", index: stickyTurn.index + 1 })
+  }, [stickyTurn, totalTurns, dispatch])
+
   if (!promptText || !stickyTurn || stickyTurn.userMsgVisible) return null
+
+  const isFirst = stickyTurn.index <= 0
+  const isLast = stickyTurn.index >= totalTurns - 1
 
   return (
     <div
-      role="button"
-      tabIndex={0}
-      aria-label={`Scroll to turn ${stickyTurn.index + 1} prompt`}
       className={cn(
         "absolute inset-x-0 top-0 z-20",
         "bg-blue-950 border-b border-blue-500/20",
-        "px-3 py-1.5 flex items-center gap-2 cursor-pointer",
-        "transition-colors duration-200 hover:bg-blue-900"
+        "px-2 py-1.5 flex items-center gap-1.5",
+        "transition-colors duration-200"
       )}
-      onClick={scrollToPrompt}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") scrollToPrompt() }}
     >
-      <span className="text-[11px] font-medium text-blue-400/80 shrink-0">
-        Turn {stickyTurn.index + 1}
-      </span>
-      <span className="text-xs text-blue-100/70 truncate min-w-0">
-        {promptText}
-      </span>
-      <ChevronUp className="size-3 text-blue-400/60 shrink-0 ml-auto" />
+      <button
+        onClick={goToPrev}
+        disabled={isFirst}
+        className="p-0.5 text-blue-400/60 hover:text-blue-300 disabled:opacity-25 disabled:cursor-default transition-colors shrink-0"
+        aria-label="Previous turn"
+      >
+        <ChevronLeft className="size-3.5" />
+      </button>
+      <button
+        className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer hover:bg-blue-900/50 rounded px-1 -mx-1 transition-colors"
+        onClick={scrollToPrompt}
+        aria-label={`Scroll to turn ${stickyTurn.index + 1} prompt`}
+      >
+        <span className="text-[11px] font-medium text-blue-400/80 shrink-0">
+          Turn {stickyTurn.index + 1}/{totalTurns}
+        </span>
+        <span className="text-xs text-blue-100/70 truncate min-w-0">
+          {promptText}
+        </span>
+        <ChevronUp className="size-3 text-blue-400/60 shrink-0 ml-auto" />
+      </button>
+      <button
+        onClick={goToNext}
+        disabled={isLast}
+        className="p-0.5 text-blue-400/60 hover:text-blue-300 disabled:opacity-25 disabled:cursor-default transition-colors shrink-0"
+        aria-label="Next turn"
+      >
+        <ChevronRight className="size-3.5" />
+      </button>
     </div>
   )
 })
