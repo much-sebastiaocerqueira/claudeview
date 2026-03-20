@@ -10,11 +10,11 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet" />
-    <title>Cogpit - Claude Code Session Dashboard</title>
+    <title>ClaudeView</title>
     <script>
       // FOUC prevention: apply theme class before first paint
       (function(){
-        var t='dark';try{t=localStorage.getItem('cogpit-theme')||'dark'}catch(e){}
+        var t='dark';try{t=localStorage.getItem('cogpit-theme')||localStorage.getItem('claudeview-theme')||'dark'}catch(e){}
         if(t==='dark'||t==='oled')document.documentElement.classList.add('dark');
         if(t==='oled')document.documentElement.classList.add('theme-oled');
         if(navigator.userAgent.includes('Electron'))document.documentElement.classList.add('electron');
