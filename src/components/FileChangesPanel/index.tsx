@@ -1,15 +1,22 @@
 import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react"
-import { FileCode2, ChevronsDownUp, ChevronsUpDown, Layers, Clock, X, Sigma, List, ChevronLeft, ChevronRight, Users } from "lucide-react"
+import { FileCode2, Users, Minus, Plus } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import type { ParsedSession } from "@/lib/types"
 import { cn } from "@/lib/utils"
+import { authFetch } from "@/lib/auth"
 import { GroupedFileCard } from "./GroupedFileCard"
-import { useFileChangesData, buildGroupedFiles, buildGroupedFilesByAgent, type AgentGroup } from "./useFileChangesData"
+import { DiffViewModal } from "../diff/DiffViewModal"
+import { useFileChangesData, buildGroupedFilesByAgent, type AgentGroup } from "./useFileChangesData"
 import { OPEN_SUBAGENT_EVENT } from "./file-change-indicators"
+import { useDiffFontSize } from "@/contexts/DiffFontSizeContext"
+import type { GroupedFile } from "./useFileChangesData"
 
 /** Custom event name for cross-panel file focus. */
 export const FOCUS_FILE_EVENT = "cogpit:focus-file"
+
+/** Diff display mode: aggregated net diff or individual per-edit diffs. */
+export type DiffMode = "net" | "per-edit"
 
 const PREFS_KEY = "cogpit:file-changes-prefs"
 
@@ -31,29 +38,26 @@ function savePref(key: string, value: unknown): void {
   } catch { /* ignore */ }
 }
 
-/** Scope: last turn, all turns, or a specific turn index. */
-type Scope = "last" | "all" | number
-
-/** Diff display mode: aggregated net diff or individual per-edit diffs. */
-export type DiffMode = "net" | "per-edit"
-
 interface FileChangesPanelProps {
   session: ParsedSession
   sessionChangeKey: number
 }
 
+/** Diff modal state managed at panel level for keyboard navigation between files. */
+interface DiffModalState {
+  head: string
+  working: string
+  filePath: string
+}
+
 function AgentGroupSection({
   group,
-  allExpanded,
   highlightPath,
-  diffMode,
-  sessionId,
+  onDiffLoaded,
 }: {
   group: AgentGroup
-  allExpanded: boolean
   highlightPath: string | null
-  diffMode: DiffMode
-  sessionId?: string
+  onDiffLoaded: (data: DiffModalState) => void
 }) {
   const name = group.agentName || group.agentId.slice(0, 8)
   const type = group.subagentType
@@ -93,10 +97,8 @@ function AgentGroupSection({
         <GroupedFileCard
           key={file.filePath}
           file={file}
-          defaultOpen={allExpanded}
           isHighlighted={highlightPath === file.filePath}
-          diffMode={diffMode}
-          sessionId={sessionId}
+          onDiffLoaded={onDiffLoaded}
         />
       ))}
     </div>
@@ -104,6 +106,7 @@ function AgentGroupSection({
 }
 
 export const FileChangesPanel = memo(function FileChangesPanel({ session, sessionChangeKey }: FileChangesPanelProps) {
+  const { fontSize, increase: increaseFontSize, decrease: decreaseFontSize } = useDiffFontSize()
   const scrollRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const isAtBottomRef = useRef(true)
@@ -112,19 +115,6 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
   const prevTurnCountRef = useRef(session.turns.length)
   const [canScrollUp, setCanScrollUp] = useState(false)
   const [canScrollDown, setCanScrollDown] = useState(false)
-  const [allExpanded, setAllExpanded] = useState(() => loadPref("expanded", true))
-  const [diffMode, setDiffMode] = useState<DiffMode>(() => loadPref("diffMode", "net"))
-
-  // Scope: "last" (default), "all", or a specific turn index
-  const [scope, setScope] = useState<Scope>(() => loadPref("scope", "last") as Scope)
-
-  // Persist toggle preferences
-  useEffect(() => { savePref("expanded", allExpanded) }, [allExpanded])
-  useEffect(() => { savePref("diffMode", diffMode) }, [diffMode])
-  useEffect(() => {
-    // Only persist "last" or "all" — numeric scope is transient (from click events)
-    if (typeof scope !== "number") savePref("scope", scope)
-  }, [scope])
 
   // Highlighted file path (from TurnChangedFiles click)
   const [highlightPath, setHighlightPath] = useState<string | null>(null)
@@ -133,34 +123,54 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
   const [groupByAgent, setGroupByAgent] = useState(() => loadPref("groupByAgent", false))
   useEffect(() => { savePref("groupByAgent", groupByAgent) }, [groupByAgent])
 
+  // Diff modal state — managed here so we can navigate between files
+  const [diffModal, setDiffModal] = useState<DiffModalState | null>(null)
+
   const {
     fileChanges,
     fileContents,
     groupedByFile,
-    groupedLastTurn,
-    lastTurnIndex,
     agentMap,
   } = useFileChangesData(session)
 
-  // Compute grouped files for specific turn on demand
-  const groupedForTurn = useMemo(() => {
-    if (typeof scope !== "number") return null
-    return buildGroupedFiles(fileChanges, scope, fileContents)
-  }, [fileChanges, scope, fileContents])
-
-  function getActiveGrouped(): typeof groupedByFile {
-    if (typeof scope === "number") return groupedForTurn ?? []
-    if (scope === "all") return groupedByFile
-    return groupedLastTurn
-  }
-  const activeGrouped = getActiveGrouped()
+  // Always show all changed files
+  const activeGrouped = groupedByFile
 
   // Agent-grouped view
   const agentGroups = useMemo<AgentGroup[]>(() => {
     if (!groupByAgent) return []
-    const effectiveScope = typeof scope === "number" ? scope : scope === "all" ? "all" : lastTurnIndex
-    return buildGroupedFilesByAgent(fileChanges, effectiveScope, agentMap, fileContents)
-  }, [groupByAgent, fileChanges, scope, lastTurnIndex, agentMap, fileContents])
+    return buildGroupedFilesByAgent(fileChanges, "all", agentMap, fileContents)
+  }, [groupByAgent, fileChanges, agentMap, fileContents])
+
+  // Flat list of all files for keyboard navigation
+  const allFiles = useMemo<GroupedFile[]>(() => {
+    if (groupByAgent) {
+      return agentGroups.flatMap((ag) => ag.files)
+    }
+    return activeGrouped
+  }, [groupByAgent, agentGroups, activeGrouped])
+
+  // Navigate to prev/next file in the diff modal
+  const handleNavigate = useCallback(async (direction: "prev" | "next") => {
+    if (!diffModal) return
+    const currentIdx = allFiles.findIndex((f) => f.filePath === diffModal.filePath)
+    if (currentIdx < 0) return
+    const nextIdx = direction === "prev" ? currentIdx - 1 : currentIdx + 1
+    if (nextIdx < 0 || nextIdx >= allFiles.length) return
+
+    const nextFile = allFiles[nextIdx]
+    try {
+      const res = await authFetch(`/api/git-file-diff?path=${encodeURIComponent(nextFile.filePath)}`)
+      const data = await res.json()
+      if (data.head !== undefined && data.working !== undefined) {
+        setDiffModal({ head: data.head, working: data.working, filePath: nextFile.filePath })
+      }
+    } catch {
+      // silently fail
+    }
+  }, [diffModal, allFiles])
+
+  const currentFileIdx = diffModal ? allFiles.findIndex((f) => f.filePath === diffModal.filePath) : -1
 
   // Listen for focus-file events from TurnChangedFiles
   useEffect(() => {
@@ -168,15 +178,11 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
       const detail = (e as CustomEvent<{ filePath: string; turnIndex: number }>).detail
       if (!detail?.filePath) return
 
-      // Switch to that specific turn's scope
-      setScope(detail.turnIndex)
-
       // Highlight and scroll to the file
       setHighlightPath(detail.filePath)
       if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current)
       highlightTimerRef.current = setTimeout(() => setHighlightPath(null), 3000)
 
-      // Scroll after a tick (to let scope change render)
       requestAnimationFrame(() => {
         const el = scrollRef.current?.querySelector(
           `[data-file-path="${CSS.escape(detail.filePath)}"]`
@@ -211,7 +217,7 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
     updateScrollIndicators()
   }, [fileChanges.length, activeGrouped.length, updateScrollIndicators])
 
-  // Reset scroll position on session switch
+  // Reset on session switch
   useEffect(() => {
     const el = scrollRef.current
     if (el) el.scrollTop = el.scrollHeight
@@ -219,8 +225,8 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
     scrollOnNextChangeRef.current = false
     prevChangeCountRef.current = fileChanges.length
     prevTurnCountRef.current = session.turns.length
-    setScope(loadPref("scope", "last") as Scope)
     setHighlightPath(null)
+    setDiffModal(null)
     updateScrollIndicators()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally only runs on session switch
   }, [sessionChangeKey])
@@ -269,17 +275,6 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
     totalFileCount = activeGrouped.length
   }
 
-  function handleScopeToggle(): void {
-    setScope(scope === "last" ? "all" : "last")
-  }
-
-  function getScopeLabel(): string {
-    if (typeof scope === "number") return `Turn ${scope + 1}`
-    if (scope === "all") return "All turns"
-    return `Last turn (T${lastTurnIndex + 1})`
-  }
-  const scopeLabel = getScopeLabel()
-
   return (
     <div className="flex flex-col h-full overflow-hidden border-border min-w-0 elevation-1">
       <div className="shrink-0 flex items-center gap-2 px-3 h-8 border-b border-border/50">
@@ -322,109 +317,33 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
           </TooltipContent>
         </Tooltip>
 
-        {/* Scope toggle */}
-        <Tooltip>
-          <TooltipTrigger render={<button
-              onClick={handleScopeToggle}
-              className={cn(
-                "p-1 transition-colors rounded",
-                scope === "all"
-                  ? "text-amber-400 bg-amber-400/10"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-              aria-label={scope === "last" ? "Show all turns" : "Show last turn only"}
-            />}>
-              {scope === "all" ? <Layers className="size-3.5" /> : <Clock className="size-3.5" />}
-          </TooltipTrigger>
-          <TooltipContent>
-            {scope === "last"
-              ? "Click for all turns"
-              : "Click for last turn only"}
-          </TooltipContent>
-        </Tooltip>
+        {/* Font size controls */}
+        <div className="flex items-center gap-0.5">
+          <Tooltip>
+            <TooltipTrigger render={<button
+                onClick={decreaseFontSize}
+                className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Decrease diff font size"
+              />}>
+                <Minus className="size-3" />
+            </TooltipTrigger>
+            <TooltipContent>Decrease font size</TooltipContent>
+          </Tooltip>
+          <span className="text-[9px] font-mono tabular-nums text-muted-foreground/70 w-4 text-center select-none">
+            {fontSize}
+          </span>
+          <Tooltip>
+            <TooltipTrigger render={<button
+                onClick={increaseFontSize}
+                className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Increase diff font size"
+              />}>
+                <Plus className="size-3" />
+            </TooltipTrigger>
+            <TooltipContent>Increase font size</TooltipContent>
+          </Tooltip>
+        </div>
 
-        {/* Diff mode toggle */}
-        <Tooltip>
-          <TooltipTrigger render={<button
-              onClick={() => setDiffMode(diffMode === "net" ? "per-edit" : "net")}
-              className={cn(
-                "p-1 transition-colors rounded",
-                diffMode === "per-edit"
-                  ? "text-violet-400 bg-violet-400/10"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-              aria-label={diffMode === "net" ? "Show per-edit diffs" : "Show net diff"}
-            />}>
-              {diffMode === "net" ? <Sigma className="size-3.5" /> : <List className="size-3.5" />}
-          </TooltipTrigger>
-          <TooltipContent>
-            {diffMode === "net"
-              ? "Switch to per-edit diffs"
-              : "Switch to net diff"}
-          </TooltipContent>
-        </Tooltip>
-
-        <Tooltip>
-          <TooltipTrigger render={<button
-              onClick={() => setAllExpanded(!allExpanded)}
-              className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-              aria-label={allExpanded ? "Collapse all" : "Expand all"}
-            />}>
-              {allExpanded ? <ChevronsDownUp className="size-3.5" /> : <ChevronsUpDown className="size-3.5" />}
-          </TooltipTrigger>
-          <TooltipContent>{allExpanded ? "Collapse all" : "Expand all"}</TooltipContent>
-        </Tooltip>
-      </div>
-
-      {/* Scope indicator bar */}
-      <div className="shrink-0 flex items-center gap-2 px-3 py-1 border-b border-border/50 bg-elevation-1/50">
-        <span className="text-[10px] text-muted-foreground/70">
-          Showing:
-        </span>
-        {/* Turn navigation arrows */}
-        {scope !== "all" && lastTurnIndex > 0 && (
-          <button
-            onClick={() => {
-              const current = typeof scope === "number" ? scope : lastTurnIndex
-              if (current > 0) setScope(current - 1)
-            }}
-            disabled={(typeof scope === "number" ? scope : lastTurnIndex) <= 0}
-            className="p-0.5 text-muted-foreground/50 hover:text-foreground disabled:opacity-25 disabled:cursor-default transition-colors"
-            title="Previous turn"
-          >
-            <ChevronLeft className="size-3" />
-          </button>
-        )}
-        <span className={cn(
-          "text-[10px] font-medium",
-          typeof scope === "number" ? "text-blue-400" : "text-muted-foreground",
-        )}>
-          {scopeLabel}
-        </span>
-        {scope !== "all" && lastTurnIndex > 0 && (
-          <button
-            onClick={() => {
-              if (typeof scope === "number") {
-                if (scope + 1 >= lastTurnIndex) setScope("last")
-                else setScope(scope + 1)
-              }
-            }}
-            disabled={scope === "last"}
-            className="p-0.5 text-muted-foreground/50 hover:text-foreground disabled:opacity-25 disabled:cursor-default transition-colors"
-            title="Next turn"
-          >
-            <ChevronRight className="size-3" />
-          </button>
-        )}
-        {typeof scope === "number" && (
-          <button
-            onClick={() => setScope("last")}
-            className="p-0.5 text-muted-foreground/50 hover:text-foreground transition-colors"
-            title="Back to last turn"
-          >
-            <X className="size-3" />
-          </button>
-        )}
       </div>
 
       <div className="relative flex-1 min-h-0">
@@ -447,15 +366,13 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
                   <AgentGroupSection
                     key={ag.agentId}
                     group={ag}
-                    allExpanded={allExpanded}
                     highlightPath={highlightPath}
-                    diffMode={diffMode}
-                    sessionId={session.sessionId}
+                    onDiffLoaded={setDiffModal}
                   />
                 ))
               ) : (
                 <div className="text-[11px] text-muted-foreground/50 text-center py-4">
-                  No subagent changes in {scopeLabel.toLowerCase()}
+                  No subagent changes in this session
                 </div>
               )
             ) : activeGrouped.length > 0 ? (
@@ -463,15 +380,13 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
                 <GroupedFileCard
                   key={file.filePath}
                   file={file}
-                  defaultOpen={allExpanded}
                   isHighlighted={highlightPath === file.filePath}
-                  diffMode={diffMode}
-                  sessionId={session.sessionId}
+                  onDiffLoaded={setDiffModal}
                 />
               ))
             ) : (
               <div className="text-[11px] text-muted-foreground/50 text-center py-4">
-                No file changes in {scopeLabel.toLowerCase()}
+                No file changes in this session
               </div>
             )}
           </div>
@@ -485,6 +400,20 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
           )}
         />
       </div>
+
+      {/* Diff modal — rendered at panel level for file-to-file keyboard navigation */}
+      {diffModal && (
+        <DiffViewModal
+          oldContent={diffModal.head}
+          newContent={diffModal.working}
+          filePath={diffModal.filePath}
+          onClose={() => setDiffModal(null)}
+          onPrev={() => handleNavigate("prev")}
+          onNext={() => handleNavigate("next")}
+          hasPrev={currentFileIdx > 0}
+          hasNext={currentFileIdx >= 0 && currentFileIdx < allFiles.length - 1}
+        />
+      )}
     </div>
   )
 })

@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useState } from "react"
-import { X } from "lucide-react"
+import { X, ChevronLeft, ChevronRight } from "lucide-react"
+import { cn } from "@/lib/utils"
 import { FullDiffView } from "./FullDiffView"
 
 export interface DiffViewModalProps {
@@ -9,6 +10,12 @@ export interface DiffViewModalProps {
   additions?: number
   deletions?: number
   onClose: () => void
+  /** Navigate to the previous file in the list. */
+  onPrev?: () => void
+  /** Navigate to the next file in the list. */
+  onNext?: () => void
+  hasPrev?: boolean
+  hasNext?: boolean
 }
 
 export function DiffViewModal({
@@ -18,19 +25,29 @@ export function DiffViewModal({
   additions,
   deletions,
   onClose,
+  onPrev,
+  onNext,
+  hasPrev = false,
+  hasNext = false,
 }: DiffViewModalProps) {
-  const [mode, setMode] = useState<"split" | "unified">("split")
+  const [mode, setMode] = useState<"split" | "unified">(oldContent ? "split" : "unified")
+
+  // Reset mode when navigating to a different file
+  useEffect(() => {
+    setMode(oldContent ? "split" : "unified")
+  }, [filePath, oldContent])
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose()
+      if (e.key === "ArrowLeft" && hasPrev) onPrev?.()
+      if (e.key === "ArrowRight" && hasNext) onNext?.()
     },
-    [onClose],
+    [onClose, onPrev, onNext, hasPrev, hasNext],
   )
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown)
-    // Prevent background scroll
     document.body.style.overflow = "hidden"
     return () => {
       document.removeEventListener("keydown", handleKeyDown)
@@ -43,6 +60,35 @@ export function DiffViewModal({
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-2">
         <div className="flex items-center gap-3 min-w-0">
+          {/* Prev / Next navigation */}
+          {(onPrev || onNext) && (
+            <div className="flex items-center gap-0.5 shrink-0">
+              <button
+                onClick={onPrev}
+                disabled={!hasPrev}
+                className={cn(
+                  "p-1 rounded hover:bg-accent transition-colors",
+                  !hasPrev && "opacity-25 cursor-default",
+                )}
+                aria-label="Previous file"
+                title="Previous file (←)"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              <button
+                onClick={onNext}
+                disabled={!hasNext}
+                className={cn(
+                  "p-1 rounded hover:bg-accent transition-colors",
+                  !hasNext && "opacity-25 cursor-default",
+                )}
+                aria-label="Next file"
+                title="Next file (→)"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
+          )}
           <span className="font-mono text-sm truncate">{filePath}</span>
           {(additions !== undefined || deletions !== undefined) && (
             <span className="text-xs text-muted-foreground shrink-0">
