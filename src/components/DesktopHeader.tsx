@@ -29,7 +29,7 @@ import { useCopyWithFeedback } from "@/hooks/useCopyWithFeedback"
 import { useAppContext } from "@/contexts/AppContext"
 import { useSessionContext } from "@/contexts/SessionContext"
 import { agentKindFromDirName, getResumeCommand } from "@/lib/sessionSource"
-import { getContextUsage } from "@/lib/format"
+import { getContextUsage, projectName } from "@/lib/format"
 import packageJson from "../../package.json"
 
 function formatTokens(n: number): string {
@@ -89,10 +89,14 @@ export const DesktopHeader = memo(function DesktopHeader({
   layoutMode,
   onSetLayoutMode,
 }: DesktopHeaderProps) {
-  const { config: { networkUrl, networkAccessDisabled } } = useAppContext()
+  const { dispatch, config: { networkUrl, networkAccessDisabled } } = useAppContext()
   const { session, sessionSource, isLive } = useSessionContext()
   const [cmdCopied, copyCmd] = useCopyWithFeedback()
   const [urlCopied, copyUrl] = useCopyWithFeedback()
+
+  const dirName = sessionSource?.dirName ?? null
+  const projName = session?.cwd ? projectName(session.cwd) : (dirName ?? null)
+  const sessionLabel = session?.slug || session?.sessionId?.slice(0, 8) || null
 
   function handleCopyResumeCmd(): void {
     if (!session) return
@@ -105,67 +109,75 @@ export const DesktopHeader = memo(function DesktopHeader({
     copyUrl(networkUrl)
   }
 
+  function goToProjectSessions(): void {
+    if (!dirName) return
+    dispatch({ type: "GO_HOME", isMobile: false })
+    dispatch({ type: "SET_DASHBOARD_PROJECT", dirName })
+  }
+
   return (
     <header className="flex h-8 shrink-0 items-center border-b border-border/50 bg-elevation-2 px-2.5 electron-drag">
-      <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center gap-1 min-w-0">
         <Tooltip>
           <TooltipTrigger render={<button
               onClick={onGoHome}
               className="shrink-0 transition-opacity hover:opacity-70"
-              aria-label={session ? "Back to Dashboard" : "ClaudeView"}
+              aria-label="All Projects"
             />}>
               <Eye className="size-4 text-blue-400" />
           </TooltipTrigger>
-          <TooltipContent>{session ? "Back to Dashboard" : "ClaudeView"}</TooltipContent>
+          <TooltipContent>All Projects</TooltipContent>
         </Tooltip>
 
-        <span className="text-[11px] font-medium text-muted-foreground/60 select-none">ClaudeView</span>
+        <button
+          onClick={onGoHome}
+          className="text-[11px] font-medium text-muted-foreground/60 hover:text-muted-foreground transition-colors select-none shrink-0"
+        >
+          ClaudeView
+        </button>
 
-        {session ? (
+        {session && projName ? (
           <>
-            <Tooltip>
-              <TooltipTrigger render={<button
-                  className="truncate max-w-[220px] text-sm font-medium text-foreground hover:text-foreground transition-colors"
-                  onClick={handleCopyResumeCmd}
-                />}>
-                  {cmdCopied ? (
-                    <span className="flex items-center gap-1.5 text-green-400">
-                      <Check className="size-3" /> Copied
-                    </span>
-                  ) : (
-                    session.cwd?.split("/").pop() || session.slug || session.sessionId.slice(0, 8)
-                  )}
-              </TooltipTrigger>
-              <TooltipContent className="text-xs space-y-1">
-                <div>Click to copy resume command</div>
-                {session.cwd && (
-                  <div className="font-mono text-muted-foreground">{session.cwd}</div>
-                )}
-              </TooltipContent>
-            </Tooltip>
+            <ChevronRight className="size-3 text-muted-foreground/30 shrink-0" />
+            <button
+              onClick={goToProjectSessions}
+              className="text-[11px] font-medium text-muted-foreground/60 hover:text-blue-400 transition-colors truncate max-w-[120px]"
+              title={`View all sessions in ${projName}`}
+            >
+              {projName}
+            </button>
+            {sessionLabel && (
+              <>
+                <ChevronRight className="size-3 text-muted-foreground/30 shrink-0" />
+                <Tooltip>
+                  <TooltipTrigger render={<button
+                      className="text-[11px] font-medium text-foreground/80 truncate max-w-[180px]"
+                      onClick={handleCopyResumeCmd}
+                    />}>
+                      {cmdCopied ? (
+                        <span className="flex items-center gap-1 text-green-400">
+                          <Check className="size-3" /> Copied
+                        </span>
+                      ) : (
+                        sessionLabel
+                      )}
+                  </TooltipTrigger>
+                  <TooltipContent className="text-xs space-y-1">
+                    <div>Click to copy resume command</div>
+                    {session.cwd && (
+                      <div className="font-mono text-muted-foreground">{session.cwd}</div>
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            )}
             {isLive && <LiveIndicator aria-label="Session is live" />}
-            <Tooltip>
-              <TooltipTrigger render={<Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
-                  onClick={handleCopyResumeCmd}
-                  aria-label={cmdCopied ? "Copied!" : "Copy resume command"}
-                />}>
-                  {cmdCopied ? (
-                    <Check className="size-3 text-green-400" />
-                  ) : (
-                    <Copy className="size-3" />
-                  )}
-              </TooltipTrigger>
-              <TooltipContent>
-                {cmdCopied ? "Copied!" : "Copy resume command"}
-              </TooltipContent>
-            </Tooltip>
           </>
-        ) : (
-          <h1 className="text-sm font-semibold tracking-tight">ClaudeView</h1>
-        )}
+        ) : !session ? (
+          <span className="text-[11px] font-medium text-muted-foreground/40 select-none ml-1">
+            v{packageJson.version}
+          </span>
+        ) : null}
       </div>
 
       <div className="flex-1" />
