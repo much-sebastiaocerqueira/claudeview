@@ -35,7 +35,7 @@ export function UpdateBanner() {
       <div className="flex items-center gap-3 bg-emerald-500/10 border-b border-emerald-500/20 px-4 py-2 text-sm">
         <ArrowUpCircle className="size-4 text-emerald-400 shrink-0" />
         <span className="text-emerald-300">
-          Cogpit v{downloadedInfo.version} is ready — restart to apply
+          ClaudeView v{downloadedInfo.version} is ready — restart to apply
         </span>
         <div className="flex-1" />
         <button
@@ -55,7 +55,7 @@ export function UpdateBanner() {
       <div className="flex items-center gap-3 bg-blue-500/10 border-b border-blue-500/20 px-4 py-2 text-sm">
         <ArrowUpCircle className="size-4 text-blue-400 shrink-0" />
         <span className="text-blue-300">
-          Cogpit v{updateInfo.version} is available
+          ClaudeView v{updateInfo.version} is available
         </span>
         <div className="flex-1" />
         {updateInfo.platform === "mac" ? (

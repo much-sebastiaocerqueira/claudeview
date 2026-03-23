@@ -94,7 +94,7 @@ export function ProjectsView({
           <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
             <Cog className="size-5 sm:size-7 text-blue-400" />
             <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-foreground">
-              Cogpit
+              ClaudeView
             </h1>
           </div>
           <p className="text-xs sm:text-sm text-muted-foreground">Session Viewer & Monitor</p>

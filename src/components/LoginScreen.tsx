@@ -54,7 +54,7 @@ export function LoginScreen({ onAuthenticated }: LoginScreenProps) {
             <Lock className="size-5 text-blue-400" />
           </div>
           <div className="text-center">
-            <h1 className="text-lg font-semibold text-foreground">Cogpit</h1>
+            <h1 className="text-lg font-semibold text-foreground">ClaudeView</h1>
             <p className="text-sm text-muted-foreground">Enter the password to connect</p>
           </div>
         </div>
