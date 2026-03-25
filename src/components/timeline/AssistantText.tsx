@@ -53,32 +53,16 @@ interface AssistantTextProps {
 
 export const AssistantText = memo(function AssistantText({
   text,
-  model,
-  tokenUsage,
-  timestamp,
+  model: _model,
+  tokenUsage: _tokenUsage,
+  timestamp: _timestamp,
 }: AssistantTextProps) {
   const markdownText = useMemo(() => preprocessImagePaths(text), [text])
 
   if (!text) return null
 
   return (
-    <div className="group">
-      {(model || tokenUsage || timestamp) && (
-        <div className="flex items-center gap-1.5 justify-end mb-1">
-          {tokenUsage && <TokenUsageBadge usage={tokenUsage} />}
-          {model && (
-            <span className="text-[10px] text-muted-foreground/40">
-              {shortenModel(model)}
-            </span>
-          )}
-          {model && timestamp && <span className="text-[10px] text-muted-foreground/20">·</span>}
-          {timestamp && (
-            <span className="text-[10px] text-muted-foreground/40">
-              {new Date(timestamp).toLocaleTimeString()}
-            </span>
-          )}
-        </div>
-      )}
+    <div className="rounded-2xl bg-amber-500/[0.06] border border-amber-500/15 px-3.5 py-2.5">
       <div className="text-sm break-words overflow-hidden">
         <ReactMarkdown components={markdownComponents} remarkPlugins={markdownPlugins}>{markdownText}</ReactMarkdown>
       </div>

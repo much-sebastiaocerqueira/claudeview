@@ -22,7 +22,7 @@ async function createWindow(port: number) {
     height: 900,
     minWidth: 800,
     minHeight: 600,
-    title: "Cogpit",
+    title: "ClaudeView",
     titleBarStyle: "hiddenInset",
     trafficLightPosition: { x: 16, y: 14 },
     backgroundColor: "#09090b",
@@ -111,7 +111,7 @@ app.whenReady().then(async () => {
     return
   }
 
-  console.log(`Cogpit server ready on port ${port} (utility process)`)
+  console.log(`ClaudeView server ready on port ${port} (utility process)`)
 
   // Grant microphone permission for voice input (Whisper WASM)
   session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {

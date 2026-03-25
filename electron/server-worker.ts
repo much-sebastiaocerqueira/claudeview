@@ -35,7 +35,7 @@ process.parentPort.on("message", async ({ data }: { data: WorkerConfig }) => {
       return
     }
 
-    console.log(`[server-worker] Cogpit server listening on http://${listenHost}:${port}`)
+    console.log(`[server-worker] ClaudeView server listening on http://${listenHost}:${port}`)
     process.parentPort.postMessage({ type: "ready", port })
   } catch (err) {
     console.error("[server-worker] Failed to start server:", err)

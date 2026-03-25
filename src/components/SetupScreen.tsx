@@ -37,7 +37,7 @@ export function SetupScreen({ onConfigured }: SetupScreenProps) {
       <Card className="w-full max-w-md mx-4 p-6 elevation-1 border-border">
         <div className="flex flex-col items-center gap-4">
           <Cog className="size-8 text-blue-400" />
-          <h1 className="text-xl font-semibold tracking-tight">Cogpit Setup</h1>
+          <h1 className="text-xl font-semibold tracking-tight">ClaudeView Setup</h1>
           <p className="text-sm text-muted-foreground text-center leading-relaxed">
             Enter the path to your <code className="rounded bg-elevation-2 px-1.5 py-0.5 text-xs text-foreground">.claude</code> directory
             to get started. This is typically located at{" "}

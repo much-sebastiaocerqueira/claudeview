@@ -15,7 +15,7 @@ import { useAppContext } from "@/contexts/AppContext"
 import { useSessionContext } from "@/contexts/SessionContext"
 import type { Turn, TurnContentBlock } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { formatDuration, getTurnDuration } from "@/lib/format"
+import { formatDuration, getTurnDuration, shortenModel } from "@/lib/format"
 
 // ── Style constants ──────────────────────────────────────────────────────────
 
@@ -131,7 +131,7 @@ const TurnSectionInner = memo(function TurnSectionInner({
     <div
       ref={ref}
       className={cn(
-        "group relative py-5 px-4",
+        "group relative py-4 px-4",
         isActive && "ring-1 ring-blue-500/30",
       )}
     >
@@ -145,7 +145,7 @@ const TurnSectionInner = memo(function TurnSectionInner({
       />
 
       {isNear ? (
-        <div ref={contentRef} className="space-y-3">
+        <div ref={contentRef} className="space-y-2.5">
           {turn.userMessage && (
             <div className={cn("rounded-2xl p-3", isSubAgentView ? CARD_STYLES.userAgent : CARD_STYLES.user)}>
               <UserMessage
@@ -204,7 +204,7 @@ function TurnHeader({
   const durationMs = isTurnDone ? getTurnDuration(turn) : null
 
   return (
-    <div className="flex items-center gap-2 mb-4">
+    <div className="flex items-center gap-2 mb-3">
       <div className="flex items-center justify-center w-6 h-6 rounded-full bg-elevation-2 border border-border/50 text-[10px] font-mono text-muted-foreground shrink-0">
         {index + 1}
       </div>
@@ -212,6 +212,11 @@ function TurnHeader({
       {turn.timestamp && (
         <span className="text-[10px] text-muted-foreground/40">
           {new Date(turn.timestamp).toLocaleTimeString()}
+        </span>
+      )}
+      {turn.model && (
+        <span className="text-[10px] text-muted-foreground/30 font-mono">
+          {shortenModel(turn.model)}
         </span>
       )}
       {onRestoreToHere && (

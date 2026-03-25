@@ -311,9 +311,9 @@ export const ToolCallCard = memo(function ToolCallCard({ toolCall, expandAll, is
   return (
     <div
       className={cn(
-        "py-1.5",
-        toolCall.isError && "bg-red-950/10 rounded-md px-2",
-        isCompactMobile && "cursor-pointer active:bg-white/[0.03] rounded-sm",
+        "rounded-lg border border-border/15 bg-white/[0.02] px-2.5 py-2",
+        toolCall.isError && "bg-red-950/10 border-red-500/20",
+        isCompactMobile && "cursor-pointer active:bg-white/[0.05]",
       )}
       onClick={isCompactMobile ? handleCompactTap : undefined}
     >
@@ -335,40 +335,35 @@ export const ToolCallCard = memo(function ToolCallCard({ toolCall, expandAll, is
           )}
         </div>
         <div className="flex items-center gap-1.5 flex-shrink-0">
-          {/* Hide timestamp on mobile compact mode to save space */}
-          {toolCall.timestamp && !isCompactMobile && (
-            <span className="text-[10px] text-muted-foreground/40 font-mono tabular-nums">
-              {new Date(toolCall.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-            </span>
+          {!isCompactMobile && (
+            <div className="flex items-center gap-1.5">
+              {hasEditDiff && (
+                <ToggleButton
+                  isOpen={showDiff}
+                  onClick={() => setDiffOpen(!diffOpen)}
+                  label="Diff"
+                  activeClass="text-amber-400"
+                />
+              )}
+              <ToggleButton
+                isOpen={showInput}
+                onClick={() => setInputOpen(!inputOpen)}
+                label="Input"
+                activeClass="text-blue-400"
+              />
+              {toolCall.result !== null && (
+                <ToggleButton
+                  isOpen={showResult}
+                  onClick={() => setResultOpen(!resultOpen)}
+                  label="Result"
+                  activeClass="text-green-400"
+                />
+              )}
+            </div>
           )}
           <StatusIcon toolCall={toolCall} isAgentActive={isAgentActive} />
         </div>
       </div>
-
-      {!isCompactMobile && (
-        <div className="flex gap-3 mt-1">
-          {hasEditDiff && (
-            <ToggleButton
-              isOpen={showDiff}
-              onClick={() => setDiffOpen(!diffOpen)}
-              label="Diff"
-              activeClass="text-amber-400"
-            />
-          )}
-          <ToggleButton
-            isOpen={showInput}
-            onClick={() => setInputOpen(!inputOpen)}
-            label="Input"
-          />
-          {toolCall.result !== null && (
-            <ToggleButton
-              isOpen={showResult}
-              onClick={() => setResultOpen(!resultOpen)}
-              label="Result"
-            />
-          )}
-        </div>
-      )}
 
       {showDiff && hasEditDiff && (
         <EditDiffView

@@ -95,7 +95,7 @@ export const ChatArea = memo(function ChatArea({
           onScroll={handleScroll}
           className={cn("h-full overflow-y-auto overflow-x-hidden elevation-1", isMobile && "mobile-scroll")}
         >
-          <div className={isMobile ? "py-3 px-1 pb-24" : cn("mx-auto max-w-3xl pt-4", hasTodos ? "pb-48" : "pb-32")}>
+          <div className={isMobile ? "py-3 px-1 pb-24" : cn("mx-auto max-w-5xl pt-4", hasTodos ? "pb-48" : "pb-32")}>
             <ErrorBoundary fallbackMessage="Failed to render conversation timeline">
               {showConversation && (
                 <ConversationTimeline chatScrollRef={chatScrollRef} />

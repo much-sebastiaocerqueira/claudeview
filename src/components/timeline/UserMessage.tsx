@@ -416,13 +416,6 @@ export const UserMessage = memo(function UserMessage({ content, timestamp, onEdi
             )}
           </button>
         )}
-        {timestamp && (
-          <div className="flex items-center mt-1.5 ml-auto">
-            <span className="text-[10px] text-muted-foreground/50">
-              {new Date(timestamp).toLocaleTimeString()}
-            </span>
-          </div>
-        )}
       </div>
 
       {lightboxIndex !== null && (
