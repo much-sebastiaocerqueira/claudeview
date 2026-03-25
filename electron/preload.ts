@@ -1,5 +1,11 @@
 import { contextBridge, ipcRenderer } from "electron"
 
+contextBridge.exposeInMainWorld("electronWindow", {
+  openNewWindow: (path: string) => {
+    ipcRenderer.send("open-new-window", path)
+  },
+})
+
 contextBridge.exposeInMainWorld("electronUpdater", {
   onUpdateAvailable: (cb: (info: { version: string; url: string; platform: string }) => void) => {
     ipcRenderer.on("update-available", (_event, info) => cb(info))

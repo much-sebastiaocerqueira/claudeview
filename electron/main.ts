@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu, session, shell, systemPreferences, utilityProcess } from "electron"
+import { app, BrowserWindow, ipcMain, Menu, session, shell, systemPreferences, utilityProcess } from "electron"
 import { execSync } from "node:child_process"
 import { join } from "node:path"
 import { initUpdater } from "./updater.ts"
@@ -15,9 +15,10 @@ try {
 
 let mainWindow: BrowserWindow | null = null
 let serverProcess: Electron.UtilityProcess | null = null
+let serverPort: number | null = null
 
-async function createWindow(port: number) {
-  mainWindow = new BrowserWindow({
+function createWindow(port: number, path = "/"): BrowserWindow {
+  const win = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 800,
@@ -35,13 +36,13 @@ async function createWindow(port: number) {
   })
 
   // Open external links in system browser
-  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+  win.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
     return { action: "deny" }
   })
 
   // Intercept in-page link clicks that would navigate away from the app
-  mainWindow.webContents.on("will-navigate", (event, url) => {
+  win.webContents.on("will-navigate", (event, url) => {
     const appOrigin = `http://127.0.0.1:${port}`
     if (!url.startsWith(appOrigin)) {
       event.preventDefault()
@@ -51,11 +52,9 @@ async function createWindow(port: number) {
 
   // Always load from the Express server — it serves the built renderer
   // and handles all API routes on the same origin (no proxy needed).
-  mainWindow.loadURL(`http://127.0.0.1:${port}`)
+  win.loadURL(`http://127.0.0.1:${port}${path}`)
 
-  mainWindow.on("closed", () => {
-    mainWindow = null
-  })
+  return win
 }
 
 /**
@@ -155,17 +154,26 @@ app.whenReady().then(async () => {
     },
   ]))
 
-  await createWindow(port)
+  serverPort = port
+
+  mainWindow = createWindow(port)
+  mainWindow.on("closed", () => { mainWindow = null })
 
   // Initialize auto-updater / update notifications
-  if (mainWindow) {
-    initUpdater(mainWindow)
-  }
+  initUpdater(mainWindow)
+
+  // IPC: open a session in a new window
+  ipcMain.on("open-new-window", (_event, path: string) => {
+    if (serverPort) {
+      createWindow(serverPort, path || "/")
+    }
+  })
 
   // macOS: re-create window when dock icon clicked
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow(port)
+    if (BrowserWindow.getAllWindows().length === 0 && serverPort) {
+      mainWindow = createWindow(serverPort)
+      mainWindow.on("closed", () => { mainWindow = null })
     }
   })
 })
