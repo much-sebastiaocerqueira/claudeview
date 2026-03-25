@@ -1,7 +1,7 @@
 import { memo, useRef, useLayoutEffect } from "react"
 import { useNearViewport } from "@/hooks/useNearViewport"
 import { Clock, RotateCcw } from "lucide-react"
-import { UserMessage } from "./UserMessage"
+import { UserMessage, isBackgroundCommandMessage } from "./UserMessage"
 import { AssistantText } from "./AssistantText"
 import { SubAgentPanel } from "./SubAgentPanel"
 import { BackgroundAgentPanel } from "./BackgroundAgentPanel"
@@ -147,14 +147,23 @@ const TurnSectionInner = memo(function TurnSectionInner({
       {isNear ? (
         <div ref={contentRef} className="space-y-2.5">
           {turn.userMessage && (
-            <div className={cn("rounded-2xl p-3", isSubAgentView ? CARD_STYLES.userAgent : CARD_STYLES.user)}>
+            isBackgroundCommandMessage(turn.userMessage) ? (
               <UserMessage
                 content={turn.userMessage}
                 timestamp={turn.timestamp}
                 onEditCommand={onEditCommand}
                 onExpandCommand={onExpandCommand}
               />
-            </div>
+            ) : (
+              <div className={cn("rounded-2xl p-3", isSubAgentView ? CARD_STYLES.userAgent : CARD_STYLES.user)}>
+                <UserMessage
+                  content={turn.userMessage}
+                  timestamp={turn.timestamp}
+                  onEditCommand={onEditCommand}
+                  onExpandCommand={onExpandCommand}
+                />
+              </div>
+            )
           )}
 
           <ContentBlocks

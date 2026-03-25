@@ -149,6 +149,10 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
     return activeGrouped
   }, [groupByAgent, agentGroups, activeGrouped])
 
+  // Keep a ref so the FOCUS_FILE_EVENT handler can access the latest file list
+  const allFilesRef = useRef(allFiles)
+  allFilesRef.current = allFiles
+
   // Navigate to prev/next file in the diff modal
   const handleNavigate = useCallback((direction: "prev" | "next") => {
     if (!diffModal) return
@@ -180,6 +184,12 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
         ) as HTMLElement | null
         el?.scrollIntoView({ behavior: "smooth", block: "nearest" })
       })
+
+      // Open the diff modal for the clicked file
+      const match = allFilesRef.current.find((f) => f.filePath === detail.filePath)
+      if (match) {
+        setDiffModal({ head: match.netOriginal, working: match.netCurrent, filePath: match.filePath })
+      }
     }
 
     window.addEventListener(FOCUS_FILE_EVENT, handler)

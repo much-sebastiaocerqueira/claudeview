@@ -13,6 +13,21 @@ export const ThinkingBlock = memo(function ThinkingBlock({ blocks, expandAll }: 
 
   if (blocks.length === 0) return null
 
+  // Check if any blocks have visible thinking content (non-redacted)
+  const visibleBlocks = blocks.filter((b) => b.thinking)
+  const allRedacted = visibleBlocks.length === 0
+
+  // All thinking is redacted — show a compact indicator (not expandable)
+  if (allRedacted) {
+    return (
+      <div className="flex items-center gap-1.5 py-0.5">
+        <span className="text-[10px] text-violet-400/50 italic">
+          Thinking... ({blocks.length} block{blocks.length > 1 ? "s" : ""})
+        </span>
+      </div>
+    )
+  }
+
   if (isOpen) {
     return (
       <div className="space-y-2">
@@ -22,10 +37,10 @@ export const ThinkingBlock = memo(function ThinkingBlock({ blocks, expandAll }: 
             className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
           >
             <ChevronDown className="size-3" />
-            <span>Thinking... ({blocks.length} block{blocks.length > 1 ? "s" : ""})</span>
+            <span>Thinking... ({visibleBlocks.length} block{visibleBlocks.length > 1 ? "s" : ""})</span>
           </button>
         )}
-        {blocks.map((block, i) => (
+        {visibleBlocks.map((block, i) => (
           <pre
             key={i}
             className="text-xs text-muted-foreground/70 font-mono whitespace-pre-wrap break-words max-h-96 overflow-y-auto"
@@ -44,7 +59,7 @@ export const ThinkingBlock = memo(function ThinkingBlock({ blocks, expandAll }: 
     >
       <ChevronRight className="size-3.5 text-muted-foreground shrink-0" />
       <span className="text-xs text-muted-foreground shrink-0">
-        Thinking... ({blocks.length} block{blocks.length > 1 ? "s" : ""})
+        Thinking... ({visibleBlocks.length} block{visibleBlocks.length > 1 ? "s" : ""})
       </span>
     </button>
   )

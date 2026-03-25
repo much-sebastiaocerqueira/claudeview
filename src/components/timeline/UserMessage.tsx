@@ -6,6 +6,7 @@ import type { UserContent } from "@/lib/types"
 import { getUserMessageText, getUserMessageImages } from "@/lib/parser"
 import { cn } from "@/lib/utils"
 import { CompletedIcon, FailedIcon, RunningIcon, ProcessingIcon } from "@/components/ui/StatusIcons"
+import { useDiffFontSize } from "@/contexts/DiffFontSizeContext"
 
 const SYSTEM_TAG_RE =
   /<(?:system-reminder|local-command-caveat|command-name|command-message|command-args|teammate-message|env|claude_background_info|fast_mode_info|gitStatus)[^>]*>[\s\S]*?<\/(?:system-reminder|local-command-caveat|command-name|command-message|command-args|teammate-message|env|claude_background_info|fast_mode_info|gitStatus)>/g
@@ -137,6 +138,25 @@ function TaskNotificationCard({ notification }: { notification: TaskNotification
   )
 }
 
+// ── Background command completion detection ─────────────────────────────
+
+const BG_COMMAND_RE = /^Background command "(.+?)" completed \(exit code (\d+)\)\s*\n?(?:Read the output file to retrieve the result:\s*\S+)?$/s
+
+function parseBackgroundCommand(text: string): { description: string; exitCode: number } | null {
+  const m = text.trim().match(BG_COMMAND_RE)
+  if (!m) return null
+  return { description: m[1], exitCode: parseInt(m[2], 10) }
+}
+
+/** Check if a user message is purely a background command completion notification. */
+export function isBackgroundCommandMessage(content: UserContent): boolean {
+  const text = getUserMessageText(content)
+  const clean = stripSystemTags(text)
+  const { remainingText } = parseTaskNotifications(clean)
+  const { remainingText: final } = parseLocalCommandOutputs(remainingText)
+  return parseBackgroundCommand(final) !== null
+}
+
 function stripSystemTags(text: string): string {
   return text.replace(SYSTEM_TAG_RE, "").trim()
 }
@@ -262,6 +282,7 @@ interface UserMessageProps {
 }
 
 export const UserMessage = memo(function UserMessage({ content, timestamp, onEditCommand, onExpandCommand }: UserMessageProps) {
+  const { fontSize } = useDiffFontSize()
   const [expanded, setExpanded] = useState(false)
   const [showRaw, setShowRaw] = useState(false)
   const [commandExpanded, setCommandExpanded] = useState(false)
@@ -298,6 +319,7 @@ export const UserMessage = memo(function UserMessage({ content, timestamp, onEdi
     () => images.map((img) => `data:${img.source.media_type};base64,${img.source.data}`),
     [images]
   )
+  const bgCommand = useMemo(() => parseBackgroundCommand(textAfterOutputs), [textAfterOutputs])
   const hasTags = rawText !== cleanText
   const displayText = showRaw ? rawText : textAfterOutputs
 
@@ -395,11 +417,24 @@ export const UserMessage = memo(function UserMessage({ content, timestamp, onEdi
           </div>
         )}
 
-        {visibleText && (
-          <div className="max-w-none text-sm break-words overflow-hidden">
+        {bgCommand && !showRaw ? (
+          <div className="flex items-center gap-2 py-0.5">
+            {bgCommand.exitCode === 0
+              ? <CompletedIcon className="size-3.5 text-amber-400/70 shrink-0" />
+              : <FailedIcon className="size-3.5 text-red-400/70 shrink-0" />
+            }
+            <span className="text-[11px] text-amber-400/60 italic truncate">
+              {bgCommand.description}
+              {bgCommand.exitCode !== 0 && (
+                <span className="text-red-400/60 ml-1">(exit {bgCommand.exitCode})</span>
+              )}
+            </span>
+          </div>
+        ) : visibleText ? (
+          <div className="max-w-none break-words overflow-hidden" style={{ fontSize }}>
             <ReactMarkdown components={markdownComponents} remarkPlugins={markdownPlugins}>{visibleText}</ReactMarkdown>
           </div>
-        )}
+        ) : null}
         {displayText.length > 500 && (
           <button
             onClick={() => setExpanded(!expanded)}
