@@ -11,6 +11,7 @@ import { ConversationTimeline } from "@/components/ConversationTimeline"
 import { StickyPromptBanner } from "@/components/StickyPromptBanner"
 import { PendingTurnPreview } from "@/components/PendingTurnPreview"
 import { AgentStatusIndicator } from "@/components/timeline/AgentStatusIndicator"
+import { BackgroundAgentTracker } from "@/components/timeline/BackgroundAgentTracker"
 import { ErrorBoundary } from "@/components/ErrorBoundary"
 import { FindInSession, type FindInSessionHandle } from "@/components/FindInSession"
 import { useAppContext } from "@/contexts/AppContext"
@@ -20,11 +21,14 @@ import { cn } from "@/lib/utils"
 interface ChatAreaProps {
   searchInputRef: RefObject<HTMLInputElement | null>
   hasTodos?: boolean
+  /** Opens a background process output in the ProcessPanel */
+  onViewOutput?: (id: string, outputPath: string, title: string) => void
 }
 
 export const ChatArea = memo(function ChatArea({
   searchInputRef,
   hasTodos,
+  onViewOutput,
 }: ChatAreaProps) {
   const { state, dispatch, isMobile } = useAppContext()
   const { session, actions } = useSessionContext()
@@ -112,6 +116,9 @@ export const ChatArea = memo(function ChatArea({
             </ErrorBoundary>
           </div>
         </div>
+
+        {/* Background agent tracker */}
+        <BackgroundAgentTracker onViewOutput={onViewOutput} />
 
         {/* Scroll-to-bottom FAB */}
         <button
