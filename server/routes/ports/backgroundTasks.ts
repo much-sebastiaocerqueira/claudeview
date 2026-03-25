@@ -86,8 +86,6 @@ export async function handleBackgroundTasks(
         if (p > 0 && p < 65536) ports.add(p)
       }
 
-      if (ports.size === 0) continue // skip tasks with no detected ports
-
       const lines = content.split("\n").filter((l) => l.trim() && !l.startsWith("[2K"))
       const preview = lines.slice(0, 5).join("\n").slice(0, 300)
 
@@ -126,7 +124,7 @@ export async function handleBackgroundTasks(
       }
     }
 
-    // Deduplicate tasks (a task may own multiple ports)
+    // Deduplicate tasks — include port-owning tasks and portless tasks (e.g. background test runs)
     const seen = new Set<string>()
     const result: Array<{
       id: string
@@ -135,6 +133,7 @@ export async function handleBackgroundTasks(
       portStatus: Record<number, boolean>
       preview: string
     }> = []
+    // Add tasks that own alive ports
     for (const task of portOwner.values()) {
       if (seen.has(task.id)) continue
       seen.add(task.id)
@@ -145,6 +144,19 @@ export async function handleBackgroundTasks(
         outputPath: task.outputPath,
         ports: task.ports,
         portStatus: ps,
+        preview: task.preview,
+      })
+    }
+    // Add portless background tasks (test runs, builds, etc.)
+    for (const task of tasks) {
+      if (seen.has(task.id)) continue
+      if (task.ports.length > 0) continue // port-based tasks handled above
+      seen.add(task.id)
+      result.push({
+        id: task.id,
+        outputPath: task.outputPath,
+        ports: [],
+        portStatus: {},
         preview: task.preview,
       })
     }

@@ -3,6 +3,32 @@ import { X, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { FullDiffView } from "./FullDiffView"
 
+/**
+ * Shorten an absolute file path to a project-relative display path.
+ * Strips common prefixes (home dir, dev dirs, client project structure)
+ * and falls back to the last 4 path segments if nothing matched.
+ */
+function shortenPath(filePath: string): string {
+  const segments = filePath.split("/")
+  for (let i = 0; i < segments.length; i++) {
+    if (segments[i] === "dev" && i + 2 < segments.length) {
+      const next = segments[i + 1]
+      // dev/client_projects/Client/project/module/... → module/...
+      if (next === "client_projects" && i + 4 < segments.length) {
+        return segments.slice(i + 4).join("/")
+      }
+      // dev/internal/project/module/... → module/...
+      if (next === "internal" && i + 3 < segments.length) {
+        return segments.slice(i + 3).join("/")
+      }
+      // dev/project/src/... → src/...
+      return segments.slice(i + 2).join("/")
+    }
+  }
+  if (segments.length > 4) return segments.slice(-4).join("/")
+  return filePath
+}
+
 export interface DiffViewModalProps {
   oldContent: string
   newContent: string
@@ -89,7 +115,7 @@ export function DiffViewModal({
               </button>
             </div>
           )}
-          <span className="font-mono text-sm truncate">{filePath}</span>
+          <span className="font-mono text-sm truncate" title={filePath}>{shortenPath(filePath)}</span>
           {(additions !== undefined || deletions !== undefined) && (
             <span className="text-xs text-muted-foreground shrink-0">
               {additions !== undefined && <span className="text-green-500">+{additions}</span>}

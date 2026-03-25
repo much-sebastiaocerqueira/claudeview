@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/tooltip"
 import type { TokenUsage } from "@/lib/types"
 import { shortenModel, formatTokenCount } from "@/lib/format"
+import { useDiffFontSize } from "@/contexts/DiffFontSizeContext"
 
 // ── Token usage tooltip ──────────────────────────────────────────────────
 
@@ -59,11 +60,13 @@ export const AssistantText = memo(function AssistantText({
 }: AssistantTextProps) {
   const markdownText = useMemo(() => preprocessImagePaths(text), [text])
 
+  const { fontSize } = useDiffFontSize()
+
   if (!text) return null
 
   return (
     <div className="rounded-2xl bg-amber-500/[0.06] border border-amber-500/15 px-3.5 py-2.5">
-      <div className="text-sm break-words overflow-hidden">
+      <div className="break-words overflow-hidden" style={{ fontSize }}>
         <ReactMarkdown components={markdownComponents} remarkPlugins={markdownPlugins}>{markdownText}</ReactMarkdown>
       </div>
     </div>

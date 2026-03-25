@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 import type { ParsedSession } from "@/lib/types"
 import { cn } from "@/lib/utils"
-import { authFetch } from "@/lib/auth"
 import { GroupedFileCard } from "./GroupedFileCard"
 import { DiffViewModal } from "../diff/DiffViewModal"
 import { useFileChangesData, buildGroupedFilesByAgent, type AgentGroup } from "./useFileChangesData"
@@ -150,8 +149,12 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
     return activeGrouped
   }, [groupByAgent, agentGroups, activeGrouped])
 
+  // Keep a ref so the FOCUS_FILE_EVENT handler can access the latest file list
+  const allFilesRef = useRef(allFiles)
+  allFilesRef.current = allFiles
+
   // Navigate to prev/next file in the diff modal
-  const handleNavigate = useCallback(async (direction: "prev" | "next") => {
+  const handleNavigate = useCallback((direction: "prev" | "next") => {
     if (!diffModal) return
     const currentIdx = allFiles.findIndex((f) => f.filePath === diffModal.filePath)
     if (currentIdx < 0) return
@@ -159,15 +162,7 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
     if (nextIdx < 0 || nextIdx >= allFiles.length) return
 
     const nextFile = allFiles[nextIdx]
-    try {
-      const res = await authFetch(`/api/git-file-diff?path=${encodeURIComponent(nextFile.filePath)}`)
-      const data = await res.json()
-      if (data.head !== undefined && data.working !== undefined) {
-        setDiffModal({ head: data.head, working: data.working, filePath: nextFile.filePath })
-      }
-    } catch {
-      // silently fail
-    }
+    setDiffModal({ head: nextFile.netOriginal, working: nextFile.netCurrent, filePath: nextFile.filePath })
   }, [diffModal, allFiles])
 
   const currentFileIdx = diffModal ? allFiles.findIndex((f) => f.filePath === diffModal.filePath) : -1
@@ -189,6 +184,12 @@ export const FileChangesPanel = memo(function FileChangesPanel({ session, sessio
         ) as HTMLElement | null
         el?.scrollIntoView({ behavior: "smooth", block: "nearest" })
       })
+
+      // Open the diff modal for the clicked file
+      const match = allFilesRef.current.find((f) => f.filePath === detail.filePath)
+      if (match) {
+        setDiffModal({ head: match.netOriginal, working: match.netCurrent, filePath: match.filePath })
+      }
     }
 
     window.addEventListener(FOCUS_FILE_EVENT, handler)

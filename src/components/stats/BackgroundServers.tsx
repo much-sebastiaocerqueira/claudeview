@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react"
-import { Server, Square, TerminalSquare } from "lucide-react"
+import { Server, Square, TerminalSquare, Play } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { authFetch } from "@/lib/auth"
 import { SectionHeading } from "@/components/stats/SectionHeading"
@@ -192,7 +192,7 @@ export function BackgroundServers({
 
   return (
     <section>
-      <SectionHeading>Active Servers ({tasks.length})</SectionHeading>
+      <SectionHeading>Background Tasks ({tasks.length})</SectionHeading>
       <div className="space-y-1.5">
         {tasks.map((task) => {
           const activePorts = task.ports.filter((p) => task.portStatus[p])
@@ -212,7 +212,10 @@ export function BackgroundServers({
                 }
               >
                 <div className="flex items-center gap-1.5">
-                  <Server className="size-3 shrink-0 text-green-400" />
+                  {activePorts.length > 0
+                    ? <Server className="size-3 shrink-0 text-green-400" />
+                    : <Play className="size-3 shrink-0 text-amber-400" />
+                  }
                   <span className="truncate text-[11px] font-medium text-foreground">
                     {title}
                   </span>
