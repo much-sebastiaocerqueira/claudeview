@@ -69,17 +69,24 @@ export function useBackgroundProcesses(session: ParsedSession | null): Backgroun
         }
       }
 
-      // Enrich agent entries with duration/toolUseCount from background_agent blocks
+      // Enrich agent entries with duration/toolUseCount from background_agent blocks.
+      // Each background_agent block groups messages by parentToolUseId (which equals tc.id).
+      // We match by iterating blocks in order and pairing with agent results from this turn
+      // that haven't been enriched yet, preserving the 1:1 relationship.
+      const unenrichedAgents = results.filter(
+        (r) => r.kind === "agent" && r.turnIndex === turnIdx && r.durationMs === null && r.status !== "running"
+      )
+      let enrichIdx = 0
       for (const block of turn.contentBlocks) {
         if (block.kind !== "background_agent") continue
-        for (const msg of block.messages) {
-          const match = results.find(
-            (r) => r.kind === "agent" && r.turnIndex === turnIdx && r.status !== "running"
-          )
-          if (match && msg.durationMs != null) {
-            match.durationMs = msg.durationMs
-            match.toolUseCount = msg.toolUseCount ?? null
-          }
+        if (enrichIdx >= unenrichedAgents.length) break
+        // Find the first message with duration data in this block
+        const enrichMsg = block.messages.find((m) => m.durationMs != null)
+        if (enrichMsg) {
+          const target = unenrichedAgents[enrichIdx]
+          target.durationMs = enrichMsg.durationMs ?? null
+          target.toolUseCount = enrichMsg.toolUseCount ?? null
+          enrichIdx++
         }
       }
     }
