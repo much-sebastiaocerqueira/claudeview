@@ -4,6 +4,11 @@ interface ElectronUpdaterAPI {
   dismissVersion: (version: string) => void
 }
 
+interface ElectronWindowAPI {
+  openNewWindow: (path: string) => void
+}
+
 interface Window {
   electronUpdater?: ElectronUpdaterAPI
+  electronWindow?: ElectronWindowAPI
 }
