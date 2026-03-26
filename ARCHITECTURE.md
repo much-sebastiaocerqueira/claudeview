@@ -1,8 +1,8 @@
-# Cogpit Architecture & Agent Integration Guide
+# ClaudeView Architecture & Agent Integration Guide
 
 ## Project Overview
 
-**Cogpit** is a real-time dashboard for monitoring Claude Code agent sessions. It:
+**ClaudeView** is a real-time dashboard for monitoring Claude Code agent sessions. It:
 - Reads JSONL session files from `~/.claude/projects/`
 - Monitors background sub-agents spawned via Task tool calls
 - Tracks background servers (dev servers, API servers) running in background Bash commands
@@ -116,21 +116,21 @@ Gracefully terminates process listening on a port:
 - Waits for graceful shutdown
 - Falls back to `SIGKILL` after 5s
 
-### 6. Cogpit Session Search (`/api/cogpit-search`)
+### 6. ClaudeView Session Search (`/api/claudeview-search`)
 
-**Route:** `server/routes/cogpit-search.ts`
+**Route:** `server/routes/claudeview-search.ts`
 
-Deep session search powered by the local `packages/cogpit-memory` indexing package:
+Deep session search powered by the local `packages/claudeview-memory` indexing package:
 - **Query params:**
   - `q` (required, min 2 chars) — Search query
   - `limit` (optional, default 20, max 100) — Max results to return
   - `maxAge` (optional, default "30d") — Filter to recent sessions (e.g., "7d", "30d")
 - **Returns:** `ActiveSessionInfo[]` shaped for LiveSessions UI
   - Fields: dirName, projectShortName, cwd, firstUserMessage, lastUserMessage, gitBranch, lastModified, turnCount, isActive, matchedMessage (snippet), hitCount
-- **Implementation:** Spawns cogpit-memory CLI as child process
-  - Dev: `bun packages/cogpit-memory/src/cli.ts` (TypeScript source for fast reload)
-  - Packaged app: `node packages/cogpit-memory/dist/cli.js` (compiled, from app.asar.unpacked via asarUnpack configuration)
-- **Used by:** LiveSessions panel for fast deep search across all sessions via pre-built cogpit-memory index (faster than full JSONL scan)
+- **Implementation:** Spawns claudeview-memory CLI as child process
+  - Dev: `bun packages/claudeview-memory/src/cli.ts` (TypeScript source for fast reload)
+  - Packaged app: `node packages/claudeview-memory/dist/cli.js` (compiled, from app.asar.unpacked via asarUnpack configuration)
+- **Used by:** LiveSessions panel for fast deep search across all sessions via pre-built claudeview-memory index (faster than full JSONL scan)
 
 ---
 
@@ -151,7 +151,7 @@ All routes are registered in **both** `server/api-plugin.ts` (Vite) and `electro
 | `/api/teams` | GET | List teams in `~/.claude/teams/` |
 | `/api/team-detail/:name` | GET | Team config, tasks, and inbox |
 | `/api/watch-team/:name` | GET (SSE) | Live stream for team updates |
-| `/api/cogpit-search` | GET | Deep session search via cogpit-memory (query, limit, maxAge params) |
+| `/api/claudeview-search` | GET | Deep session search via claudeview-memory (query, limit, maxAge params) |
 | `/api/check-ports` | GET | Test TCP listening on ports |
 | `/api/background-tasks` | GET | Scan Claude's task dir for background Bash tasks |
 | `/api/background-agents` | GET | Scan `projects/` for background agent symlinks |
@@ -345,7 +345,7 @@ Comprehensive file modification tracking across sessions:
 **Solution:** Custom DOM event with typed payload
 
 **Event Details:**
-- **Name:** `"cogpit:focus-file"`
+- **Name:** `"claudeview:focus-file"`
 - **Exported from:** `src/components/FileChangesPanel/index.tsx`
 - **Emitted by:** `TurnChangedFiles` when file clicked
 - **Listened by:** `FileChangesPanel` (useEffect at line 71)
@@ -382,7 +382,7 @@ Comprehensive file modification tracking across sessions:
 **Solution:** Custom event dispatched by SubAgentIndicator, listened by App.tsx for session navigation.
 
 **Event Details:**
-- **Name:** `"cogpit:open-subagent"`
+- **Name:** `"claudeview:open-subagent"`
 - **Exported from:** `src/components/FileChangesPanel/file-change-indicators.tsx`
 - **Emitted by:** `SubAgentIndicator` when "S" badge clicked
 - **Listened by:** `App.tsx` (useEffect at line ~421)
@@ -441,7 +441,7 @@ Given the current architecture, notifications should be:
 ## File Organization
 
 ```
-cogpit/
+claudeview/
 ├── electron/
 │   ├── main.ts              # Electron entry point
 │   ├── server.ts            # Express server + PTY WebSocket
@@ -661,7 +661,7 @@ Discover and execute scripts from project package.json files:
 
 ### Configuration File
 
-Location (Electron): `~/Library/Application Support/Cogpit/config.local.json`
+Location (Electron): `~/Library/Application Support/ClaudeView/config.local.json`
 Location (Web): `config.local.json` in project root
 
 ```json

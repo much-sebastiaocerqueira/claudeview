@@ -9,9 +9,9 @@ import { homedir } from "node:os"
 import { mkdirSync } from "node:fs"
 import { createAppServer } from "../electron/server"
 
-const host = process.env.COGPIT_HOST || "127.0.0.1"
-const port = parseInt(process.env.COGPIT_PORT || "19384", 10)
-const dataDir = process.env.COGPIT_DATA_DIR || join(homedir(), ".config", "cogpit")
+const host = process.env.CLAUDEVIEW_HOST || "127.0.0.1"
+const port = parseInt(process.env.CLAUDEVIEW_PORT || "19384", 10)
+const dataDir = process.env.CLAUDEVIEW_DATA_DIR || join(homedir(), ".config", "claudeview")
 
 // Resolve static dir: built Vite output
 const staticDir = join(import.meta.dirname, "../dist")
@@ -22,7 +22,7 @@ mkdirSync(dataDir, { recursive: true })
 const { httpServer } = await createAppServer(staticDir, dataDir)
 
 httpServer.listen(port, host, () => {
-  console.log(`Cogpit server listening on http://${host}:${port}`)
+  console.log(`ClaudeView server listening on http://${host}:${port}`)
   console.log(`Data directory: ${dataDir}`)
 })
 

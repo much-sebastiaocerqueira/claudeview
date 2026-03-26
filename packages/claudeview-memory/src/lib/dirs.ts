@@ -8,4 +8,4 @@ export const dirs = {
 }
 
 /** Default database path for the FTS5 search index. */
-export const DEFAULT_DB_PATH = join(homedir(), ".claude", "cogpit-memory", "search-index.db")
+export const DEFAULT_DB_PATH = join(homedir(), ".claude", "claudeview-memory", "search-index.db")

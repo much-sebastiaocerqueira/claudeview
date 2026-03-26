@@ -63,7 +63,7 @@ function writeSession(
 
 describe("sessions command", () => {
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), "cogpit-sessions-test-"))
+    tmpDir = mkdtempSync(join(tmpdir(), "claudeview-sessions-test-"))
     const projectsDir = join(tmpDir, "projects")
     mkdirSync(projectsDir, { recursive: true })
     mockDirs.PROJECTS_DIR = projectsDir

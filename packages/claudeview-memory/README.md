@@ -1,4 +1,4 @@
-# cogpit-memory
+# claudeview-memory
 
 CLI tool that gives any AI assistant memory of past [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sessions. Retrieve conversation history, tool usage, thinking blocks, sub-agent activity, and full-text search across all sessions.
 
@@ -7,29 +7,29 @@ All output is JSON to stdout — designed for programmatic consumption by AI age
 ## Install
 
 ```bash
-npm install -g cogpit-memory
+npm install -g claudeview-memory
 ```
 
 Or run directly:
 
 ```bash
-npx cogpit-memory sessions
+npx claudeview-memory sessions
 ```
 
 ## Quick Start
 
 ```bash
 # List recent sessions
-cogpit-memory sessions
+claudeview-memory sessions
 
 # Get session overview
-cogpit-memory context <sessionId>
+claudeview-memory context <sessionId>
 
 # Drill into a specific turn
-cogpit-memory context <sessionId> --turn 3
+claudeview-memory context <sessionId> --turn 3
 
 # Search across all sessions
-cogpit-memory search "authentication"
+claudeview-memory search "authentication"
 ```
 
 ## Commands
@@ -37,10 +37,10 @@ cogpit-memory search "authentication"
 ### `sessions` — Discover sessions
 
 ```bash
-cogpit-memory sessions                              # Recent sessions (last 7 days)
-cogpit-memory sessions --cwd /path/to/project       # Filter by project
-cogpit-memory sessions --current --cwd /path/to/project  # Most recent for a project
-cogpit-memory sessions --max-age 90d --limit 50     # Custom window
+claudeview-memory sessions                              # Recent sessions (last 7 days)
+claudeview-memory sessions --cwd /path/to/project       # Filter by project
+claudeview-memory sessions --current --cwd /path/to/project  # Most recent for a project
+claudeview-memory sessions --max-age 90d --limit 50     # Custom window
 ```
 
 | Flag | Default | Description |
@@ -56,10 +56,10 @@ Three layers of detail. Start at L1, drill down only as needed.
 
 | Layer | Command | What you get |
 |-------|---------|-------------|
-| **L1** — Overview | `cogpit-memory context <sessionId>` | Every turn: user prompt, assistant reply, tool summary, sub-agent list |
-| **L2** — Turn detail | `cogpit-memory context <sessionId> --turn 3` | Thinking blocks, full tool call I/O, sub-agent summaries (chronological) |
-| **L3** — Sub-agent | `cogpit-memory context <sessionId> --agent <agentId>` | Full sub-agent conversation (same shape as L1) |
-| **L3** — Sub-agent turn | `cogpit-memory context <sessionId> --agent <agentId> --turn 0` | Sub-agent turn detail (same shape as L2) |
+| **L1** — Overview | `claudeview-memory context <sessionId>` | Every turn: user prompt, assistant reply, tool summary, sub-agent list |
+| **L2** — Turn detail | `claudeview-memory context <sessionId> --turn 3` | Thinking blocks, full tool call I/O, sub-agent summaries (chronological) |
+| **L3** — Sub-agent | `claudeview-memory context <sessionId> --agent <agentId>` | Full sub-agent conversation (same shape as L1) |
+| **L3** — Sub-agent turn | `claudeview-memory context <sessionId> --agent <agentId> --turn 0` | Sub-agent turn detail (same shape as L2) |
 
 **Discovery flow:** L1 gives you `turnIndex` and `agentId` values → use those to drill into L2/L3.
 
@@ -68,12 +68,12 @@ Three layers of detail. Start at L1, drill down only as needed.
 Searches everything: user messages, assistant responses, thinking blocks, tool call inputs/outputs, sub-agent content, and compaction summaries.
 
 ```bash
-cogpit-memory search "authentication"                        # Cross-session search
-cogpit-memory search "auth" --session <sessionId>            # Single session
-cogpit-memory search "bug" --max-age 30d --limit 50          # Custom window
-cogpit-memory search "AuthProvider" --case-sensitive          # Case-sensitive
-cogpit-memory search "auth" --limit 200 --session-limit 50    # 50 unique sessions
-cogpit-memory search "bug" --session-limit 20 --hits-per-session 2  # Compact results
+claudeview-memory search "authentication"                        # Cross-session search
+claudeview-memory search "auth" --session <sessionId>            # Single session
+claudeview-memory search "bug" --max-age 30d --limit 50          # Custom window
+claudeview-memory search "AuthProvider" --case-sensitive          # Case-sensitive
+claudeview-memory search "auth" --limit 200 --session-limit 50    # 50 unique sessions
+claudeview-memory search "bug" --session-limit 20 --hits-per-session 2  # Compact results
 ```
 
 | Flag | Default | Description |
@@ -90,8 +90,8 @@ Each result includes the `cwd` (working directory where the session ran) and an 
 ### `index` — Manage the FTS5 search index
 
 ```bash
-cogpit-memory index stats     # Show index stats (session count, DB size, staleness)
-cogpit-memory index rebuild   # Rebuild from scratch
+claudeview-memory index stats     # Show index stats (session count, DB size, staleness)
+claudeview-memory index rebuild   # Rebuild from scratch
 ```
 
 ## Performance
@@ -120,9 +120,9 @@ FTS5 trigram search is sublinear — doubling the index size does not double que
 
 ## How It Works
 
-cogpit-memory reads Claude Code's JSONL session files from `~/.claude/projects/`. It parses the conversation structure (turns, tool calls, thinking blocks, sub-agents) and provides a layered drill-down interface.
+claudeview-memory reads Claude Code's JSONL session files from `~/.claude/projects/`. It parses the conversation structure (turns, tool calls, thinking blocks, sub-agents) and provides a layered drill-down interface.
 
-For search, it maintains an FTS5 trigram index at `~/.claude/cogpit-memory/search-index.db`. The trigram tokenizer enables substring matching (not just whole-word) — searching for `"auth"` matches `"authentication"`, `"OAuth"`, and `"AuthProvider"`.
+For search, it maintains an FTS5 trigram index at `~/.claude/claudeview-memory/search-index.db`. The trigram tokenizer enables substring matching (not just whole-word) — searching for `"auth"` matches `"authentication"`, `"OAuth"`, and `"AuthProvider"`.
 
 ## Development
 
@@ -141,32 +141,32 @@ bun run build:npm
 
 ## Agent Skill
 
-cogpit-memory ships with a skill that teaches AI agents how to use it automatically — layered drill-down, search workflows, and all command options. Works with Claude Code, Cursor, Gemini CLI, GitHub Copilot, and more.
+claudeview-memory ships with a skill that teaches AI agents how to use it automatically — layered drill-down, search workflows, and all command options. Works with Claude Code, Cursor, Gemini CLI, GitHub Copilot, and more.
 
 ### Install via Skills CLI (recommended)
 
 Installs globally across all supported agents:
 
 ```bash
-npx skills add gentritbiba/cogpit-memory -g -y
+npx skills add much-sebastiaocerqueira/claudeview-memory -g -y
 ```
 
 Browse at [skills.sh](https://skills.sh).
 
-### Install via cogpit-memory CLI
+### Install via claudeview-memory CLI
 
 ```bash
 # Install globally (all projects)
-npx cogpit-memory install-skill -g
+npx claudeview-memory install-skill -g
 
 # Install into a single project's .claude/skills/
-npx cogpit-memory install-skill
+npx claudeview-memory install-skill
 
 # Or specify a project directory
-npx cogpit-memory install-skill --cwd /path/to/project
+npx claudeview-memory install-skill --cwd /path/to/project
 ```
 
-Once installed, your AI agent will automatically use `cogpit-memory` when it needs to recall past session context or search conversation history.
+Once installed, your AI agent will automatically use `claudeview-memory` when it needs to recall past session context or search conversation history.
 
 ## License
 

@@ -13,7 +13,7 @@ interface McpResponse {
   configs: McpConfigs
 }
 
-const STORAGE_PREFIX = "cogpit:mcpSelection:"
+const STORAGE_PREFIX = "claudeview:mcpSelection:"
 
 /** Extract the set of connected server names from a server list. */
 function connectedNames(servers: McpServer[]): Set<string> {

@@ -1,7 +1,9 @@
 import { useEffect, useCallback, useState } from "react"
-import { X, ChevronLeft, ChevronRight } from "lucide-react"
+import ReactMarkdown from "react-markdown"
+import { X, ChevronLeft, ChevronRight, Eye, Code } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { FullDiffView } from "./FullDiffView"
+import { markdownComponents, markdownPlugins, preprocessImagePaths } from "@/components/timeline/markdown-components"
 
 /**
  * Shorten an absolute file path to a project-relative display path.
@@ -44,6 +46,11 @@ export interface DiffViewModalProps {
   hasNext?: boolean
 }
 
+function isMarkdownFile(path: string): boolean {
+  const lower = path.toLowerCase()
+  return lower.endsWith(".md") || lower.endsWith(".mdx") || lower.endsWith(".markdown")
+}
+
 export function DiffViewModal({
   oldContent,
   newContent,
@@ -57,10 +64,12 @@ export function DiffViewModal({
   hasNext = false,
 }: DiffViewModalProps) {
   const [mode, setMode] = useState<"split" | "unified">(oldContent ? "split" : "unified")
+  const [preview, setPreview] = useState(false)
 
-  // Reset mode when navigating to a different file
+  // Reset mode and preview when navigating to a different file
   useEffect(() => {
     setMode(oldContent ? "split" : "unified")
+    setPreview(false)
   }, [filePath, oldContent])
 
   const handleKeyDown = useCallback(
@@ -126,12 +135,27 @@ export function DiffViewModal({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <button
-            className="px-2 py-1 text-xs rounded border hover:bg-accent"
-            onClick={() => setMode(mode === "split" ? "unified" : "split")}
-          >
-            {mode === "split" ? "Unified" : "Split"}
-          </button>
+          {isMarkdownFile(filePath) && (
+            <button
+              className={cn(
+                "flex items-center gap-1 px-2 py-1 text-xs rounded border hover:bg-accent transition-colors",
+                preview && "bg-accent border-accent-foreground/20",
+              )}
+              onClick={() => setPreview(!preview)}
+              title={preview ? "Show diff" : "Preview markdown"}
+            >
+              {preview ? <Code className="size-3" /> : <Eye className="size-3" />}
+              {preview ? "Diff" : "Preview"}
+            </button>
+          )}
+          {!preview && (
+            <button
+              className="px-2 py-1 text-xs rounded border hover:bg-accent"
+              onClick={() => setMode(mode === "split" ? "unified" : "split")}
+            >
+              {mode === "split" ? "Unified" : "Split"}
+            </button>
+          )}
           <button
             className="p-1 rounded hover:bg-accent"
             onClick={onClose}
@@ -142,14 +166,25 @@ export function DiffViewModal({
         </div>
       </div>
 
-      {/* Diff content */}
+      {/* Content */}
       <div className="flex-1 overflow-auto">
-        <FullDiffView
-          oldContent={oldContent}
-          newContent={newContent}
-          filePath={filePath}
-          mode={mode}
-        />
+        {preview ? (
+          <div className="max-w-4xl mx-auto px-8 py-6 prose-sm">
+            <ReactMarkdown
+              components={markdownComponents}
+              remarkPlugins={markdownPlugins}
+            >
+              {preprocessImagePaths(newContent)}
+            </ReactMarkdown>
+          </div>
+        ) : (
+          <FullDiffView
+            oldContent={oldContent}
+            newContent={newContent}
+            filePath={filePath}
+            mode={mode}
+          />
+        )}
       </div>
     </div>
   )

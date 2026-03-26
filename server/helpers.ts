@@ -56,7 +56,7 @@ export function buildMcpArgs(mcpConfig: unknown): string[] {
   }
 
   const hash = createHash("md5").update(mcpConfig).digest("hex").slice(0, 8)
-  const tmpPath = join(tmpdir(), `cogpit-mcp-${hash}.json`)
+  const tmpPath = join(tmpdir(), `claudeview-mcp-${hash}.json`)
   writeFileSync(tmpPath, mcpConfig, "utf-8")
   return ["--strict-mcp-config", "--mcp-config", tmpPath]
 }
@@ -97,7 +97,7 @@ export async function writeTempImageFiles(
   const files: string[] = []
   for (const [index, image] of images.entries()) {
     const ext = IMAGE_EXT[image.mediaType] ?? "png"
-    const filePath = join(tmpdir(), `cogpit-codex-image-${Date.now()}-${index}.${ext}`)
+    const filePath = join(tmpdir(), `claudeview-codex-image-${Date.now()}-${index}.${ext}`)
     await writeFile(filePath, Buffer.from(image.data, "base64"))
     files.push(filePath)
   }

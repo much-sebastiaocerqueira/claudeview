@@ -1,6 +1,6 @@
 // ── Network auth utilities ──────────────────────────────────────────────
 
-const TOKEN_KEY = "cogpit-network-token"
+const TOKEN_KEY = "claudeview-network-token"
 
 export function isRemoteClient(): boolean {
   const host = window.location.hostname
@@ -13,7 +13,7 @@ export function getToken(): string | null {
 
 export function setToken(token: string): void {
   localStorage.setItem(TOKEN_KEY, token)
-  window.dispatchEvent(new Event("cogpit-auth-changed"))
+  window.dispatchEvent(new Event("claudeview-auth-changed"))
 }
 
 export function clearToken(): void {
@@ -29,7 +29,7 @@ export function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise
 
   const token = getToken()
   if (!token) {
-    window.dispatchEvent(new Event("cogpit-auth-required"))
+    window.dispatchEvent(new Event("claudeview-auth-required"))
     return Promise.reject(new Error("Authentication required"))
   }
 
@@ -39,7 +39,7 @@ export function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise
   return fetch(input, { ...init, headers }).then((res) => {
     if (res.status === 401) {
       clearToken()
-      window.dispatchEvent(new Event("cogpit-auth-required"))
+      window.dispatchEvent(new Event("claudeview-auth-required"))
       return Promise.reject(new Error("Authentication required"))
     }
     return res
@@ -53,7 +53,7 @@ export function authUrl(url: string): string {
   if (!isRemoteClient()) return url
   const token = getToken()
   if (!token) {
-    window.dispatchEvent(new Event("cogpit-auth-required"))
+    window.dispatchEvent(new Event("claudeview-auth-required"))
     return url
   }
   const sep = url.includes("?") ? "&" : "?"

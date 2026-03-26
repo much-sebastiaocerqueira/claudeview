@@ -76,7 +76,7 @@ describe("useNetworkAuth", () => {
     expect(mockedClearToken).toHaveBeenCalled()
   })
 
-  it("responds to cogpit-auth-required event for remote clients", () => {
+  it("responds to claudeview-auth-required event for remote clients", () => {
     mockedIsRemoteClient.mockReturnValue(true)
     mockedGetToken.mockReturnValue("some-token")
 
@@ -84,12 +84,12 @@ describe("useNetworkAuth", () => {
     expect(result.current.authenticated).toBe(true)
 
     act(() => {
-      window.dispatchEvent(new Event("cogpit-auth-required"))
+      window.dispatchEvent(new Event("claudeview-auth-required"))
     })
     expect(result.current.authenticated).toBe(false)
   })
 
-  it("does not respond to cogpit-auth-required for local clients", () => {
+  it("does not respond to claudeview-auth-required for local clients", () => {
     mockedIsRemoteClient.mockReturnValue(false)
     mockedGetToken.mockReturnValue(null)
 
@@ -97,7 +97,7 @@ describe("useNetworkAuth", () => {
     expect(result.current.authenticated).toBe(true)
 
     act(() => {
-      window.dispatchEvent(new Event("cogpit-auth-required"))
+      window.dispatchEvent(new Event("claudeview-auth-required"))
     })
     // Still authenticated for local
     expect(result.current.authenticated).toBe(true)
@@ -112,11 +112,11 @@ describe("useNetworkAuth", () => {
 
     const { unmount } = renderHook(() => useNetworkAuth())
 
-    expect(addSpy).toHaveBeenCalledWith("cogpit-auth-required", expect.any(Function))
+    expect(addSpy).toHaveBeenCalledWith("claudeview-auth-required", expect.any(Function))
 
     unmount()
 
-    expect(removeSpy).toHaveBeenCalledWith("cogpit-auth-required", expect.any(Function))
+    expect(removeSpy).toHaveBeenCalledWith("claudeview-auth-required", expect.any(Function))
 
     addSpy.mockRestore()
     removeSpy.mockRestore()
@@ -149,7 +149,7 @@ describe("useNetworkAuth", () => {
 
     // Server requires re-auth
     act(() => {
-      window.dispatchEvent(new Event("cogpit-auth-required"))
+      window.dispatchEvent(new Event("claudeview-auth-required"))
     })
     expect(result.current.authenticated).toBe(false)
   })

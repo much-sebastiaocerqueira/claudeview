@@ -5,7 +5,7 @@
  * Fallback:   3-phase raw-scan (discover -> pre-filter -> structured walk)
  *
  * Ported from server/routes/session-search.ts (FTS5 path) and
- * .worktrees/session-context-server/packages/cogpit-memory/src/routes/session-search.ts (raw-scan).
+ * .worktrees/session-context-server/packages/claudeview-memory/src/routes/session-search.ts (raw-scan).
  */
 
 import { existsSync } from "node:fs"

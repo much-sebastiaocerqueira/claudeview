@@ -1,0 +1,15 @@
+[Unit]
+Description=ClaudeView Server - Claude Code Dashboard
+Documentation=https://github.com/much-sebastiaocerqueira/claudeview
+After=network.target
+
+[Service]
+Type=simple
+Environment=CLAUDEVIEW_HOST=127.0.0.1
+Environment=CLAUDEVIEW_PORT=19384
+ExecStart=/usr/bin/bun /opt/claudeview-server/server/standalone.ts
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

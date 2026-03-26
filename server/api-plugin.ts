@@ -25,7 +25,7 @@ import { registerSessionSearchRoutes, setSearchIndex, getSearchIndex } from "./r
 import { registerLocalFileRoutes } from "./routes/local-file"
 import { registerFileContentRoutes } from "./routes/file-content"
 import { registerSearchIndexRoutes } from "./routes/search-index-stats"
-import { registerCogpitSearchRoutes } from "./routes/cogpit-search"
+import { registerClaudeViewSearchRoutes } from "./routes/claudeview-search"
 import { registerMcpRoutes } from "./routes/mcp"
 import { registerNotifyRoutes } from "./routes/notify"
 import { registerScriptRoutes } from "./routes/scripts"
@@ -111,7 +111,7 @@ export function sessionApiPlugin(): Plugin {
       registerLocalFileRoutes(use)
       registerFileContentRoutes(use)
       registerSearchIndexRoutes(use)
-      registerCogpitSearchRoutes(use)
+      registerClaudeViewSearchRoutes(use)
       registerMcpRoutes(use)
       registerNotifyRoutes(use)
       registerScriptRoutes(use)

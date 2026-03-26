@@ -33,7 +33,7 @@ export function usePanelState(
   state: SessionState,
   dispatch: React.Dispatch<SessionAction>,
 ): PanelState {
-  const [showSidebar, setShowSidebar] = useState(true)
+  const [showSidebar, setShowSidebar] = useState(false)
   const [showStats, setShowStats] = useState(false)
   const [showWorktrees, setShowWorktrees] = useState(false)
   const [showFileChanges, setShowFileChanges] = useState(true)

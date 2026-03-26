@@ -4,7 +4,7 @@
 import type { GitFileStatus } from "./useFileChangesData"
 
 /** Custom event name for navigating to a sub-agent's chat view. */
-export const OPEN_SUBAGENT_EVENT = "cogpit:open-subagent"
+export const OPEN_SUBAGENT_EVENT = "claudeview:open-subagent"
 
 const GIT_STATUS_COLORS: Record<GitFileStatus, string> = {
   A: "text-green-400",

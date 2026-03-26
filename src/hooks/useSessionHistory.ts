@@ -5,7 +5,7 @@ interface HistoryEntry {
   fileName: string
 }
 
-const STORAGE_KEY = "cogpit-session-history"
+const STORAGE_KEY = "claudeview-session-history"
 const MAX_HISTORY = 50
 
 function loadHistory(): HistoryEntry[] {

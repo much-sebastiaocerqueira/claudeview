@@ -145,7 +145,7 @@ function writeSessionWithToolCalls(
 
 describe("search command", () => {
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), "cogpit-search-test-"))
+    tmpDir = mkdtempSync(join(tmpdir(), "claudeview-search-test-"))
     const projectsDir = join(tmpDir, "projects")
     mkdirSync(projectsDir, { recursive: true })
     mockDirs.PROJECTS_DIR = projectsDir

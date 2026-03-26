@@ -64,12 +64,12 @@ describe("useMcpServers", () => {
     act(() => result.current.toggleServer("figma"))
     expect(result.current.selectedServers).toEqual(["clickup"])
 
-    const stored = JSON.parse(localStorage.getItem("cogpit:mcpSelection:test-dir") || "null")
+    const stored = JSON.parse(localStorage.getItem("claudeview:mcpSelection:test-dir") || "null")
     expect(stored).toEqual(["clickup"])
   })
 
   it("loads saved selection from localStorage", async () => {
-    localStorage.setItem("cogpit:mcpSelection:test-dir", JSON.stringify(["figma"]))
+    localStorage.setItem("claudeview:mcpSelection:test-dir", JSON.stringify(["figma"]))
 
     mockServerResponse([
       { name: "clickup", status: "connected" },
@@ -86,7 +86,7 @@ describe("useMcpServers", () => {
   })
 
   it("returns mcpConfigJson with only selected server configs", async () => {
-    localStorage.setItem("cogpit:mcpSelection:test-dir", JSON.stringify(["clickup"]))
+    localStorage.setItem("claudeview:mcpSelection:test-dir", JSON.stringify(["clickup"]))
 
     mockServerResponse([
       { name: "clickup", status: "connected" },
@@ -122,7 +122,7 @@ describe("useMcpServers", () => {
   })
 
   it("returns empty mcpServers config when 0 selected", async () => {
-    localStorage.setItem("cogpit:mcpSelection:test-dir", JSON.stringify([]))
+    localStorage.setItem("claudeview:mcpSelection:test-dir", JSON.stringify([]))
 
     mockServerResponse([
       { name: "clickup", status: "connected" },
@@ -180,7 +180,7 @@ describe("useMcpServers", () => {
   })
 
   it("toggleServer adds a server when not selected", async () => {
-    localStorage.setItem("cogpit:mcpSelection:test-dir", JSON.stringify(["clickup"]))
+    localStorage.setItem("claudeview:mcpSelection:test-dir", JSON.stringify(["clickup"]))
 
     mockServerResponse([
       { name: "clickup", status: "connected" },
@@ -225,7 +225,7 @@ describe("useMcpServers", () => {
   })
 
   it("filters out saved servers that are no longer connected", async () => {
-    localStorage.setItem("cogpit:mcpSelection:test-dir", JSON.stringify(["clickup", "figma"]))
+    localStorage.setItem("claudeview:mcpSelection:test-dir", JSON.stringify(["clickup", "figma"]))
 
     mockServerResponse([
       { name: "clickup", status: "connected" },
@@ -272,7 +272,7 @@ describe("useMcpServers", () => {
   describe("session switch selection", () => {
     it("resets to auto-select-all when switching to a session with no saved selection", async () => {
       // Session A has custom selection
-      localStorage.setItem("cogpit:mcpSelection:session-a.jsonl", JSON.stringify(["clickup"]))
+      localStorage.setItem("claudeview:mcpSelection:session-a.jsonl", JSON.stringify(["clickup"]))
 
       mockServerResponse([
         { name: "clickup", status: "connected" },
@@ -302,7 +302,7 @@ describe("useMcpServers", () => {
 
     it("inherits project-level selection when switching to session with no saved selection", async () => {
       // Project-level default: only clickup
-      localStorage.setItem("cogpit:mcpSelection:test-dir", JSON.stringify(["clickup"]))
+      localStorage.setItem("claudeview:mcpSelection:test-dir", JSON.stringify(["clickup"]))
 
       mockServerResponse([
         { name: "clickup", status: "connected" },
@@ -310,7 +310,7 @@ describe("useMcpServers", () => {
       ])
 
       // Start with session A (has its own selection)
-      localStorage.setItem("cogpit:mcpSelection:session-a.jsonl", JSON.stringify(["figma"]))
+      localStorage.setItem("claudeview:mcpSelection:session-a.jsonl", JSON.stringify(["figma"]))
       const { result, rerender } = renderHook(
         ({ sessionFileName }) => useMcpServers("/test/path", "test-dir", sessionFileName),
         { initialProps: { sessionFileName: "session-a.jsonl" as string | undefined } },
@@ -443,7 +443,7 @@ describe("useMcpServers", () => {
       })
 
       // Save selection with only clickup (not mystery)
-      localStorage.setItem("cogpit:mcpSelection:test-dir", JSON.stringify(["clickup"]))
+      localStorage.setItem("claudeview:mcpSelection:test-dir", JSON.stringify(["clickup"]))
 
       const { result } = renderHook(() => useMcpServers("/test/path", "test-dir", undefined))
 

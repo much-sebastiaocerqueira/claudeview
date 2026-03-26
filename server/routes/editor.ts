@@ -345,7 +345,7 @@ end tell`
             return
           }
 
-          const tmpFile = join(tmpdir(), `cogpit-diff-${randomBytes(4).toString("hex")}-${basename(path)}`)
+          const tmpFile = join(tmpdir(), `claudeview-diff-${randomBytes(4).toString("hex")}-${basename(path)}`)
           await writeFile(tmpFile, originalContent, "utf8")
 
           try {

@@ -10,8 +10,8 @@ export function useNetworkAuth(): NetworkAuth {
     if (!remote) return
 
     const handler = () => setAuthenticated(false)
-    window.addEventListener("cogpit-auth-required", handler)
-    return () => window.removeEventListener("cogpit-auth-required", handler)
+    window.addEventListener("claudeview-auth-required", handler)
+    return () => window.removeEventListener("claudeview-auth-required", handler)
   }, [remote])
 
   const handleAuthenticated = useCallback(() => {

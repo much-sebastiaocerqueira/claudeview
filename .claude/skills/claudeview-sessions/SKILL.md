@@ -1,9 +1,9 @@
 ---
-name: cogpit-sessions
-description: Create and manage Claude Code sessions via the Cogpit (agent-window) HTTP API running on localhost:19384. Use when an agent needs to spawn a new Claude Code session in a project directory, send messages to existing sessions, stop sessions, list projects, or query active sessions. Triggers on requests like "start a session", "run claude in project X", "send a message to session Y", "list cogpit projects", or any programmatic interaction with the agent-window server.
+name: claudeview-sessions
+description: Create and manage Claude Code sessions via the ClaudeView (agent-window) HTTP API running on localhost:19384. Use when an agent needs to spawn a new Claude Code session in a project directory, send messages to existing sessions, stop sessions, list projects, or query active sessions. Triggers on requests like "start a session", "run claude in project X", "send a message to session Y", "list claudeview projects", or any programmatic interaction with the agent-window server.
 ---
 
-# Cogpit Sessions API
+# ClaudeView Sessions API
 
 Base URL: `http://localhost:19384`
 
@@ -32,8 +32,8 @@ curl -s -X POST http://localhost:19384/api/send-message ...
 curl -s --max-time 600 -X POST http://localhost:19384/api/send-message \
   -H "Content-Type: application/json" \
   -d '{"sessionId":"...","message":"..."}' \
-  > /tmp/cogpit-result.txt 2>&1 &
-# Then poll /tmp/cogpit-result.txt or read the session JSONL directly
+  > /tmp/claudeview-result.txt 2>&1 &
+# Then poll /tmp/claudeview-result.txt or read the session JSONL directly
 ```
 
 ## Quick Start — Create a Session
@@ -126,7 +126,7 @@ Stop a running session. Instant response.
 
 ### POST /api/kill-all
 
-Kill all active claude processes managed by cogpit.
+Kill all active claude processes managed by claudeview.
 
 **Body:** (empty or `{}`)
 **Response:** `{ success: true, killed: <count> }`
@@ -242,7 +242,7 @@ DIR_NAME=$(echo "/Users/gentritbiba/projects/my-app" | sed 's|/|-|g')
 
 ## Notes
 
-- The server must be running (Cogpit app or `bun run dev` in the agent-window project)
+- The server must be running (ClaudeView app or `bun run dev` in the agent-window project)
 - Sessions persist as JSONL files in `~/.claude/projects/<dirName>/`
 - `create-and-send` returns as soon as the JSONL file appears on disk (does not wait for the full response) — but this still takes 5–15 seconds
 - `send-message` waits for the full turn to complete before responding — this can take minutes

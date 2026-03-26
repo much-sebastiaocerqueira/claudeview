@@ -68,13 +68,13 @@ function writeSession(
 
 describe("index command", () => {
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), "cogpit-index-test-"))
+    tmpDir = mkdtempSync(join(tmpdir(), "claudeview-index-test-"))
     const projectsDir = join(tmpDir, "projects")
     mkdirSync(projectsDir, { recursive: true })
     mockDirs.PROJECTS_DIR = projectsDir
     mockDirs.TEAMS_DIR = join(mockDirs.PROJECTS_DIR, "..", "teams")
     mockDirs.TASKS_DIR = join(mockDirs.PROJECTS_DIR, "..", "tasks")
-    mockDbPath.value = join(mockDirs.PROJECTS_DIR, "..", "cogpit-memory", "search-index.db")
+    mockDbPath.value = join(mockDirs.PROJECTS_DIR, "..", "claudeview-memory", "search-index.db")
   })
 
   afterEach(() => {
@@ -98,7 +98,7 @@ describe("index command", () => {
 
     it("returns IndexStats when DB exists", async () => {
       // First rebuild to create the DB
-      const dbPath = join(tmpDir, "cogpit-memory", "test.db")
+      const dbPath = join(tmpDir, "claudeview-memory", "test.db")
       await indexRebuild(dbPath)
 
       const result = await indexStats(dbPath)
@@ -124,7 +124,7 @@ describe("index command", () => {
       writeSession(projDir, "s1.jsonl", { userMessage: "first session" })
       writeSession(projDir, "s2.jsonl", { userMessage: "second session" })
 
-      const dbPath = join(tmpDir, "cogpit-memory", "stats-count.db")
+      const dbPath = join(tmpDir, "claudeview-memory", "stats-count.db")
       await indexRebuild(dbPath)
 
       const result = await indexStats(dbPath)
@@ -142,7 +142,7 @@ describe("index command", () => {
 
   describe("indexRebuild", () => {
     it("creates the DB file and returns rebuilt status", async () => {
-      const dbPath = join(tmpDir, "cogpit-memory", "rebuild.db")
+      const dbPath = join(tmpDir, "claudeview-memory", "rebuild.db")
       const result = await indexRebuild(dbPath)
 
       expect(result.status).toBe("rebuilt")
@@ -156,7 +156,7 @@ describe("index command", () => {
       writeSession(projDir, "sess-a.jsonl", { userMessage: "alpha content" })
       writeSession(projDir, "sess-b.jsonl", { userMessage: "beta content" })
 
-      const dbPath = join(tmpDir, "cogpit-memory", "rebuild-sessions.db")
+      const dbPath = join(tmpDir, "claudeview-memory", "rebuild-sessions.db")
       const result = await indexRebuild(dbPath)
 
       expect(result.status).toBe("rebuilt")
@@ -166,7 +166,7 @@ describe("index command", () => {
     })
 
     it("returns zero counts when no sessions exist", async () => {
-      const dbPath = join(tmpDir, "cogpit-memory", "rebuild-empty.db")
+      const dbPath = join(tmpDir, "claudeview-memory", "rebuild-empty.db")
       const result = await indexRebuild(dbPath)
 
       expect(result.status).toBe("rebuilt")
@@ -188,7 +188,7 @@ describe("index command", () => {
       mkdirSync(projDir, { recursive: true })
       writeSession(projDir, "s1.jsonl", { userMessage: "first pass" })
 
-      const dbPath = join(tmpDir, "cogpit-memory", "rebuild-twice.db")
+      const dbPath = join(tmpDir, "claudeview-memory", "rebuild-twice.db")
 
       // First rebuild
       const result1 = await indexRebuild(dbPath)
@@ -204,7 +204,7 @@ describe("index command", () => {
     })
 
     it("records lastFullBuild timestamp", async () => {
-      const dbPath = join(tmpDir, "cogpit-memory", "rebuild-ts.db")
+      const dbPath = join(tmpDir, "claudeview-memory", "rebuild-ts.db")
       const before = new Date().toISOString()
       const result = await indexRebuild(dbPath)
 
