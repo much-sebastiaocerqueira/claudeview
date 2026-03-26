@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
 
-const STORAGE_KEY = "cogpit:diff-font-size"
+const STORAGE_KEY = "claudeview:diff-font-size"
 const DEFAULT_SIZE = 12
 const MIN_SIZE = 9
 const MAX_SIZE = 20

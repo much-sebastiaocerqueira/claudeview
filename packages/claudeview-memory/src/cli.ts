@@ -1,11 +1,11 @@
 /**
- * cogpit-memory CLI — query Claude Code session history.
+ * claudeview-memory CLI — query Claude Code session history.
  *
  * Usage:
- *   cogpit-memory search <query> [options]
- *   cogpit-memory context <sessionId> [--turn N] [--agent ID]
- *   cogpit-memory sessions [--cwd path] [--current] [--limit N] [--max-age 7d]
- *   cogpit-memory index stats|rebuild
+ *   claudeview-memory search <query> [options]
+ *   claudeview-memory context <sessionId> [--turn N] [--agent ID]
+ *   claudeview-memory sessions [--cwd path] [--current] [--limit N] [--max-age 7d]
+ *   claudeview-memory index stats|rebuild
  */
 
 import { searchSessions } from "./commands/search"
@@ -90,7 +90,7 @@ async function main() {
   switch (cmd.command) {
     case "search":
       if (!cmd.args.query) {
-        console.error(JSON.stringify({ error: "Usage: cogpit-memory search <query>" }))
+        console.error(JSON.stringify({ error: "Usage: claudeview-memory search <query>" }))
         process.exit(1)
       }
       result = await searchSessions(cmd.args.query, {
@@ -113,7 +113,7 @@ async function main() {
 
     case "context":
       if (!cmd.args.sessionId) {
-        console.error(JSON.stringify({ error: "Usage: cogpit-memory context <sessionId>" }))
+        console.error(JSON.stringify({ error: "Usage: claudeview-memory context <sessionId>" }))
         process.exit(1)
       }
       if (cmd.args.agentId && cmd.args.turnIndex !== undefined) {
@@ -161,7 +161,7 @@ async function main() {
 }
 
 function printUsage() {
-  console.log(`cogpit-memory - query Claude Code session history
+  console.log(`claudeview-memory - query Claude Code session history
 
 Commands:
   search <query> [options]    Search across sessions
@@ -193,7 +193,7 @@ Commands:
 
 // Run main() when executed directly (not when imported for testing).
 // Detection covers: Bun compiled binary, bun src/cli.ts, node dist/cli.js,
-// and npx symlink (where argv[1] may be "cogpit-memory" not "cli.js").
+// and npx symlink (where argv[1] may be "claudeview-memory" not "cli.js").
 const isBunCompiled = typeof Bun !== "undefined" && !process.argv[1]?.endsWith(".ts")
 const isNodeScript = process.argv[1]?.endsWith("/cli.ts") || process.argv[1]?.endsWith("/cli.js")
 // CJS bundled output: require.main === module (works for npx symlinks too)

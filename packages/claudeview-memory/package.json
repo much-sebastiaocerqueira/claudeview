@@ -1,11 +1,11 @@
 {
-  "name": "cogpit-memory",
+  "name": "claudeview-memory",
   "version": "0.1.5",
   "description": "CLI tool for Claude Code session introspection — search, browse, and drill into past sessions",
   "main": "./dist/index.js",
   "types": "./src/index.ts",
   "bin": {
-    "cogpit-memory": "./dist/cli.js"
+    "claudeview-memory": "./dist/cli.js"
   },
   "files": [
     "dist/",
@@ -13,7 +13,7 @@
   ],
   "scripts": {
     "test": "bun test",
-    "build": "bun build --compile src/cli.ts --outfile cogpit-memory",
+    "build": "bun build --compile src/cli.ts --outfile claudeview-memory",
     "build:npm": "node scripts/build-npm.mjs",
     "prepublishOnly": "node scripts/build-npm.mjs"
   },

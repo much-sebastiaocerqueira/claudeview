@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Build cogpit-memory for npm distribution (Node.js compatible).
+ * Build claudeview-memory for npm distribution (Node.js compatible).
  *
  * - Bundles src/cli.ts → dist/cli.js  (CLI entry)
  * - Bundles src/index.ts → dist/index.js (library entry)

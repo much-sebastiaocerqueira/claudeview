@@ -29,14 +29,14 @@ function findSkillContent(): string {
     } catch {}
   }
 
-  throw new Error("Could not find SKILL.md — try reinstalling cogpit-memory")
+  throw new Error("Could not find SKILL.md — try reinstalling claudeview-memory")
 }
 
 export function installSkill(cwd?: string, global?: boolean): { installed: boolean; path: string } {
   const root = global
     ? join(process.env.HOME ?? process.env.USERPROFILE ?? "~", ".claude")
     : join(cwd ?? process.cwd(), ".claude")
-  const skillDir = join(root, "skills", "cogpit-memory")
+  const skillDir = join(root, "skills", "claudeview-memory")
 
   mkdirSync(skillDir, { recursive: true })
 

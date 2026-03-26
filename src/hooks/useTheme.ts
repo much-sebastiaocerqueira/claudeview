@@ -3,7 +3,7 @@ import type { ThemeContext } from "@/contexts/AppContext"
 
 export type ThemeId = "dark" | "oled" | "light"
 
-const STORAGE_KEY = "cogpit-theme"
+const STORAGE_KEY = "claudeview-theme"
 
 interface ThemeDefinition {
   id: ThemeId

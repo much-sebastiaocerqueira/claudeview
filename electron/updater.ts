@@ -38,8 +38,8 @@ function getUpdatePlatform(): UpdatePlatform {
 
 async function checkGitHubRelease(): Promise<{ version: string; url: string } | null> {
   try {
-    const res = await fetch("https://api.github.com/repos/gentritbiba/cogpit/releases/latest", {
-      headers: { "User-Agent": "Cogpit-Updater" },
+    const res = await fetch("https://api.github.com/repos/much-sebastiaocerqueira/claudeview/releases/latest", {
+      headers: { "User-Agent": "ClaudeView-Updater" },
     })
     if (!res.ok) return null
     const data = await res.json()

@@ -14,7 +14,7 @@ import { DEFAULT_DB_PATH, dirs } from "../lib/dirs"
 export async function indexStats(dbPath?: string): Promise<IndexStats | { error: string }> {
   const path = dbPath ?? DEFAULT_DB_PATH
   if (!existsSync(path)) {
-    return { error: `Database not found at ${path}. Run 'cogpit-memory index rebuild' to create it.` }
+    return { error: `Database not found at ${path}. Run 'claudeview-memory index rebuild' to create it.` }
   }
   const index = new SearchIndex(path)
   const stats = index.getStats()

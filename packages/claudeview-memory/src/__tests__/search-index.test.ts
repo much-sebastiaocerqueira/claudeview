@@ -9,7 +9,7 @@ describe("SearchIndex", () => {
   let tmpDir: string
 
   beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), "cogpit-memory-test-"))
+    tmpDir = mkdtempSync(join(tmpdir(), "claudeview-memory-test-"))
     dbPath = join(tmpDir, "test.db")
   })
 

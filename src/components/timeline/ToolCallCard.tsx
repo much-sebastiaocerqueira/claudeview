@@ -408,7 +408,7 @@ export const ToolCallCard = memo(function ToolCallCard({ toolCall, expandAll, is
   const [inputOpen, setInputOpen] = useState(false)
   const [resultOpen, setResultOpen] = useState(false)
   const [resultExpanded, setResultExpanded] = useState(false)
-  const [diffOpen, setDiffOpen] = useState(false)
+  const [diffOpen, setDiffOpen] = useState(true)
   // On mobile, low-signal tools are collapsed to a single line by default
   const [mobileExpanded, setMobileExpanded] = useState(false)
   const isCompactMobile = isMobile && COMPACT_MOBILE_TOOLS.has(toolCall.name) && !expandAll && !mobileExpanded

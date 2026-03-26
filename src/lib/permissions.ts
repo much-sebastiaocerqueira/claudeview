@@ -31,7 +31,7 @@ export const KNOWN_TOOLS = [
   "Task",
 ] as const
 
-export const PERMISSIONS_STORAGE_KEY = "cogpit:permissions"
+export const PERMISSIONS_STORAGE_KEY = "claudeview:permissions"
 
 export function buildPermissionArgs(config: PermissionsConfig): string[] {
   void config

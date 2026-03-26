@@ -1,9 +1,9 @@
 ---
-name: cogpit-memory
+name: claudeview-memory
 description: CLI tool for Claude Code session introspection -- retrieves conversation history, tool calls, thinking, sub-agent/team activity, full-text search, and session discovery. All output is JSON to stdout.
 ---
 
-# Cogpit Memory -- Session Context CLI
+# ClaudeView Memory -- Session Context CLI
 
 CLI tool that gives any AI assistant memory of past Claude Code sessions. Retrieve conversation history, tool usage, thinking, and sub-agent activity via a layered command structure. **Also supports full-text search across all sessions** and session discovery/listing.
 
@@ -14,16 +14,16 @@ Always start with session discovery or the overview (Layer 1), and drill into sp
 ## Step 1 -- Verify the tool works
 
 ```bash
-bunx cogpit-memory --help
+bunx claudeview-memory --help
 ```
 
 If this prints usage info, proceed to Step 2. If `bunx` is not available, install the package globally:
 
 ```bash
-npm install -g cogpit-memory
+npm install -g claudeview-memory
 ```
 
-Then use `cogpit-memory` directly instead of `bunx cogpit-memory`.
+Then use `claudeview-memory` directly instead of `bunx claudeview-memory`.
 
 ## Step 2 -- Find sessions
 
@@ -31,13 +31,13 @@ Then use `cogpit-memory` directly instead of `bunx cogpit-memory`.
 
 ```bash
 # List recent sessions (default: last 7 days, up to 20 results)
-bunx cogpit-memory sessions
+bunx claudeview-memory sessions
 
 # Filter by working directory
-bunx cogpit-memory sessions --cwd /path/to/project
+bunx claudeview-memory sessions --cwd /path/to/project
 
 # Customize limit and time window
-bunx cogpit-memory sessions --limit 50 --max-age 30d
+bunx claudeview-memory sessions --limit 50 --max-age 30d
 ```
 
 Options:
@@ -53,7 +53,7 @@ Response: array of session summaries with `sessionId`, `cwd`, `model`, `firstMes
 ### Get current session for a directory
 
 ```bash
-bunx cogpit-memory sessions --current --cwd /path/to/project
+bunx claudeview-memory sessions --current --cwd /path/to/project
 ```
 
 Returns the most recently active session for the given working directory. The `--cwd` flag is required when using `--current` (defaults to the current working directory if omitted).
@@ -63,7 +63,7 @@ Returns the most recently active session for the given working directory. The `-
 This gives you every user prompt and AI reply, plus a tool usage summary per turn. **You must call this before Layer 2 or Layer 3** -- it provides the `turnIndex` and `agentId` values you need for drill-downs.
 
 ```bash
-bunx cogpit-memory context <SESSION_ID>
+bunx claudeview-memory context <SESSION_ID>
 ```
 
 Response shape:
@@ -117,7 +117,7 @@ Key fields:
 Use this to drill into a specific turn. Get thinking, full tool call inputs/outputs, and sub-agent summaries in chronological order.
 
 ```bash
-bunx cogpit-memory context <SESSION_ID> --turn <TURN_INDEX>
+bunx claudeview-memory context <SESSION_ID> --turn <TURN_INDEX>
 ```
 
 Response shape:
@@ -163,7 +163,7 @@ Key details:
 Drill into a specific sub-agent's full conversation. Returns the same shape as Layer 1 (an overview of the sub-agent's own turns).
 
 ```bash
-bunx cogpit-memory context <SESSION_ID> --agent <AGENT_ID>
+bunx claudeview-memory context <SESSION_ID> --agent <AGENT_ID>
 ```
 
 Get the `AGENT_ID` from Layer 1's `subAgents[].agentId` field.
@@ -188,7 +188,7 @@ Response shape:
 The `overview` field has the exact same shape as Layer 1. You can then drill into specific sub-agent turns:
 
 ```bash
-bunx cogpit-memory context <SESSION_ID> --agent <AGENT_ID> --turn <TURN_INDEX>
+bunx claudeview-memory context <SESSION_ID> --agent <AGENT_ID> --turn <TURN_INDEX>
 ```
 
 This returns the same shape as Layer 2.
@@ -230,16 +230,16 @@ Search for keywords across all sessions or within a specific session. Searches *
 
 ```bash
 # Search across all recent sessions (last 5 days)
-bunx cogpit-memory search "authentication"
+bunx claudeview-memory search "authentication"
 
 # Search within a specific session
-bunx cogpit-memory search "authentication" --session <SESSION_ID>
+bunx claudeview-memory search "authentication" --session <SESSION_ID>
 
 # Search with custom time window and more results
-bunx cogpit-memory search "authentication" --max-age 30d --limit 50
+bunx claudeview-memory search "authentication" --max-age 30d --limit 50
 
 # Case-sensitive search
-bunx cogpit-memory search "AuthProvider" --case-sensitive
+bunx claudeview-memory search "AuthProvider" --case-sensitive
 ```
 
 ### Options
@@ -302,10 +302,10 @@ Locations map directly to Layer 2/3 drill-down commands -- use them to fetch ful
 
 ### Typical workflow
 
-1. Search for keyword: `bunx cogpit-memory search "auth"`
+1. Search for keyword: `bunx claudeview-memory search "auth"`
 2. Pick a hit from results (e.g., `sessionId: "abc-123"`, `location: "turn/3/assistantMessage"`)
-3. Get full turn context: `bunx cogpit-memory context abc-123 --turn 3`
-4. If hit is in a sub-agent, get agent overview first: `bunx cogpit-memory context abc-123 --agent a7f3bc2`
+3. Get full turn context: `bunx claudeview-memory context abc-123 --turn 3`
+4. If hit is in a sub-agent, get agent overview first: `bunx claudeview-memory context abc-123 --agent a7f3bc2`
 
 ### Performance notes
 
@@ -316,30 +316,30 @@ Locations map directly to Layer 2/3 drill-down commands -- use them to fetch ful
 
 ## Index management
 
-The search index is an FTS5 trigram database at `~/.claude/cogpit-memory/search-index.db`. Most commands work without the index (falling back to raw file scanning), but indexed search is significantly faster.
+The search index is an FTS5 trigram database at `~/.claude/claudeview-memory/search-index.db`. Most commands work without the index (falling back to raw file scanning), but indexed search is significantly faster.
 
 ```bash
 # Show index stats (session count, staleness, DB size)
-bunx cogpit-memory index stats
+bunx claudeview-memory index stats
 
 # Rebuild the full index from scratch
-bunx cogpit-memory index rebuild
+bunx claudeview-memory index rebuild
 ```
 
 ## Quick reference
 
 | Goal | Command |
 |------|---------|
-| List recent sessions | `bunx cogpit-memory sessions` |
-| Sessions for a directory | `bunx cogpit-memory sessions --cwd <path>` |
-| Current session for a directory | `bunx cogpit-memory sessions --current --cwd <path>` |
-| Session overview (always first) | `bunx cogpit-memory context <sessionId>` |
-| Turn detail | `bunx cogpit-memory context <sessionId> --turn <N>` |
-| Sub-agent overview | `bunx cogpit-memory context <sessionId> --agent <agentId>` |
-| Sub-agent turn detail | `bunx cogpit-memory context <sessionId> --agent <agentId> --turn <N>` |
-| **Search across sessions** | `bunx cogpit-memory search "<query>"` |
-| **Search single session** | `bunx cogpit-memory search "<query>" --session <sessionId>` |
-| Index stats | `bunx cogpit-memory index stats` |
-| Index rebuild | `bunx cogpit-memory index rebuild` |
+| List recent sessions | `bunx claudeview-memory sessions` |
+| Sessions for a directory | `bunx claudeview-memory sessions --cwd <path>` |
+| Current session for a directory | `bunx claudeview-memory sessions --current --cwd <path>` |
+| Session overview (always first) | `bunx claudeview-memory context <sessionId>` |
+| Turn detail | `bunx claudeview-memory context <sessionId> --turn <N>` |
+| Sub-agent overview | `bunx claudeview-memory context <sessionId> --agent <agentId>` |
+| Sub-agent turn detail | `bunx claudeview-memory context <sessionId> --agent <agentId> --turn <N>` |
+| **Search across sessions** | `bunx claudeview-memory search "<query>"` |
+| **Search single session** | `bunx claudeview-memory search "<query>" --session <sessionId>` |
+| Index stats | `bunx claudeview-memory index stats` |
+| Index rebuild | `bunx claudeview-memory index rebuild` |
 
 **Default to Layer 1 only. Drill into Layer 2/3 only when you have a specific reason.**

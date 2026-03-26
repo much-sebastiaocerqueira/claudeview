@@ -5,8 +5,7 @@
   "description": "Session viewer for Claude Code with side-by-side diffs and session timeline",
   "license": "MIT",
   "author": {
-    "name": "Gentrit Biba",
-    "email": "gentritbiba@gmail.com"
+    "name": "ClaudeView Contributors"
   },
   "type": "module",
   "main": "out/main/main.js",
@@ -26,7 +25,7 @@
     "postinstall": "electron-builder install-app-deps",
     "serve": "bun run build && bun server/standalone.ts",
     "serve:start": "bun server/standalone.ts",
-    "sync-cogpit-memory": "bun scripts/sync-cogpit-memory.ts"
+    "sync-claudeview-memory": "bun scripts/sync-claudeview-memory.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.2.0",

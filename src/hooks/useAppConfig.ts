@@ -70,8 +70,8 @@ export function useAppConfig(): AppConfig {
   // Re-fetch config when auth state changes (e.g. after login on remote client)
   useEffect(() => {
     const handler = () => setFetchKey((k) => k + 1)
-    window.addEventListener("cogpit-auth-changed", handler)
-    return () => window.removeEventListener("cogpit-auth-changed", handler)
+    window.addEventListener("claudeview-auth-changed", handler)
+    return () => window.removeEventListener("claudeview-auth-changed", handler)
   }, [])
 
   // Fetch network info when claudeDir changes

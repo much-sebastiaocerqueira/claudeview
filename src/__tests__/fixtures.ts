@@ -1,5 +1,5 @@
 /**
- * Test fixtures for Cogpit - realistic JSONL mock data
+ * Test fixtures for ClaudeView - realistic JSONL mock data
  * matching the actual Claude Code JSONL format.
  */
 

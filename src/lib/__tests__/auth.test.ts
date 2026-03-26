@@ -64,7 +64,7 @@ describe("auth", () => {
     })
 
     it("returns the stored token", () => {
-      localStorage.setItem("cogpit-network-token", "abc123")
+      localStorage.setItem("claudeview-network-token", "abc123")
       expect(getToken()).toBe("abc123")
     })
   })
@@ -72,23 +72,23 @@ describe("auth", () => {
   describe("setToken", () => {
     it("stores the token in localStorage", () => {
       setToken("my-token")
-      expect(localStorage.getItem("cogpit-network-token")).toBe("my-token")
+      expect(localStorage.getItem("claudeview-network-token")).toBe("my-token")
     })
 
-    it("dispatches cogpit-auth-changed event", () => {
+    it("dispatches claudeview-auth-changed event", () => {
       const handler = vi.fn()
-      window.addEventListener("cogpit-auth-changed", handler)
+      window.addEventListener("claudeview-auth-changed", handler)
       setToken("t")
-      window.removeEventListener("cogpit-auth-changed", handler)
+      window.removeEventListener("claudeview-auth-changed", handler)
       expect(handler).toHaveBeenCalledOnce()
     })
   })
 
   describe("clearToken", () => {
     it("removes the token from localStorage", () => {
-      localStorage.setItem("cogpit-network-token", "t")
+      localStorage.setItem("claudeview-network-token", "t")
       clearToken()
-      expect(localStorage.getItem("cogpit-network-token")).toBeNull()
+      expect(localStorage.getItem("claudeview-network-token")).toBeNull()
     })
   })
 
@@ -108,12 +108,12 @@ describe("auth", () => {
     it("rejects with auth-required event when remote and no token", async () => {
       setHostname("example.com")
       const handler = vi.fn()
-      window.addEventListener("cogpit-auth-required", handler)
+      window.addEventListener("claudeview-auth-required", handler)
 
       await expect(authFetch("/api/test")).rejects.toThrow("Authentication required")
       expect(handler).toHaveBeenCalledOnce()
 
-      window.removeEventListener("cogpit-auth-required", handler)
+      window.removeEventListener("claudeview-auth-required", handler)
     })
 
     it("injects Bearer token header for remote clients", async () => {
@@ -135,13 +135,13 @@ describe("auth", () => {
       vi.spyOn(globalThis, "fetch").mockResolvedValue(mockResponse)
 
       const handler = vi.fn()
-      window.addEventListener("cogpit-auth-required", handler)
+      window.addEventListener("claudeview-auth-required", handler)
 
       await expect(authFetch("/api/secure")).rejects.toThrow("Authentication required")
       expect(getToken()).toBeNull()
       expect(handler).toHaveBeenCalledOnce()
 
-      window.removeEventListener("cogpit-auth-required", handler)
+      window.removeEventListener("claudeview-auth-required", handler)
     })
 
     it("merges with existing init options", async () => {
@@ -195,12 +195,12 @@ describe("auth", () => {
     it("fires auth-required and returns URL unchanged when remote with no token", () => {
       setHostname("example.com")
       const handler = vi.fn()
-      window.addEventListener("cogpit-auth-required", handler)
+      window.addEventListener("claudeview-auth-required", handler)
 
       expect(authUrl("/api/stream")).toBe("/api/stream")
       expect(handler).toHaveBeenCalledOnce()
 
-      window.removeEventListener("cogpit-auth-required", handler)
+      window.removeEventListener("claudeview-auth-required", handler)
     })
 
     it("appends token as query param with ? separator", () => {

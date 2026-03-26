@@ -12,12 +12,12 @@ import { useDiffFontSize } from "@/contexts/DiffFontSizeContext"
 import type { GroupedFile } from "./useFileChangesData"
 
 /** Custom event name for cross-panel file focus. */
-export const FOCUS_FILE_EVENT = "cogpit:focus-file"
+export const FOCUS_FILE_EVENT = "claudeview:focus-file"
 
 /** Diff display mode: aggregated net diff or individual per-edit diffs. */
 export type DiffMode = "net" | "per-edit"
 
-const PREFS_KEY = "cogpit:file-changes-prefs"
+const PREFS_KEY = "claudeview:file-changes-prefs"
 
 function loadPref<T>(key: string, fallback: T): T {
   try {

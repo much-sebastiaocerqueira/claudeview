@@ -26,9 +26,9 @@ export function registerNotifyRoutes(use: UseFn): void {
           return sendJson(res, 200, { success: true, skipped: "subagent" })
         }
 
-        // Skip Cogpit-managed sessions (spawned via /api/create-and-send)
+        // Skip ClaudeView-managed sessions (spawned via /api/create-and-send)
         if (sessionId && persistentSessions.has(sessionId)) {
-          return sendJson(res, 200, { success: true, skipped: "cogpit-session" })
+          return sendJson(res, 200, { success: true, skipped: "claudeview-session" })
         }
 
         // Throttle: check cooldown before doing any work

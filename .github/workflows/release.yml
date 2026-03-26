@@ -98,14 +98,14 @@ jobs:
       - name: Download .pacman from release
         run: |
           gh release download "$GITHUB_REF_NAME" \
-            --pattern "cogpit-*.pacman" \
+            --pattern "claudeview-*.pacman" \
             --dir .
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Compute checksum
         id: checksum
-        run: echo "sha256=$(sha256sum cogpit-*.pacman | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
+        run: echo "sha256=$(sha256sum claudeview-*.pacman | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
 
       - name: Setup SSH for AUR
         run: |
@@ -120,7 +120,7 @@ jobs:
           EOF
 
       - name: Clone AUR repo
-        run: git clone ssh://aur@aur.archlinux.org/cogpit.git aur-repo
+        run: git clone ssh://aur@aur.archlinux.org/claudeview.git aur-repo
 
       - name: Update PKGBUILD
         run: |
@@ -139,7 +139,7 @@ jobs:
           cd aur-repo
           sudo chown -R "$(id -u):$(id -g)" .
           git config user.name "Gentrit Biba"
-          git config user.email "gentritbiba@gmail.com"
+          git config user.email "noreply@claudeview.dev"
           git add PKGBUILD .SRCINFO
           git commit -m "Update to ${{ steps.version.outputs.pkgver }}"
           git push
@@ -168,13 +168,13 @@ jobs:
           EOF
 
       - name: Clone AUR repo
-        run: git clone ssh://aur@aur.archlinux.org/cogpit-server.git aur-repo
+        run: git clone ssh://aur@aur.archlinux.org/claudeview-server.git aur-repo
 
       - name: Update PKGBUILD
         run: |
           sed -e 's/%%PKGVER%%/${{ steps.version.outputs.pkgver }}/' \
               aur/PKGBUILD-server.template > aur-repo/PKGBUILD
-          cp aur/cogpit-server.service aur-repo/
+          cp aur/claudeview-server.service aur-repo/
 
       - name: Generate .SRCINFO
         run: |
@@ -187,7 +187,7 @@ jobs:
           cd aur-repo
           sudo chown -R "$(id -u):$(id -g)" .
           git config user.name "Gentrit Biba"
-          git config user.email "gentritbiba@gmail.com"
-          git add PKGBUILD .SRCINFO cogpit-server.service
+          git config user.email "noreply@claudeview.dev"
+          git add PKGBUILD .SRCINFO claudeview-server.service
           git commit -m "Update to ${{ steps.version.outputs.pkgver }}"
           git push

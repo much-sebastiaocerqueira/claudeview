@@ -29,7 +29,7 @@ import { registerSessionSearchRoutes, setSearchIndex, getSearchIndex } from "../
 import { registerLocalFileRoutes } from "../server/routes/local-file"
 import { registerFileContentRoutes } from "../server/routes/file-content"
 import { registerSearchIndexRoutes } from "../server/routes/search-index-stats"
-import { registerCogpitSearchRoutes } from "../server/routes/cogpit-search"
+import { registerClaudeViewSearchRoutes } from "../server/routes/claudeview-search"
 import { registerMcpRoutes } from "../server/routes/mcp"
 import { registerNotifyRoutes } from "../server/routes/notify"
 import { registerScriptRoutes } from "../server/routes/scripts"
@@ -104,7 +104,7 @@ export async function createAppServer(staticDir: string, userDataDir: string) {
   registerLocalFileRoutes(use)
   registerFileContentRoutes(use)
   registerSearchIndexRoutes(use)
-  registerCogpitSearchRoutes(use)
+  registerClaudeViewSearchRoutes(use)
   registerMcpRoutes(use)
   registerNotifyRoutes(use)
   registerScriptRoutes(use)

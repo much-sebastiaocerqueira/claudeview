@@ -508,7 +508,7 @@ mark.find-in-session-active {
 }
 
 /* ── @git-diff-view theme overrides ──────────────────────── */
-/* Match diff view backgrounds to Cogpit's elevation surfaces */
+/* Match diff view backgrounds to ClaudeView's elevation surfaces */
 .dark [class*="diff-view"] {
   --diff-add-background-color: rgba(34, 197, 94, 0.08);
   --diff-del-background-color: rgba(239, 68, 68, 0.08);

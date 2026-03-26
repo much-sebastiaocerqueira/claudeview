@@ -1,11 +1,11 @@
-appId: com.cogpit.app
-productName: Cogpit
-copyright: "Copyright © 2026 Gentrit Biba"
+appId: com.claudeview.app
+productName: ClaudeView
+copyright: "Copyright © 2026 ClaudeView Contributors"
 
 publish:
   provider: github
-  owner: gentritbiba
-  repo: cogpit
+  owner: much-sebastiaocerqueira
+  repo: claudeview
 
 directories:
   output: release
@@ -13,12 +13,12 @@ directories:
 
 asar: true
 asarUnpack:
-  - packages/cogpit-memory/dist/**/*
+  - packages/claudeview-memory/dist/**/*
 compression: maximum
 
 files:
   - out/**/*
-  - packages/cogpit-memory/dist/**/*
+  - packages/claudeview-memory/dist/**/*
   - "!out/**/*.map"
   - "!node_modules/**/*.{md,map,ts,d.ts}"
   - "!node_modules/**/{CHANGELOG,README,LICENSE,LICENCE,readme,changelog}*"

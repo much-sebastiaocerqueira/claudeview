@@ -433,7 +433,7 @@ describe("useAppConfig", () => {
   })
 
   describe("auth state changes", () => {
-    it("re-fetches config when cogpit-auth-changed event fires", async () => {
+    it("re-fetches config when claudeview-auth-changed event fires", async () => {
       let fetchCount = 0
       mockAuthFetch.mockImplementation(async (input: RequestInfo | URL) => {
         const url = typeof input === "string" ? input : input.toString()
@@ -459,7 +459,7 @@ describe("useAppConfig", () => {
 
       // Simulate auth change event
       act(() => {
-        window.dispatchEvent(new Event("cogpit-auth-changed"))
+        window.dispatchEvent(new Event("claudeview-auth-changed"))
       })
 
       await waitFor(() => {

@@ -70,7 +70,6 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable"
-import { HoverRevealPanel } from "@/components/HoverRevealPanel"
 import { AppProvider } from "@/contexts/AppContext"
 import { DiffFontSizeProvider } from "@/contexts/DiffFontSizeContext"
 import { SessionProvider, type SessionContextValue, type SessionChatContextValue } from "@/contexts/SessionContext"
@@ -1310,11 +1309,7 @@ export default function App() {
       />
 
       <div className="relative flex flex-1 min-h-0 overflow-hidden">
-        <HoverRevealPanel
-          side="left"
-          visible={panels.showSidebar && state.mainView !== "config"}
-          enabled={state.mainView !== "config"}
-        >
+        {panels.showSidebar && state.mainView !== "config" && (
           <SessionBrowser
             sessionId={state.session?.sessionId ?? null}
             activeSessionKey={activeSessionKey}
@@ -1333,7 +1328,7 @@ export default function App() {
             projectDir={state.session?.cwd ?? state.pendingCwd ?? null}
             onScriptStarted={processPanel.addProcess}
           />
-        </HoverRevealPanel>
+        )}
 
         <main className="relative flex-1 min-w-0 overflow-hidden flex flex-col">
           {state.mainView === "config" ? (
@@ -1460,11 +1455,7 @@ export default function App() {
           )}
         </main>
 
-        <HoverRevealPanel
-          side="right"
-          visible={panels.showStats && !!state.session && state.mainView !== "teams" && state.mainView !== "config"}
-          enabled={!!state.session && state.mainView !== "teams" && state.mainView !== "config"}
-        >
+        {panels.showStats && !!state.session && state.mainView !== "teams" && state.mainView !== "config" && (
           <StatsPanel
             onJumpToTurn={actions.handleJumpToTurn}
             onToggleServer={processPanel.handleToggleServer}
@@ -1473,7 +1464,7 @@ export default function App() {
             onLoadSession={handlers.handleLoadSessionScrollAware}
             backgroundAgents={backgroundAgents}
           />
-        </HoverRevealPanel>
+        )}
 
       </div>
 

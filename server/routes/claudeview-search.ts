@@ -1,11 +1,11 @@
 /**
- * /api/cogpit-search — deep session search powered by local cogpit-memory CLI.
+ * /api/claudeview-search — deep session search powered by local claudeview-memory CLI.
  *
- * Shells out to the cogpit-memory CLI and maps results to ActiveSessionInfo[]
+ * Shells out to the claudeview-memory CLI and maps results to ActiveSessionInfo[]
  * so the LiveSessions UI can render them directly.
  *
- * In dev: runs `bun packages/cogpit-memory/src/cli.ts` (source, fast reload)
- * In packaged app: runs `node packages/cogpit-memory/dist/cli.js` (compiled)
+ * In dev: runs `bun packages/claudeview-memory/src/cli.ts` (source, fast reload)
+ * In packaged app: runs `node packages/claudeview-memory/dist/cli.js` (compiled)
  */
 
 import { execFile as execFileCb } from "node:child_process"
@@ -20,7 +20,7 @@ const cliEnv = { ...process.env, ELECTRON_RUN_AS_NODE: "1" }
 
 function getCliConfig(): { executable: string; script: string } {
   // Dev mode: __dirname = server/routes/ (via Vite middleware)
-  const devTs = join(__dirname, "..", "..", "packages", "cogpit-memory", "src", "cli.ts")
+  const devTs = join(__dirname, "..", "..", "packages", "claudeview-memory", "src", "cli.ts")
   if (existsSync(devTs)) {
     return { executable: "bun", script: devTs }
   }
@@ -30,7 +30,7 @@ function getCliConfig(): { executable: string; script: string } {
   const unpackedRoot = asarRoot.replace("app.asar", "app.asar.unpacked")
   return {
     executable: process.execPath,
-    script: join(unpackedRoot, "packages", "cogpit-memory", "dist", "cli.js"),
+    script: join(unpackedRoot, "packages", "claudeview-memory", "dist", "cli.js"),
   }
 }
 
@@ -94,8 +94,8 @@ async function buildSessionInfo(sr: SearchResult) {
   }
 }
 
-export function registerCogpitSearchRoutes(use: UseFn) {
-  use("/api/cogpit-search", async (req, res, next) => {
+export function registerClaudeViewSearchRoutes(use: UseFn) {
+  use("/api/claudeview-search", async (req, res, next) => {
     if (req.method !== "GET") return next()
 
     const url = new URL(req.url || "/", "http://localhost")

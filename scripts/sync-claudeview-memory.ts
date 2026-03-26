@@ -1,14 +1,14 @@
 #!/usr/bin/env bun
 /**
- * Sync shared modules from src/lib/ to packages/cogpit-memory/src/lib/.
- * cogpit (agent-window) is the source of truth for these files.
+ * Sync shared modules from src/lib/ to packages/claudeview-memory/src/lib/.
+ * claudeview (agent-window) is the source of truth for these files.
  */
 import { copyFileSync, mkdirSync } from "node:fs"
 import { join } from "node:path"
 
 const ROOT = join(import.meta.dir, "..")
 const SRC = join(ROOT, "src/lib")
-const DEST = join(ROOT, "packages/cogpit-memory/src/lib")
+const DEST = join(ROOT, "packages/claudeview-memory/src/lib")
 
 const FILES = [
   "parser.ts",
@@ -30,4 +30,4 @@ for (const file of FILES) {
   console.log(`  synced ${file}`)
 }
 
-console.log(`\nSynced ${FILES.length} files to packages/cogpit-memory/src/lib/`)
+console.log(`\nSynced ${FILES.length} files to packages/claudeview-memory/src/lib/`)

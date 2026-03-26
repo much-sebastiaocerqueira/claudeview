@@ -1,9 +1,9 @@
 /**
- * cogpit-memory library — exports for cogpit integration.
+ * claudeview-memory library — exports for claudeview integration.
  *
- * Usage from cogpit:
- *   import { SearchIndex } from "../packages/cogpit-memory"
- *   const index = new SearchIndex("~/.claude/cogpit-memory/search-index.db")
+ * Usage from claudeview:
+ *   import { SearchIndex } from "../packages/claudeview-memory"
+ *   const index = new SearchIndex("~/.claude/claudeview-memory/search-index.db")
  *   index.startWatching(dirs.PROJECTS_DIR)
  */
 
