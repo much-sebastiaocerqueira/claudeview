@@ -1,4 +1,4 @@
-import { useState, memo, useMemo } from "react"
+import { useState, useEffect, useRef, memo, useMemo } from "react"
 import { Users, ChevronRight, ChevronDown, Clock, Wrench, CheckCircle2, XCircle, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { formatDuration } from "@/lib/format"
@@ -45,7 +45,22 @@ export const AgentPanel = memo(function AgentPanel({
   thinkingIconColor,
   lazyLoad = false,
 }: AgentPanelProps): React.ReactElement | null {
-  const [open, setOpen] = useState(false)
+  // Auto-expand when any agent is still running (no durationMs yet)
+  const hasRunningAgent = useMemo(
+    () => messages.some((m) => m.durationMs == null),
+    [messages],
+  )
+  const [open, setOpen] = useState(hasRunningAgent)
+  const autoExpandedRef = useRef(false)
+
+  // Auto-expand once when a running agent is detected (don't force-collapse on completion)
+  useEffect(() => {
+    if (hasRunningAgent && !autoExpandedRef.current) {
+      setOpen(true)
+      autoExpandedRef.current = true
+    }
+  }, [hasRunningAgent])
+
   const isOpen = expandAll || open
 
   const { enrichedMessages: displayMessages, isLoading } = useSubagentContent(messages, lazyLoad && isOpen)

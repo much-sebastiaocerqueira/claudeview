@@ -104,36 +104,30 @@ function TaskNotificationCard({ notification }: { notification: TaskNotification
   const Chevron = expanded ? ChevronDown : ChevronRight
 
   return (
-    <div className={`rounded-lg border ${statusStyle.bg} p-3 my-1`}>
-      <div className="flex items-start gap-2">
-        <StatusIcon className={`w-4 h-4 mt-0.5 flex-shrink-0 ${statusStyle.color}`} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-foreground">{notification.summary}</span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${statusStyle.color} ${statusStyle.bg}`}>
-              {statusStyle.label}
-            </span>
-          </div>
-          {hasResult && (
-            <>
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="mt-1.5 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-              >
-                <Chevron className="w-3 h-3" />
-                {expanded ? "Hide result" : "Show result"}
-              </button>
-              {expanded && (
-                <div className="mt-2 text-sm text-foreground/90 border-t border-border/30 pt-2">
-                  <ReactMarkdown components={markdownComponents} remarkPlugins={markdownPlugins}>
-                    {notification.result}
-                  </ReactMarkdown>
-                </div>
-              )}
-            </>
-          )}
-        </div>
+    <div className="rounded-md border border-border/15 bg-white/[0.02] px-2.5 py-1.5 my-1">
+      <div className="flex items-center gap-2">
+        <StatusIcon className={`w-3.5 h-3.5 flex-shrink-0 ${statusStyle.color}`} />
+        <span className="text-xs text-muted-foreground truncate">{notification.summary}</span>
+        <span className={`text-[10px] px-1 py-0 rounded ${statusStyle.color} opacity-60`}>
+          {statusStyle.label}
+        </span>
+        {hasResult && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-[10px] text-muted-foreground/50 hover:text-foreground flex items-center gap-0.5 transition-colors ml-auto shrink-0"
+          >
+            <Chevron className="w-3 h-3" />
+            Result
+          </button>
+        )}
       </div>
+      {expanded && hasResult && (
+        <div className="mt-1.5 text-sm text-foreground/90 border-t border-border/20 pt-1.5 ml-5.5">
+          <ReactMarkdown components={markdownComponents} remarkPlugins={markdownPlugins}>
+            {notification.result}
+          </ReactMarkdown>
+        </div>
+      )}
     </div>
   )
 }
