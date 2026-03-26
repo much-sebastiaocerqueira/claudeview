@@ -171,6 +171,7 @@ export const Dashboard = memo(function Dashboard({
     const q = searchFilter.toLowerCase()
     return sessions.filter(
       (s) =>
+        s.customTitle?.toLowerCase().includes(q) ||
         s.firstUserMessage?.toLowerCase().includes(q) ||
         s.slug?.toLowerCase().includes(q) ||
         s.model?.toLowerCase().includes(q) ||

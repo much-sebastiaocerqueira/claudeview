@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m json.tool)",
+      "Bash(grep -r \"\"slug\"\" ~/.claude/projects/ --include=*.jsonl -h)",
+      "Bash(python3 -c \"import sys,json; [print\\(json.dumps\\({k:v for k,v in json.loads\\(l\\).items\\(\\) if k in \\(''''slug'''',''''sessionId'''',''''type''''\\)}, indent=None\\)\\) for l in sys.stdin]\")",
+      "Bash(find ~/.claude -name *.json -exec grep -l \"customName\\\\|renamed\\\\|sessionName\\\\|display_name\" {})",
+      "Bash(2)"
+    ]
+  }
+}

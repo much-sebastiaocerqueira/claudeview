@@ -80,6 +80,7 @@ async function buildSessionInfo(sr: SearchResult) {
     fileName,
     sessionId: sr.sessionId,
     slug: meta?.slug,
+    customTitle: meta?.customTitle || undefined,
     firstUserMessage: meta?.firstUserMessage,
     lastUserMessage: meta?.lastUserMessage,
     gitBranch: meta?.gitBranch,

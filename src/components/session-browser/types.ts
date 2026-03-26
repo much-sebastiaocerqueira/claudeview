@@ -20,6 +20,8 @@ export interface SessionInfo {
   gitBranch?: string
   model?: string
   slug?: string
+  /** Session name set via Claude Code CLI /rename command */
+  customTitle?: string
   cwd?: string
   firstUserMessage?: string
   timestamp?: string
