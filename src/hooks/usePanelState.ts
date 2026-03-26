@@ -18,7 +18,7 @@ function loadPanelState(): PersistedPanels {
     const raw = localStorage.getItem(PANEL_STORAGE_KEY)
     if (raw) return JSON.parse(raw)
   } catch { /* ignore */ }
-  return { showSidebar: true, showStats: false, showFileChanges: true }
+  return { showSidebar: false, showStats: false, showFileChanges: true }
 }
 
 function savePanelState(s: PersistedPanels): void {
