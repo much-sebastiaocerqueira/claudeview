@@ -94,6 +94,7 @@ export async function getSessionMeta(filePath: string) {
   let timestamp = ""
   let lastTimestamp = ""
   let turnCount = 0
+  let customTitle = ""
   let branchedFrom: { sessionId: string; turnIndex?: number | null } | undefined
 
   for (const line of lines) {
@@ -105,6 +106,10 @@ export async function getSessionMeta(filePath: string) {
       if (obj.slug && !slug) slug = obj.slug
       if (obj.cwd && !cwd) cwd = obj.cwd
       if (obj.branchedFrom && !branchedFrom) branchedFrom = obj.branchedFrom
+      // Claude Code CLI writes this when the user runs /rename
+      if (obj.type === "custom-title" && obj.customTitle) {
+        customTitle = obj.customTitle
+      }
       if (obj.type === "assistant" && obj.message?.model && !model) {
         model = obj.message.model
       }
@@ -138,6 +143,7 @@ export async function getSessionMeta(filePath: string) {
       let leftover = ""
       let foundMessage = false
       let foundTimestamp = false
+      let foundTitle = false
       outer: for (let i = 0; i < MAX_CHUNKS && cursor > 0; i++) {
         const readSize = Math.min(CHUNK, cursor)
         cursor -= readSize
@@ -149,7 +155,20 @@ export async function getSessionMeta(filePath: string) {
         const startIdx = cursor > 0 ? 1 : 0
         for (let j = splitLines.length - 1; j >= startIdx; j--) {
           const line = splitLines[j]
-          if (!line || !line.includes('"user"')) continue
+          if (!line) continue
+          // Pick up custom-title from /rename command (can appear anywhere in the file).
+          // The tail scans backward so the first match is the most recent rename —
+          // only set once to avoid overwriting with an older rename.
+          if (!foundTitle && line.includes('"custom-title"')) {
+            try {
+              const obj = JSON.parse(line)
+              if (obj.type === "custom-title" && obj.customTitle) {
+                customTitle = obj.customTitle
+                foundTitle = true
+              }
+            } catch { /* skip */ }
+          }
+          if (!line.includes('"user"')) continue
           try {
             const obj = JSON.parse(line)
             if (obj.type !== "user" || obj.isMeta) continue
@@ -165,7 +184,7 @@ export async function getSessionMeta(filePath: string) {
                 foundMessage = true
               }
             }
-            if (foundMessage && foundTimestamp) break outer
+            if (foundMessage && foundTimestamp && foundTitle) break outer
           } catch { continue }
         }
       }
@@ -183,6 +202,7 @@ export async function getSessionMeta(filePath: string) {
     gitBranch,
     model,
     slug,
+    customTitle,
     cwd,
     firstUserMessage,
     lastUserMessage,

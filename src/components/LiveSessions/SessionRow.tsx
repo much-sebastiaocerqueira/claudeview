@@ -17,6 +17,8 @@ export interface ActiveSessionInfo {
   fileName: string
   sessionId: string
   slug?: string
+  /** Session name set via Claude Code CLI /rename command */
+  customTitle?: string
   firstUserMessage?: string
   lastUserMessage?: string
   gitBranch?: string
@@ -78,7 +80,7 @@ export function SessionRow({
     ? (getStatusLabel(s.agentStatus, s.agentToolName) ?? "Idle")
     : null
   const turnCount = resolveTurnCount(s.sessionId, s.turnCount)
-  const title = customName || truncate(s.lastUserMessage || s.firstUserMessage || s.slug || s.sessionId, 50)
+  const title = customName || s.customTitle || truncate(s.lastUserMessage || s.firstUserMessage || s.slug || s.sessionId, 50)
 
   const sessionRow = (
     <Tooltip>

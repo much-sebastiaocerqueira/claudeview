@@ -32,6 +32,8 @@ interface SessionInfo {
   gitBranch?: string
   model?: string
   slug?: string
+  /** Session name set via Claude Code CLI /rename command */
+  customTitle?: string
   cwd?: string
   firstUserMessage?: string
   timestamp?: string
@@ -178,7 +180,7 @@ export function SessionsView({
                   >
                     <div className="flex items-center justify-between gap-2 mb-1">
                       <span className="text-xs font-medium text-foreground truncate">
-                        {s.slug || truncate(s.sessionId, 12)}
+                        {s.customTitle || s.slug || truncate(s.sessionId, 12)}
                       </span>
                       {s.model && (
                         <Badge variant="secondary" className="h-4 px-1.5 text-[9px] font-normal shrink-0">
@@ -225,7 +227,7 @@ export function SessionsView({
 
                 return wrapWithContextMenu(
                   s.fileName,
-                  s.slug || s.sessionId.slice(0, 12),
+                  s.customTitle || s.slug || s.sessionId.slice(0, 12),
                   selectedProject.dirName,
                   s.fileName,
                   card

@@ -100,9 +100,11 @@ export function useProcessPanel(sessionId: string | null | undefined) {
       const next = new Map(prev)
       const serverIds = new Set(servers.map((s) => s.id))
 
-      // Remove old task entries that are no longer present
+      // Remove old task entries that are no longer present in the server list.
+      // Skip entries added manually (source === "tracker") — those are managed
+      // by the BackgroundAgentTracker and should not be auto-removed.
       for (const [id, entry] of next) {
-        if (entry.type === "task" && !serverIds.has(id)) {
+        if (entry.type === "task" && !entry.source && !serverIds.has(id)) {
           next.delete(id)
           changed = true
         }
@@ -130,7 +132,7 @@ export function useProcessPanel(sessionId: string | null | undefined) {
     })
   }, [])
 
-  // Bridge: handle toggle from BackgroundServers/StatsPanel click
+  // Bridge: handle toggle from BackgroundServers/StatsPanel click or BackgroundAgentTracker
   const handleToggleServer = useCallback((id: string, outputPath?: string, title?: string) => {
     if (outputPath && title) {
       setProcesses((prev) => {
@@ -141,6 +143,7 @@ export function useProcessPanel(sessionId: string | null | undefined) {
           name: title,
           type: "task",
           status: "running",
+          source: "tracker",
           outputPath,
         })
         return next

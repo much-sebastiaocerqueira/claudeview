@@ -119,7 +119,7 @@ function SessionCard({
           <FileText className="size-3.5 shrink-0 text-muted-foreground group-hover:text-blue-400" />
         )}
         <span className="text-xs font-medium text-foreground truncate flex-1">
-          {customName || session.slug || truncate(session.sessionId, 16)}
+          {customName || session.customTitle || session.slug || truncate(session.sessionId, 16)}
         </span>
         {session.branchedFrom && (
           <Copy className="size-2.5 text-purple-400 shrink-0" title="Duplicated session" />
@@ -168,6 +168,7 @@ export const SessionsList = memo(function SessionsList({
     return sessions.filter(
       (s) =>
         sessionNames[s.sessionId]?.toLowerCase().includes(q) ||
+        s.customTitle?.toLowerCase().includes(q) ||
         s.firstUserMessage?.toLowerCase().includes(q) ||
         s.slug?.toLowerCase().includes(q) ||
         s.model?.toLowerCase().includes(q) ||
