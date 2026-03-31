@@ -35,6 +35,7 @@ import { registerNotifyRoutes } from "../server/routes/notify"
 import { registerScriptRoutes } from "../server/routes/scripts"
 import { registerFileSnapshotRoutes } from "../server/routes/file-snapshots"
 import { registerGitFileDiffRoutes } from "../server/routes/git-file-diff"
+import { registerDefaultsRoutes } from "../server/routes/defaults"
 import { SearchIndex } from "../server/search-index"
 import { PtySessionManager } from "../server/pty-server"
 
@@ -110,6 +111,7 @@ export async function createAppServer(staticDir: string, userDataDir: string) {
   registerScriptRoutes(use)
   registerFileSnapshotRoutes(use)
   registerGitFileDiffRoutes(use)
+  registerDefaultsRoutes(use)
 
   // ── Static files / dev proxy ────────────────────────────────────
   const viteDevUrl = process.env.ELECTRON_RENDERER_URL

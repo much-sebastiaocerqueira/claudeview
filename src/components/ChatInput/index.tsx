@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo, memo, useImperativeHandle, forwardRef } from "react"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { formatElapsed } from "@/lib/format"
 import { useElapsedTimer } from "@/hooks/useElapsedTimer"
 import { useSessionContext, useSessionChatContext } from "@/contexts/SessionContext"
 import { SlashSuggestions } from "@/components/SlashSuggestions"
@@ -9,7 +10,12 @@ import { PlanApprovalBar } from "./PlanApprovalBar"
 import { UserQuestionBar } from "./UserQuestionBar"
 import { useVoiceInput } from "./useVoiceInput"
 import { useImageUpload } from "./useImageUpload"
-import { InputToolbar, ActionButtons } from "./InputToolbar"
+import { ActionButtons } from "./InputToolbar"
+
+export interface ChatInputProps {
+  /** Rendered inside the input box, below the textarea, on the left side of the bottom row */
+  settingsSlot?: React.ReactNode
+}
 
 export interface ChatInputHandle {
   toggleVoice: () => void
@@ -31,20 +37,7 @@ function autoResize(el: HTMLTextAreaElement | null, currentlyMultiline: boolean)
   el.style.height = "auto"
   const target = Math.min(el.scrollHeight, 200)
 
-  // Decide if we need multiline
-  let needsMultiline: boolean
-  if (currentlyMultiline) {
-    // Temporarily narrow the textarea to what it would be with inline buttons
-    // and check if text still wraps. This prevents the oscillation loop where:
-    // multiline → wider → text unwraps → exit multiline → narrower → text wraps → ...
-    const INLINE_BUTTONS_WIDTH_PX = 140
-    const savedW = el.style.width
-    el.style.width = `${Math.max(100, el.offsetWidth - INLINE_BUTTONS_WIDTH_PX)}px`
-    needsMultiline = el.scrollHeight > 48
-    el.style.width = savedW
-  } else {
-    needsMultiline = target > 44
-  }
+  const needsMultiline = true
 
   if (prev !== target) {
     el.style.height = prev + "px"
@@ -60,8 +53,8 @@ function autoResize(el: HTMLTextAreaElement | null, currentlyMultiline: boolean)
 function getPlaceholder(isPlanApproval: boolean, isUserQuestion: boolean, isConnected: boolean): string {
   if (isPlanApproval) return "Provide feedback to request changes..."
   if (isUserQuestion) return "Type a custom response..."
-  if (isConnected) return "Message... (Enter to send)"
-  return "Send a message... (Enter to send)"
+  if (isConnected) return "Message Claude..."
+  return "Message Claude..."
 }
 
 function getTextareaBorderClass(isPlanApproval: boolean, isUserQuestion: boolean): string {
@@ -70,7 +63,7 @@ function getTextareaBorderClass(isPlanApproval: boolean, isUserQuestion: boolean
   return "border-border/50 focus-within:border-blue-500/30 focus-within:ring-blue-500/20"
 }
 
-export const ChatInput = memo(forwardRef<ChatInputHandle>(function ChatInput(_props, ref) {
+export const ChatInput = memo(forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput({ settingsSlot }, ref) {
   const {
     isLive,
     actions: { handleEditConfig: onEditConfig },
@@ -161,7 +154,7 @@ export const ChatInput = memo(forwardRef<ChatInputHandle>(function ChatInput(_pr
 
   return (
     <div
-      className={cn("border-border/50 bg-elevation-1 pt-2.5 pb-0 relative", isDragOver && "ring-2 ring-blue-500/50 ring-inset")}
+      className={cn("border-t border-border/30 bg-elevation-1 pt-2.5 pb-0 relative", isDragOver && "ring-2 ring-blue-500/50 ring-inset")}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -194,33 +187,42 @@ export const ChatInput = memo(forwardRef<ChatInputHandle>(function ChatInput(_pr
         )}
 
         <div className={cn(
-          "relative bg-elevation-2 border rounded-3xl chat-input-3d",
+          "relative bg-elevation-2 border rounded-2xl chat-input-3d flex flex-col",
           getTextareaBorderClass(isPlanApproval, isUserQuestion),
           "focus-within:ring-2",
-          isMultiline ? "flex flex-col" : "flex items-end"
         )}>
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={handleInput}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            onFocus={() => {
-              // On mobile, scroll textarea into view after virtual keyboard opens
-              setTimeout(() => textareaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300)
-            }}
-            placeholder={getPlaceholder(isPlanApproval, isUserQuestion, isConnected)}
-            rows={1}
-            className={cn(
-              "w-full resize-none bg-transparent pl-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none",
-              isMultiline ? "py-3 pr-4" : "py-2.5 pr-2"
+          <div className="flex items-start">
+            {isConnected && !isPlanApproval && !isUserQuestion && (
+              <div className="flex items-center gap-1.5 pl-4 pt-3 shrink-0">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+                </span>
+                {elapsedSec > 0 && (
+                  <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
+                    {formatElapsed(elapsedSec)}
+                  </span>
+                )}
+              </div>
             )}
-          />
-          <div className={cn(
-            "flex items-center shrink-0",
-            isMultiline ? "px-2 pb-2 justify-end" : "pr-1.5 pb-1.5"
-          )}>
-            <InputToolbar isPlanApproval={isPlanApproval} isUserQuestion={isUserQuestion} elapsedSec={elapsedSec} />
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={handleInput}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              onFocus={() => {
+                setTimeout(() => textareaRef.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300)
+              }}
+              placeholder={getPlaceholder(isPlanApproval, isUserQuestion, isConnected)}
+              rows={1}
+              className="w-full resize-none bg-transparent px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
+            />
+          </div>
+          <div className="flex items-center justify-between px-2 pb-1.5">
+            <div className="flex items-center min-w-0">
+              {settingsSlot}
+            </div>
             <ActionButtons hasContent={hasContent} voiceStatus={voiceStatus} voiceProgress={voiceProgress} voiceError={voiceError} onToggleVoice={toggleVoice} onSubmit={handleSubmit} />
           </div>
         </div>
