@@ -18,6 +18,7 @@ import { SessionInfoBar } from "@/components/SessionInfoBar"
 import { ChatArea } from "@/components/ChatArea"
 import { PendingTurnPreview } from "@/components/PendingTurnPreview"
 import { TodoProgressPanel } from "@/components/TodoProgressPanel"
+import { InteractivePromptBar } from "@/components/timeline/InteractivePromptBar"
 import { UpdateBanner } from "@/components/UpdateBanner"
 import { TabBar } from "@/components/TabBar"
 import { useLiveSession } from "@/hooks/useLiveSession"
@@ -50,7 +51,7 @@ import { useBackgroundTabWatcher } from "@/hooks/useBackgroundTabWatcher"
 import { TabProvider, type TabContextValue } from "@/contexts/TabContext"
 import { hapticLight } from "@/lib/haptics"
 import { detectPendingInteraction, parseSession } from "@/lib/parser"
-import { dirNameToPath, shortPath, parseSubAgentPath, projectName } from "@/lib/format"
+import { dirNameToPath, shortPath, parseSubAgentPath, projectName, sessionTabLabel } from "@/lib/format"
 import { OPEN_SUBAGENT_EVENT } from "@/components/FileChangesPanel/file-change-indicators"
 import { FOCUS_FILE_EVENT } from "@/components/FileChangesPanel"
 import type { ParsedSession } from "@/lib/types"
@@ -122,7 +123,7 @@ export default function App() {
 
   // Stable callbacks
   const handleSidebarTabChange = useCallback(
-    (tab: "live" | "browse" | "teams") => dispatch({ type: "SET_SIDEBAR_TAB", tab }),
+    (tab: "live" | "browse" | "teams" | "files") => dispatch({ type: "SET_SIDEBAR_TAB", tab }),
     [dispatch]
   )
   const handleToggleExpandAll = useCallback(() => dispatch({ type: "TOGGLE_EXPAND_ALL" }), [dispatch])
@@ -282,14 +283,28 @@ export default function App() {
 
   // Model override (empty = use session default)
   const [selectedModel, setSelectedModel] = useState("")
+  const [defaultModelId, setDefaultModelId] = useState<string | null>(null)
+  const [defaultEffort, setDefaultEffort] = useState(DEFAULT_EFFORT)
+
+  // Thinking effort level
+  const [selectedEffort, setSelectedEffort] = useState(DEFAULT_EFFORT)
+
+  // Fetch actual defaults from Claude Code CLI on mount
+  useEffect(() => {
+    authFetch("/api/defaults")
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (data?.model) setDefaultModelId(data.model)
+        if (data?.effort) setDefaultEffort(data.effort)
+      })
+      .catch(() => {})
+  }, [])
 
   const handleCodexModelRejected = useCallback((rejectedModel: string) => {
     setSelectedModel((current) => current === rejectedModel ? "" : current)
   }, [])
 
-  // Thinking effort level
-  const [selectedEffort, setSelectedEffort] = useState(DEFAULT_EFFORT)
-  const effectiveEffort = normalizeEffortForAgent(currentAgentKind ?? "claude", selectedEffort)
+  const effectiveEffort = normalizeEffortForAgent(currentAgentKind ?? "claude", selectedEffort || defaultEffort)
 
   // MCP server selection
   const currentCwd = state.session?.cwd ?? pendingPath ?? undefined
@@ -460,6 +475,7 @@ export default function App() {
     pendingMessages: claudeChat.pendingMessages,
     consumePending: claudeChat.consumePending,
     sessionChangeKey: state.sessionChangeKey,
+    pendingInteraction,
   })
 
   const chatScrollRef = scroll.chatScrollRef
@@ -617,7 +633,7 @@ export default function App() {
       const text = await res.text()
       const parsed = parseSession(text)
       const source = { dirName, fileName, rawText: text, agentKind: agentKindFromDirName(dirName) } as const
-      const tabLabel = projectName(parsed.cwd || dirNameToPath(dirName))
+      const tabLabel = sessionTabLabel(parsed)
       tabDispatch({ type: "OPEN_TAB", session: parsed, source: { ...source }, label: tabLabel })
       dispatch({ type: "LOAD_SESSION", session: parsed, source: { ...source }, isMobile })
       scroll.resetTurnCount(parsed.turns.length)
@@ -657,7 +673,9 @@ export default function App() {
   useEffect(() => {
     if (!state.sessionSource) return
     const tabId = `${state.sessionSource.dirName}/${state.sessionSource.fileName}`
-    const label = projectName(state.session?.cwd ?? dirNameToPath(state.sessionSource.dirName))
+    const label = state.session
+      ? sessionTabLabel(state.session)
+      : projectName(dirNameToPath(state.sessionSource.dirName))
     const existingTab = tabsRef.current.find(t => t.id === tabId)
     if (!existingTab) {
       tabDispatch({
@@ -1056,28 +1074,34 @@ export default function App() {
 
   const isNewSession = !!state.pendingDirName && !state.session
 
+  const settingsNode = (
+    <ChatInputSettings
+      agentKind={currentAgentKind ?? "claude"}
+      onAgentKindChange={isNewSession && pendingAgentSource?.cwd ? handlePendingSessionAgentChange : undefined}
+      selectedModel={selectedModel}
+      onModelChange={setSelectedModel}
+      selectedEffort={effectiveEffort}
+      onEffortChange={setSelectedEffort}
+      isNewSession={isNewSession}
+      worktreeEnabled={worktreeEnabled}
+      onWorktreeEnabledChange={isNewSession && supportsWorktrees ? setWorktreeEnabled : undefined}
+      onApplySettings={handlers.handleApplySettings}
+      activeModelId={state.session?.model ?? defaultModelId ?? undefined}
+      defaultEffort={defaultEffort}
+      mcpServers={supportsMcp ? mcpData.servers : undefined}
+      selectedMcpServers={supportsMcp ? mcpData.selectedServers : undefined}
+      onToggleMcpServer={supportsMcp ? mcpData.toggleServer : undefined}
+      onRefreshMcpServers={supportsMcp ? mcpData.refresh : undefined}
+      mcpLoading={supportsMcp ? mcpData.loading : undefined}
+      onMcpAuth={supportsMcp ? handleMcpAuth : undefined}
+    />
+  )
+
   const chatInputNode = (
-    <div className="shrink-0 bg-elevation-1">
-      <ChatInput ref={chatInputRef} />
-      <ChatInputSettings
-        agentKind={currentAgentKind ?? "claude"}
-        onAgentKindChange={isNewSession && pendingAgentSource?.cwd ? handlePendingSessionAgentChange : undefined}
-        selectedModel={selectedModel}
-        onModelChange={setSelectedModel}
-        selectedEffort={effectiveEffort}
-        onEffortChange={setSelectedEffort}
-        isNewSession={isNewSession}
-        worktreeEnabled={worktreeEnabled}
-        onWorktreeEnabledChange={isNewSession && supportsWorktrees ? setWorktreeEnabled : undefined}
-        onApplySettings={handlers.handleApplySettings}
-        activeModelId={state.session?.model}
-        mcpServers={supportsMcp ? mcpData.servers : undefined}
-        selectedMcpServers={supportsMcp ? mcpData.selectedServers : undefined}
-        onToggleMcpServer={supportsMcp ? mcpData.toggleServer : undefined}
-        onRefreshMcpServers={supportsMcp ? mcpData.refresh : undefined}
-        mcpLoading={supportsMcp ? mcpData.loading : undefined}
-        onMcpAuth={supportsMcp ? handleMcpAuth : undefined}
-      />
+    <div className="hidden shrink-0 bg-elevation-1 px-4 pb-8">
+    <div className="mx-auto max-w-3xl">
+      <ChatInput ref={chatInputRef} settingsSlot={settingsNode} />
+    </div>
     </div>
   )
 
@@ -1278,23 +1302,12 @@ export default function App() {
       {backgroundServers}
       <UpdateBanner />
       <DesktopHeader
-        showSidebar={panels.showSidebar}
-        showStats={panels.showStats}
-        showWorktrees={supportsWorktrees && panels.showWorktrees}
-        showFileChanges={panels.showFileChanges}
-        hasFileChanges={hasFileChanges}
         killing={killing}
         onGoHome={actions.handleGoHome}
-        onToggleSidebar={panels.handleToggleSidebar}
-        onToggleStats={panels.handleToggleStats}
-        onToggleWorktrees={supportsWorktrees ? panels.handleToggleWorktrees : undefined}
-        onToggleFileChanges={panels.handleToggleFileChanges}
-        showConfig={state.mainView === "config"}
-        onToggleConfig={panels.handleToggleConfig}
         onKillAll={handleKillAll}
         onOpenSettings={config.openConfigDialog}
-        layoutMode={layoutMode}
-        onSetLayoutMode={handleSetLayoutMode}
+        showConfig={state.mainView === "config"}
+        onToggleConfig={panels.handleToggleConfig}
       />
 
       <TabBar
@@ -1310,24 +1323,27 @@ export default function App() {
 
       <div className="relative flex flex-1 min-h-0 overflow-hidden">
         {panels.showSidebar && state.mainView !== "config" && (
-          <SessionBrowser
-            sessionId={state.session?.sessionId ?? null}
-            activeSessionKey={activeSessionKey}
-            onLoadSession={actions.handleLoadSession}
-            onOpenInNewTab={handleOpenInNewTabSimple}
-            sidebarTab={state.sidebarTab}
-            onSidebarTabChange={handleSidebarTabChange}
-            onSelectTeam={actions.handleSelectTeam}
-            onNewSession={handleStartNewSession}
-            creatingSession={creatingSession}
-            pendingSession={pendingSessionInfo}
-            onDuplicateSession={handlers.handleDuplicateSessionByPath}
-            onDeleteSession={handlers.handleDeleteSession}
-            onBeforeSessionSwitch={handlePreSessionSwitch}
-            liveSessionsRefreshRef={liveSessionsRefreshRef}
-            projectDir={state.session?.cwd ?? state.pendingCwd ?? null}
-            onScriptStarted={processPanel.addProcess}
-          />
+          <div className="shrink-0 h-full resize-x overflow-hidden" style={{ width: 280, minWidth: 180, maxWidth: 500 }}>
+            <SessionBrowser
+              sessionId={state.session?.sessionId ?? null}
+              activeSessionKey={activeSessionKey}
+              onLoadSession={actions.handleLoadSession}
+              onOpenInNewTab={handleOpenInNewTabSimple}
+              sidebarTab={state.sidebarTab}
+              onSidebarTabChange={handleSidebarTabChange}
+              onSelectTeam={actions.handleSelectTeam}
+              onNewSession={handleStartNewSession}
+              creatingSession={creatingSession}
+              pendingSession={pendingSessionInfo}
+              onDuplicateSession={handlers.handleDuplicateSessionByPath}
+              onDeleteSession={handlers.handleDeleteSession}
+              onBeforeSessionSwitch={handlePreSessionSwitch}
+              liveSessionsRefreshRef={liveSessionsRefreshRef}
+              projectDir={state.session?.cwd ?? state.pendingCwd ?? null}
+              onScriptStarted={processPanel.addProcess}
+              onClose={panels.handleToggleSidebar}
+            />
+          </div>
         )}
 
         <main className="relative flex-1 min-w-0 overflow-hidden flex flex-col">
@@ -1369,8 +1385,21 @@ export default function App() {
                       onDuplicateSession={handlers.handleDuplicateSession}
                       onOpenTerminal={handleOpenTerminal}
                       onBackToMain={isSubAgentView ? handleBackToMain : undefined}
+                      showSidebar={panels.showSidebar}
+                      onToggleSidebar={panels.handleToggleSidebar}
+                      showStats={panels.showStats}
+                      onToggleStats={panels.handleToggleStats}
+                      showWorktrees={supportsWorktrees ? panels.showWorktrees : undefined}
+                      onToggleWorktrees={supportsWorktrees ? panels.handleToggleWorktrees : undefined}
+                      showFileChangesPanel={panels.showFileChanges}
+                      onToggleFileChanges={panels.handleToggleFileChanges}
+                      hasFileChanges={hasFileChanges}
+                      layoutMode={layoutMode}
+                      onSetLayoutMode={handleSetLayoutMode}
                     />
                     <ChatArea searchInputRef={searchInputRef} hasTodos={!!todoProgress && todosExpanded} onViewOutput={processPanel.handleToggleServer} />
+                    <InteractivePromptBar />
+                    {subAgentReadOnlyNode || chatInputNode}
                     {todoProgress && (
                       <div className="shrink-0 border-t border-border/30">
                         <TodoProgressPanel progress={todoProgress} expanded={todosExpanded} onExpandedChange={handleTodosExpandedChange} />

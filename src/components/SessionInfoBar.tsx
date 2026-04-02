@@ -9,6 +9,12 @@ import {
   Bot,
   ChevronRight,
   FileCode2,
+  PanelLeft,
+  BarChart3,
+  GitBranch,
+  Rows2,
+  Columns2,
+  Maximize2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -33,6 +39,16 @@ interface SessionInfoBarProps {
   onBackToMain?: () => void
   onShowFileChanges?: () => void
   hasFileChanges?: boolean
+  showSidebar?: boolean
+  onToggleSidebar?: () => void
+  showStats?: boolean
+  onToggleStats?: () => void
+  showWorktrees?: boolean
+  onToggleWorktrees?: () => void
+  showFileChangesPanel?: boolean
+  onToggleFileChanges?: () => void
+  layoutMode?: "stacked" | "side-by-side" | "focused"
+  onSetLayoutMode?: (mode: "stacked" | "side-by-side" | "focused") => void
 }
 
 export const SessionInfoBar = memo(function SessionInfoBar({
@@ -43,6 +59,16 @@ export const SessionInfoBar = memo(function SessionInfoBar({
   onBackToMain,
   onShowFileChanges,
   hasFileChanges,
+  showSidebar,
+  onToggleSidebar,
+  showStats,
+  onToggleStats,
+  showWorktrees,
+  onToggleWorktrees,
+  showFileChangesPanel,
+  onToggleFileChanges,
+  layoutMode,
+  onSetLayoutMode,
 }: SessionInfoBarProps) {
   const { isMobile } = useAppContext()
   const { session: sessionOrNull, sessionSource } = useSessionContext()
@@ -100,6 +126,68 @@ export const SessionInfoBar = memo(function SessionInfoBar({
           <FileCode2 className="size-3" />
           Files
         </Button>
+      )}
+
+      {/* Sidebar toggle */}
+      {onToggleSidebar && (
+        <HeaderIconButton
+          icon={PanelLeft}
+          label={showSidebar ? "Hide Sidebar (Ctrl+B)" : "Show Sidebar (Ctrl+B)"}
+          onClick={onToggleSidebar}
+          className={showSidebar ? "text-blue-400" : "text-muted-foreground hover:text-foreground"}
+          iconClassName={showSidebar ? "text-blue-400" : undefined}
+        />
+      )}
+
+      {/* Panel toggles */}
+      {onToggleStats && (
+        <HeaderIconButton
+          icon={BarChart3}
+          label={showStats ? "Hide Stats" : "Show Stats"}
+          onClick={onToggleStats}
+          className={showStats ? "text-blue-400" : "text-muted-foreground hover:text-foreground"}
+          iconClassName={showStats ? "text-blue-400" : undefined}
+        />
+      )}
+      {onToggleWorktrees && (
+        <HeaderIconButton
+          icon={GitBranch}
+          label={showWorktrees ? "Hide Worktrees" : "Show Worktrees"}
+          onClick={onToggleWorktrees}
+          className={showWorktrees ? "text-blue-400" : "text-muted-foreground hover:text-foreground"}
+          iconClassName={showWorktrees ? "text-blue-400" : undefined}
+        />
+      )}
+      {hasFileChanges && onToggleFileChanges && (
+        <HeaderIconButton
+          icon={FileCode2}
+          label={showFileChangesPanel ? "Hide File Changes" : "Show File Changes"}
+          onClick={onToggleFileChanges}
+          className={showFileChangesPanel ? "text-amber-400" : "text-muted-foreground hover:text-foreground"}
+          iconClassName={showFileChangesPanel ? "text-amber-400" : undefined}
+        />
+      )}
+      {onSetLayoutMode && (
+        <>
+          <HeaderIconButton
+            icon={Rows2}
+            label="Stacked layout"
+            onClick={() => onSetLayoutMode("stacked")}
+            className={layoutMode === "stacked" ? "text-blue-400" : "text-muted-foreground hover:text-foreground"}
+          />
+          <HeaderIconButton
+            icon={Columns2}
+            label="Side-by-side layout"
+            onClick={() => onSetLayoutMode("side-by-side")}
+            className={layoutMode === "side-by-side" ? "text-blue-400" : "text-muted-foreground hover:text-foreground"}
+          />
+          <HeaderIconButton
+            icon={Maximize2}
+            label="Focused layout (hide file changes)"
+            onClick={() => onSetLayoutMode("focused")}
+            className={layoutMode === "focused" ? "text-blue-400" : "text-muted-foreground hover:text-foreground"}
+          />
+        </>
       )}
 
       {/* Action buttons */}

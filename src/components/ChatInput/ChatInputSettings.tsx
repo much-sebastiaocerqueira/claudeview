@@ -350,8 +350,10 @@ export interface ChatInputSettingsProps {
   worktreeEnabled?: boolean
   onWorktreeEnabledChange?: (enabled: boolean) => void
   onApplySettings?: () => Promise<void>
-  /** Model ID from the active session (e.g. "claude-opus-4-6"), used to resolve "Default" label */
+  /** Model ID from the active session or API defaults (e.g. "claude-opus-4-6") */
   activeModelId?: string
+  /** Default effort level from API (e.g. "medium") */
+  defaultEffort?: string
   /** MCP servers available for this project */
   mcpServers?: Array<{ name: string; status: "connected" | "needs_auth" | "error" }>
   /** Currently selected MCP server names */
@@ -378,6 +380,7 @@ export const ChatInputSettings = memo(function ChatInputSettings({
   onWorktreeEnabledChange,
   onApplySettings,
   activeModelId,
+  defaultEffort,
   mcpServers,
   selectedMcpServers,
   onToggleMcpServer,
@@ -407,22 +410,27 @@ export const ChatInputSettings = memo(function ChatInputSettings({
     [onEffortChange, changeAndApply],
   )
 
-  // Build model options with resolved "Default" label — scoped to current agentKind
-  // so Codex sessions never show a Claude model name and vice versa
-  const resolvedDefaultName = agentKind === "codex"
-    ? (activeModelId?.toLowerCase().startsWith("gpt-") ? friendlyModelName(activeModelId) : "GPT-5.4")
-    : (activeModelId ? friendlyModelName(activeModelId) : "Opus")
+  // Build model options with resolved label from session or API defaults
+  const resolvedDefaultName = activeModelId
+    ? friendlyModelName(activeModelId)
+    : "Model"
   const modelOptions: readonly DropdownOption[] = getModelOptions(agentKind).map((opt) =>
     opt.value === ""
       ? { value: "", label: resolvedDefaultName, menuLabel: `${resolvedDefaultName} (default)` }
       : opt
   )
   const effortOptions = getEffortOptions(agentKind)
+  // Resolve effort: use selected value, fall back to server-reported default
+  const resolvedEffort = normalizeEffortForAgent(agentKind, selectedEffort ?? DEFAULT_EFFORT)
+  const effortValue = resolvedEffort || defaultEffort || ""
+  const effortFallbackLabel = defaultEffort
+    ? effortOptions.find((o) => o.value === defaultEffort)?.label ?? "Effort"
+    : "Effort"
   const showWorktree = agentKind === "claude"
 
   return (
-    <div className="flex items-center pb-2">
-      <div className="w-full flex items-center gap-0.5 flex-wrap">
+    <div className="flex items-center">
+      <div className="flex items-center gap-0.5 flex-wrap">
         {/* Model */}
         {onAgentKindChange
           ? (
@@ -446,8 +454,8 @@ export const ChatInputSettings = memo(function ChatInputSettings({
 
         <span className="text-border/60 text-[10px] select-none">/</span>
         <MiniDropdown
-          value={normalizeEffortForAgent(agentKind, selectedEffort || DEFAULT_EFFORT)}
-          fallbackLabel="Effort"
+          value={effortValue}
+          fallbackLabel={effortFallbackLabel}
           options={effortOptions}
           onChange={handleEffortChange}
         />
