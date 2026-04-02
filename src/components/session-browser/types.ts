@@ -50,8 +50,8 @@ export interface SessionBrowserProps {
     session: ParsedSession,
     source: { dirName: string; fileName: string; rawText: string }
   ) => void
-  sidebarTab: "live" | "browse" | "teams"
-  onSidebarTabChange: (tab: "live" | "browse" | "teams") => void
+  sidebarTab: "live" | "browse" | "teams" | "files"
+  onSidebarTabChange: (tab: "live" | "browse" | "teams" | "files") => void
   onSelectTeam?: (teamName: string) => void
   /** Create a new Claude session in the given project */
   onNewSession?: (dirName: string, cwd?: string) => void
@@ -77,4 +77,6 @@ export interface SessionBrowserProps {
   projectDir?: string | null
   /** Called when a script process is started from the sidebar dock */
   onScriptStarted?: (entry: ProcessEntry) => void
+  /** Close/hide the sidebar */
+  onClose?: () => void
 }

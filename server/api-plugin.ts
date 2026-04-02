@@ -32,6 +32,7 @@ import { registerScriptRoutes } from "./routes/scripts"
 import { registerFileSnapshotRoutes } from "./routes/file-snapshots"
 import { registerGitFileDiffRoutes } from "./routes/git-file-diff"
 import { registerDefaultsRoutes } from "./routes/defaults"
+import { registerDirectoryTreeRoutes } from "./routes/directory-tree"
 import { SearchIndex } from "./search-index"
 
 export function sessionApiPlugin(): Plugin {
@@ -119,6 +120,7 @@ export function sessionApiPlugin(): Plugin {
       registerFileSnapshotRoutes(use)
       registerGitFileDiffRoutes(use)
       registerDefaultsRoutes(use)
+      registerDirectoryTreeRoutes(use)
     },
   }
 }

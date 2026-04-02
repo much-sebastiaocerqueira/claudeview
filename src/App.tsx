@@ -123,7 +123,7 @@ export default function App() {
 
   // Stable callbacks
   const handleSidebarTabChange = useCallback(
-    (tab: "live" | "browse" | "teams") => dispatch({ type: "SET_SIDEBAR_TAB", tab }),
+    (tab: "live" | "browse" | "teams" | "files") => dispatch({ type: "SET_SIDEBAR_TAB", tab }),
     [dispatch]
   )
   const handleToggleExpandAll = useCallback(() => dispatch({ type: "TOGGLE_EXPAND_ALL" }), [dispatch])
@@ -1302,23 +1302,12 @@ export default function App() {
       {backgroundServers}
       <UpdateBanner />
       <DesktopHeader
-        showSidebar={panels.showSidebar}
-        showStats={panels.showStats}
-        showWorktrees={supportsWorktrees && panels.showWorktrees}
-        showFileChanges={panels.showFileChanges}
-        hasFileChanges={hasFileChanges}
         killing={killing}
         onGoHome={actions.handleGoHome}
-        onToggleSidebar={panels.handleToggleSidebar}
-        onToggleStats={panels.handleToggleStats}
-        onToggleWorktrees={supportsWorktrees ? panels.handleToggleWorktrees : undefined}
-        onToggleFileChanges={panels.handleToggleFileChanges}
-        showConfig={state.mainView === "config"}
-        onToggleConfig={panels.handleToggleConfig}
         onKillAll={handleKillAll}
         onOpenSettings={config.openConfigDialog}
-        layoutMode={layoutMode}
-        onSetLayoutMode={handleSetLayoutMode}
+        showConfig={state.mainView === "config"}
+        onToggleConfig={panels.handleToggleConfig}
       />
 
       <TabBar
@@ -1334,24 +1323,27 @@ export default function App() {
 
       <div className="relative flex flex-1 min-h-0 overflow-hidden">
         {panels.showSidebar && state.mainView !== "config" && (
-          <SessionBrowser
-            sessionId={state.session?.sessionId ?? null}
-            activeSessionKey={activeSessionKey}
-            onLoadSession={actions.handleLoadSession}
-            onOpenInNewTab={handleOpenInNewTabSimple}
-            sidebarTab={state.sidebarTab}
-            onSidebarTabChange={handleSidebarTabChange}
-            onSelectTeam={actions.handleSelectTeam}
-            onNewSession={handleStartNewSession}
-            creatingSession={creatingSession}
-            pendingSession={pendingSessionInfo}
-            onDuplicateSession={handlers.handleDuplicateSessionByPath}
-            onDeleteSession={handlers.handleDeleteSession}
-            onBeforeSessionSwitch={handlePreSessionSwitch}
-            liveSessionsRefreshRef={liveSessionsRefreshRef}
-            projectDir={state.session?.cwd ?? state.pendingCwd ?? null}
-            onScriptStarted={processPanel.addProcess}
-          />
+          <div className="shrink-0 h-full resize-x overflow-hidden" style={{ width: 280, minWidth: 180, maxWidth: 500 }}>
+            <SessionBrowser
+              sessionId={state.session?.sessionId ?? null}
+              activeSessionKey={activeSessionKey}
+              onLoadSession={actions.handleLoadSession}
+              onOpenInNewTab={handleOpenInNewTabSimple}
+              sidebarTab={state.sidebarTab}
+              onSidebarTabChange={handleSidebarTabChange}
+              onSelectTeam={actions.handleSelectTeam}
+              onNewSession={handleStartNewSession}
+              creatingSession={creatingSession}
+              pendingSession={pendingSessionInfo}
+              onDuplicateSession={handlers.handleDuplicateSessionByPath}
+              onDeleteSession={handlers.handleDeleteSession}
+              onBeforeSessionSwitch={handlePreSessionSwitch}
+              liveSessionsRefreshRef={liveSessionsRefreshRef}
+              projectDir={state.session?.cwd ?? state.pendingCwd ?? null}
+              onScriptStarted={processPanel.addProcess}
+              onClose={panels.handleToggleSidebar}
+            />
+          </div>
         )}
 
         <main className="relative flex-1 min-w-0 overflow-hidden flex flex-col">
@@ -1393,6 +1385,17 @@ export default function App() {
                       onDuplicateSession={handlers.handleDuplicateSession}
                       onOpenTerminal={handleOpenTerminal}
                       onBackToMain={isSubAgentView ? handleBackToMain : undefined}
+                      showSidebar={panels.showSidebar}
+                      onToggleSidebar={panels.handleToggleSidebar}
+                      showStats={panels.showStats}
+                      onToggleStats={panels.handleToggleStats}
+                      showWorktrees={supportsWorktrees ? panels.showWorktrees : undefined}
+                      onToggleWorktrees={supportsWorktrees ? panels.handleToggleWorktrees : undefined}
+                      showFileChangesPanel={panels.showFileChanges}
+                      onToggleFileChanges={panels.handleToggleFileChanges}
+                      hasFileChanges={hasFileChanges}
+                      layoutMode={layoutMode}
+                      onSetLayoutMode={handleSetLayoutMode}
                     />
                     <ChatArea searchInputRef={searchInputRef} hasTodos={!!todoProgress && todosExpanded} onViewOutput={processPanel.handleToggleServer} />
                     <InteractivePromptBar />

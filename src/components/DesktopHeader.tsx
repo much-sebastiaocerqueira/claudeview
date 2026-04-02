@@ -2,21 +2,13 @@ import { memo } from "react"
 import {
   ChevronRight,
   Eye,
-  BarChart3,
-  PanelLeftClose,
-  PanelRightClose,
   Check,
   Copy,
   Skull,
   Settings,
   Globe,
   WifiOff,
-  GitBranch,
   SlidersHorizontal,
-  FileCode2,
-  Rows2,
-  Columns2,
-  Maximize2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -51,43 +43,21 @@ function formatDurationMs(ms: number): string {
 }
 
 interface DesktopHeaderProps {
-  showSidebar: boolean
-  showStats: boolean
-  showWorktrees?: boolean
-  showFileChanges?: boolean
-  hasFileChanges?: boolean
   killing: boolean
   onGoHome: () => void
-  onToggleSidebar: () => void
-  onToggleStats: () => void
-  onToggleWorktrees?: () => void
-  onToggleFileChanges?: () => void
   onKillAll: () => void
   onOpenSettings: () => void
   showConfig?: boolean
   onToggleConfig?: () => void
-  layoutMode?: "stacked" | "side-by-side" | "focused"
-  onSetLayoutMode?: (mode: "stacked" | "side-by-side" | "focused") => void
 }
 
 export const DesktopHeader = memo(function DesktopHeader({
-  showSidebar,
-  showStats,
-  showWorktrees,
-  showFileChanges,
-  hasFileChanges,
   killing,
   onGoHome,
-  onToggleSidebar,
-  onToggleStats,
-  onToggleWorktrees,
-  onToggleFileChanges,
   onKillAll,
   onOpenSettings,
   showConfig,
   onToggleConfig,
-  layoutMode,
-  onSetLayoutMode,
 }: DesktopHeaderProps) {
   const { dispatch, config: { networkUrl, networkAccessDisabled } } = useAppContext()
   const { session, sessionSource, isLive } = useSessionContext()
@@ -271,57 +241,6 @@ export const DesktopHeader = memo(function DesktopHeader({
           className="text-muted-foreground hover:text-red-400 hover:bg-red-500/10"
           iconClassName={killing ? "text-red-400 animate-pulse" : undefined}
         />
-        {onToggleWorktrees && (
-          <HeaderIconButton
-            icon={GitBranch}
-            label={showWorktrees ? "Hide Worktrees" : "Show Worktrees"}
-            onClick={onToggleWorktrees}
-            className={showWorktrees ? "text-foreground" : "text-muted-foreground hover:text-foreground"}
-          />
-        )}
-        {hasFileChanges && onToggleFileChanges && (
-          <HeaderIconButton
-            icon={FileCode2}
-            label={showFileChanges ? "Hide File Changes" : "Show File Changes"}
-            onClick={onToggleFileChanges}
-            className={showFileChanges ? "text-amber-400" : "text-muted-foreground hover:text-foreground"}
-            iconClassName={showFileChanges ? "text-amber-400" : undefined}
-          />
-        )}
-        {onSetLayoutMode && (
-          <>
-            <HeaderIconButton
-              icon={Rows2}
-              label="Stacked layout"
-              onClick={() => onSetLayoutMode("stacked")}
-              className={layoutMode === "stacked" ? "text-blue-400" : "text-muted-foreground hover:text-foreground"}
-            />
-            <HeaderIconButton
-              icon={Columns2}
-              label="Side-by-side layout"
-              onClick={() => onSetLayoutMode("side-by-side")}
-              className={layoutMode === "side-by-side" ? "text-blue-400" : "text-muted-foreground hover:text-foreground"}
-            />
-            <HeaderIconButton
-              icon={Maximize2}
-              label="Focused layout (hide file changes)"
-              onClick={() => onSetLayoutMode("focused")}
-              className={layoutMode === "focused" ? "text-blue-400" : "text-muted-foreground hover:text-foreground"}
-            />
-          </>
-        )}
-        <HeaderIconButton
-          icon={showSidebar ? PanelLeftClose : ChevronRight}
-          label={showSidebar ? "Hide Sidebar (Ctrl+B)" : "Show Sidebar (Ctrl+B)"}
-          onClick={onToggleSidebar}
-        />
-        {session && (
-          <HeaderIconButton
-            icon={showStats ? PanelRightClose : BarChart3}
-            label={showStats ? "Hide Stats (⌘⇧B)" : "Show Stats (⌘⇧B)"}
-            onClick={onToggleStats}
-          />
-        )}
       </div>
     </header>
   )

@@ -1,4 +1,5 @@
 import { useCallback, memo } from "react"
+import { PanelLeftClose } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LiveSessions } from "@/components/LiveSessions"
 import { ScriptsDock } from "@/components/ScriptsDock"
@@ -6,11 +7,12 @@ import { SessionTimeline } from "@/components/SessionTimeline"
 import { CrossSessionSearch } from "@/components/search/CrossSessionSearch"
 import type { SessionBrowserProps } from "./types"
 import { BrowseTab } from "./BrowseTab"
+import { FilesTab } from "@/components/files-tab"
 import { useSessionBrowser } from "./useSessionBrowser"
 
 // ── Tab type ───────────────────────────────────────────────────────────────
 
-type SidebarTab = "live" | "browse" | "teams" | "timeline" | "search"
+type SidebarTab = "files" | "live" | "browse" | "teams" | "timeline" | "search"
 
 // ── Tab Bar ────────────────────────────────────────────────────────────────
 
@@ -18,10 +20,12 @@ function SidebarTabBar({
   activeTab,
   isMobile,
   onTabChange,
+  onClose,
 }: {
   activeTab: SidebarTab
   isMobile?: boolean
   onTabChange: (tab: SidebarTab) => void
+  onClose?: () => void
 }): React.ReactElement {
   const heightClass = isMobile ? "h-10" : "h-8"
 
@@ -37,6 +41,14 @@ function SidebarTabBar({
 
   return (
     <div className={cn("flex shrink-0 border-b border-border/50", heightClass)} role="tablist">
+      <button
+        role="tab"
+        aria-selected={activeTab === "files"}
+        onClick={() => onTabChange("files")}
+        className={tabClassName(activeTab === "files", "flex items-center justify-center")}
+      >
+        Files
+      </button>
       <button
         role="tab"
         aria-selected={activeTab === "live"}
@@ -69,6 +81,15 @@ function SidebarTabBar({
       >
         Search
       </button>
+      {onClose && (
+        <button
+          onClick={onClose}
+          className="shrink-0 px-1.5 text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+          title="Hide Sidebar (Ctrl+B)"
+        >
+          <PanelLeftClose className="size-3.5" />
+        </button>
+      )}
     </div>
   )
 }
@@ -94,6 +115,7 @@ export const SessionBrowser = memo(function SessionBrowser({
   liveSessionsRefreshRef,
   projectDir,
   onScriptStarted,
+  onClose,
 }: SessionBrowserProps): React.ReactElement {
   const browser = useSessionBrowser({
     sessionId,
@@ -129,7 +151,7 @@ export const SessionBrowser = memo(function SessionBrowser({
     <aside
       className={cn(
         "flex h-full shrink-0 flex-col elevation-1",
-        isMobile ? "w-full" : "w-80 panel-enter"
+        isMobile ? "w-full" : "panel-enter"
       )}
       aria-label="Session browser"
     >
@@ -137,9 +159,16 @@ export const SessionBrowser = memo(function SessionBrowser({
         activeTab={sidebarTab}
         isMobile={isMobile}
         onTabChange={onSidebarTabChange}
+        onClose={onClose}
       />
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {sidebarTab === "files" && (
+          <div className="flex-1 min-h-0">
+            <FilesTab />
+          </div>
+        )}
+
         {sidebarTab === "live" && (
           <LiveSessions
             activeSessionKey={activeSessionKey}
